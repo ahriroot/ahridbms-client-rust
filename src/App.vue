@@ -3,18 +3,16 @@ import { h, ref, shallowRef, onBeforeMount } from 'vue'
 import {
     darkTheme, NConfigProvider, NGlobalStyle, NIcon, NLayout,
     NButton, NModal, NSelect, SelectRenderLabel, NInput, NCard, NSpace,
-    NTabs, NTabPane
+    NTabs, NTabPane, NLoadingBarProvider, NMessageProvider
 } from 'naive-ui'
-import { invoke } from '@tauri-apps/api/tauri'
-import { ArrowBack, ServerSharp } from '@vicons/ionicons5'
-import { nanoid } from 'nanoid'
+import { ArrowForward, ServerSharp, Add } from '@vicons/ionicons5'
+import { nanoid } from 'nanoid'  // 唯一 id 生成器
 
-import { DBType, ConnectionComponents, RedisConnectInit } from '@/data/data'
-import { IConnectComponents } from '@/types/data'
+import { DBType, ConnectionComponents, RedisConnectInit, TabComponents } from '@/data/data'
+import { IConnectComponents, ITabComponents } from '@/types/data'
 import { Connection, RedisConnect } from '@/types/Connection'
-import { getConnections, saveConnections } from '@/utils/storage'
+import { getConnections, saveConnections, getTabs, saveTabs } from '@/utils/storage'
 import { OpenTabMesagae } from '@/types/Message'
-import TabDbVue from '@/components/redis/TabDb.vue'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏
@@ -24,76 +22,42 @@ const connList = ref<Connection[]>([])  // 数据库链接列表
 const dbConn = ref<string>('redis')  // 正在编辑的连接类型
 const dbRedis = ref<RedisConnect>(RedisConnectInit)  // 默认 redis 数据库连接信息
 const connComponents = shallowRef<IConnectComponents>(ConnectionComponents)  // 数据库连接组件
+
+// tab 组件
+const tabComponents = shallowRef<ITabComponents>(TabComponents)
 /** ------------------ 变量 End ------------------ **/
 
 onBeforeMount(async () => {
     connList.value = await getConnections()
-    let tabs_str = localStorage.getItem('tabs')
-    tabs.value = tabs_str ? JSON.parse(tabs_str) : []
+    let connIds = connList.value.map(item => item.id)  // 所有链接 id
+    let tmp = await getTabs()  // 所有标签页
+    tabs.value = tmp.filter((item: OpenTabMesagae) => connIds.includes(item.conn.id))  // 存在连接的标签页
+    saveTabs(tabs.value)
     if (tabs.value.length > 0) {
+        // 切换到第一个标签页
         tab.value = tabs.value[0].id
     }
 })
 
-interface Keyvalue {
-    key: string
-    value: string
-}
-interface Data {
-    [key: string]: Keyvalue
-}
-
-const result = ref<any>('')
-const value = ref<string>('')
-
-const handleKeys = async () => {
-    const res = await invoke<Data[]>('keys')
-    console.log(res)
-    result.value = res
-}
-
-const handleGet = async () => {
-    const res = await invoke<any>('get', { key: value.value })
-    console.log(res)
-    result.value = res
-}
-
+// 新建连接时不同类型的数据库图标
 const renderLabel: SelectRenderLabel = (option) => {
     return h(
-        'div',
-        {
-            style: {
-                display: 'flex',
-                alignItems: 'center'
-            }
-        },
+        'div', { style: { display: 'flex', alignItems: 'center' } },
         [
-            h(NIcon, {
-                size: 20
-            }, {
-                default: () => h(ServerSharp)
-            }),
-            h(
-                'div',
-                {
-                    style: {
-                        marginLeft: '12px',
-                        padding: '4px 0'
-                    }
-                },
-                h('div', null, [option.label as string])
-            )
+            h(NIcon, { size: 20 }, { default: () => h(ServerSharp) }),
+            h('div', { style: { marginLeft: '12px', padding: '4px 0' } }, h('div', null, [option.label as string]))
         ]
     )
 }
 
+// 添加连接
 const handleSubmitConn = async () => {
     switch (dbConn.value) {
         case 'redis':
             connList.value.push({
                 id: nanoid(),
                 db_type: 'redis',
-                info: dbRedis.value
+                info: JSON.parse(JSON.stringify(dbRedis.value))
             })
             break
     }
@@ -101,13 +65,17 @@ const handleSubmitConn = async () => {
     showConn.value = false
 }
 
+// 取消添加连接
 const handleCancelConn = () => {
     showConn.value = false
+    dbRedis.value = RedisConnectInit
 }
 
 // ----------------------------------
 const tab = ref<string>('')
 const tabs = ref<OpenTabMesagae[]>([])
+
+// 打开标签页
 const handleOpenTab = (message: OpenTabMesagae) => {
     if (message) {
         if (message.conn.db_type === 'redis') {
@@ -115,92 +83,112 @@ const handleOpenTab = (message: OpenTabMesagae) => {
                 console.log('redis query')
             } else {
                 tabs.value.push(message)
-                localStorage.setItem('tabs', JSON.stringify(tabs.value))
-                if (tabs.value.length === 1) {
-                    tab.value = tabs.value[0].id
-                }
+                tab.value = message.id
+                saveTabs(tabs.value)
             }
         }
     }
 
 }
-const handleClose = () => {
 
+// 删除连接
+const handleDeleteConnection = async (id: string) => {
+    connList.value = connList.value.filter(item => item.id !== id)
+    await saveConnections(connList.value)
+    tabs.value = tabs.value.filter(item => item.conn.id !== id)
+    if (!tabs.value.find(item => item.conn.id === id)) {
+        tab.value = tabs.value.length > 0 ? tabs.value[0].id : ''
+    }
+    saveTabs(tabs.value)
 }
 
-const tabComponents = shallowRef<any>({
-    'redis:db': TabDbVue
-})
+// 关闭标签页
+const handleClose = (val: string) => {
+    tabs.value = tabs.value.filter(item => item.id !== val)
+    if (val == tab.value) {
+        tab.value = tabs.value.length > 0 ? tabs.value[0].id : ''
+    }
+    saveTabs(tabs.value)
+}
 </script>
 
 <template>
     <n-config-provider :theme="darkTheme">
         <n-global-style />
+        <n-loading-bar-provider>
+            <n-message-provider>
 
-        <n-modal v-model:show="showConn" preset="card" style="width: 600px;" title="连接" size="small">
-            <n-space vertical>
-                <n-select :options="dbTypeList" :render-label="renderLabel" v-model:value="dbConn" />
-                <n-card v-if="dbConn == 'redis'">
+                <n-modal v-model:show="showConn" preset="card" style="width: 600px;" title="连接" size="small">
                     <n-space vertical>
-                        <n-input v-model:value="dbRedis.name" type="text" placeholder="Name" />
+                        <n-select :options="dbTypeList" :render-label="renderLabel" v-model:value="dbConn" />
+                        <n-card v-if="dbConn == 'redis'">
+                            <n-space vertical>
+                                <n-input v-model:value="dbRedis.name" type="text" placeholder="Name" />
+                                <n-space>
+                                    <n-input v-model:value="dbRedis.host" type="text" placeholder="Host" />
+                                    <n-input v-model:value="dbRedis.port" type="text" placeholder="Port" />
+                                </n-space>
+                                <n-space>
+                                    <n-input v-model:value="dbRedis.user" type="text" placeholder="User" />
+                                    <n-input v-model:value="dbRedis.pass" type="text" placeholder="Pass" />
+                                </n-space>
+                                <n-input v-model:value="dbRedis.index" type="text" placeholder="DB Index" />
+                            </n-space>
+                        </n-card>
+                        <n-card v-else>
+                        </n-card>
                         <n-space>
-                            <n-input v-model:value="dbRedis.host" type="text" placeholder="Host" />
-                            <n-input v-model:value="dbRedis.port" type="text" placeholder="Port" />
+                            <n-button @click="handleSubmitConn" style="margin-top: 12px;">Submit</n-button>
+                            <n-button @click="handleCancelConn" style="margin-top: 12px;">Cancel</n-button>
                         </n-space>
-                        <n-space>
-                            <n-input v-model:value="dbRedis.user" type="text" placeholder="User" />
-                            <n-input v-model:value="dbRedis.pass" type="text" placeholder="Pass" />
-                        </n-space>
-                        <n-input v-model:value="dbRedis.index" type="text" placeholder="DB Index" />
                     </n-space>
-                </n-card>
-                <n-card v-else>
-                </n-card>
-                <n-space>
-                    <n-button @click="handleSubmitConn" style="margin-top: 12px;">Submit</n-button>
-                    <n-button @click="handleCancelConn" style="margin-top: 12px;">Cancel</n-button>
-                </n-space>
-            </n-space>
-        </n-modal>
+                </n-modal>
 
-        <div id="main">
-            <aside class="side" :class="showSide ? '' : 'show'"></aside>
-            <main class="main">
-                <div class="connection">
-                    <n-button strong secondary size="small" @click="showConn = true">
-                        New Conn
-                    </n-button>
-                    <div class="conn">
-                        <n-layout position="absolute" style="background: #21252b; color: #fff" :native-scrollbar="false"
-                            content-style="padding: 10px;">
-                            <component v-for="i in connList" :is="connComponents[i.db_type]" :conn="i"
-                                @handleOpenTab="handleOpenTab" />
-                        </n-layout>
-                    </div>
-                    <div class="btn-side">
-                        <n-icon size="20" @click="showSide = !showSide">
-                            <arrow-back class="icon" :class="showSide ? 'show' : ''" />
-                        </n-icon>
-                    </div>
+                <div id="main">
+                    <aside class="side" :class="showSide ? '' : 'show'"></aside>
+                    <main class="main">
+                        <div class="connection">
+                            <div class="header">
+                                <n-button strong secondary size="small" @click.stop="showConn = true">
+                                    <template #icon>
+                                        <n-icon>
+                                            <add />
+                                        </n-icon>
+                                    </template>
+                                </n-button>
+                            </div>
+                            <div class="conn">
+                                <n-layout position="absolute" style="background: #21252b; color: #fff"
+                                    :native-scrollbar="false" content-style="padding: 10px;">
+                                    <component v-for="i in connList" :key="i.id" :is="connComponents[i.db_type]"
+                                        :conn="i" @handleOpenTab="handleOpenTab"
+                                        @handleDeleteConnection="handleDeleteConnection" />
+                                </n-layout>
+                            </div>
+                            <div class="btn-side">
+                                <n-icon size="20" @click="showSide = !showSide">
+                                    <arrow-forward class="icon" :class="showSide ? 'show' : ''" />
+                                </n-icon>
+                            </div>
+                        </div>
+                        <div class="content">
+                            <header class="header"></header>
+                            <section class="workspace">
+                                <n-tabs v-model:value="tab" type="card" closable tab-style="min-width: 80px;"
+                                    @close="handleClose" size="small">
+                                    <n-tab-pane v-for="i in tabs" :key="i.id" :tab="`${i.tab_type}@${i.conn.info.name}`"
+                                        :name="i.id">
+                                        <component :key="i.id"
+                                            :is="tabComponents[`${i.conn.db_type}:${i.tab_type == 'query' ? 'query' : 'db'}`]"
+                                            :conn="i.conn" :db="i.tab_type" />
+                                    </n-tab-pane>
+                                </n-tabs>
+                            </section>
+                        </div>
+                    </main>
                 </div>
-                <div class="content">
-                    <header class="header"></header>
-                    <section class="workspace">
-                        <n-layout position="absolute" style="background: #282c34; color: #fff" :native-scrollbar="false"
-                            content-style="padding: 10px 0;">
-                            <n-tabs v-model:value="tab" type="card" closable tab-style="min-width: 80px;"
-                                @close="handleClose">
-                                <n-tab-pane v-for="i in tabs" :key="i.id" :tab="i.conn.info.name" :name="i.id">
-                                    <component
-                                        :is="tabComponents[`${i.conn.db_type}:${i.tab_type == 'query' ? 'query' : 'db'}`]"
-                                        :conn="i.conn" :db="i.tab_type" />
-                                </n-tab-pane>
-                            </n-tabs>
-                        </n-layout>
-                    </section>
-                </div>
-            </main>
-        </div>
+            </n-message-provider>
+        </n-loading-bar-provider>
     </n-config-provider>
 </template>
 
@@ -210,6 +198,15 @@ const tabComponents = shallowRef<any>({
     padding: 0;
     margin: 0;
     box-sizing: border-box;
+}
+
+.n-tabs {
+    height: 100%;
+}
+
+.n-tab-pane {
+    height: 100%;
+    padding: 0 !important;
 }
 </style>
 
@@ -249,10 +246,18 @@ const tabComponents = shallowRef<any>({
     position: relative;
 }
 
+#main .main .connection .header {
+    height: 32px;
+    padding: 0 2px;
+    display: flex;
+    /* justify-content: center; */
+    align-items: center;
+}
+
 #main .main .connection .conn {
     overflow: hidden;
     position: absolute;
-    top: 30px;
+    top: 32px;
     left: 0;
     right: 0;
     bottom: 30px;

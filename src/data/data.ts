@@ -1,5 +1,7 @@
 import RedisConnect from '@/components/redis/Connection.vue'
 
+import RedisVue from '@/components/redis/TabDb.vue'
+
 const DBType = [
     {
         label: 'Redis',
@@ -15,6 +17,10 @@ const ConnectionComponents = {
     'redis': RedisConnect,
 }
 
+const TabComponents = {
+    'redis:db': RedisVue
+}
+
 const RedisConnectInit = {
     name: '',
     host: 'localhost',
@@ -24,4 +30,4 @@ const RedisConnectInit = {
     index: '0'
 }
 
-export { DBType, ConnectionComponents, RedisConnectInit }
+export { DBType, ConnectionComponents, TabComponents, RedisConnectInit }

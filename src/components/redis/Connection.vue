@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { h, ref, computed, onBeforeMount } from 'vue'
+import { h, ref, onBeforeMount } from 'vue'
 import { invoke } from '@tauri-apps/api/tauri'
-import { NTree, NIcon, TreeOption } from 'naive-ui'
+import { NTree, NIcon, TreeOption, DropdownOption, NDropdown } from 'naive-ui'
 import { ServerSharp, ChevronForward } from '@vicons/ionicons5'
 import { nanoid } from 'nanoid'
 
@@ -13,13 +13,14 @@ const props = defineProps<{
 }>()
 const emits = defineEmits<{
     (e: 'handleOpenTab', val: OpenTabMesagae): void
+    (e: 'handleDeleteConnection', id: string): void
 }>()
 
 const currentScope = ref<string>('')
 const info = ref<any>({})
 
 onBeforeMount(async () => {
-    const res = await invoke<string>('key_space')
+    const res = await invoke<string>('key_space', { conn: { ...props, db: "0" } })
     res.split('\n').forEach(item => {
         item = item.trim()
         if (item.length > 0) {
@@ -41,6 +42,10 @@ const renderSwitcherIcon = () => {
 
 const defaultExpandedKeys = ref([])
 
+const showContextmenu = ref(false)
+const optionsContextmenu = ref<DropdownOption[]>([])
+const xPos = ref(0)
+const yPos = ref(0)
 const nodeProps = ({ option }: { option: any }) => {
     return {
         onClick() {
@@ -49,6 +54,21 @@ const nodeProps = ({ option }: { option: any }) => {
             }
         },
         onContextmenu(e: MouseEvent): void {
+            if (option.children != undefined && option.children != null) {
+                optionsContextmenu.value = [{
+                    label: 'Delete',
+                    key: 'delete',
+                    props: {
+                        onClick: () => {
+                            emits('handleDeleteConnection', props.conn.id)
+                        }
+                    }
+                }]
+                showContextmenu.value = true
+                xPos.value = e.clientX
+                yPos.value = e.clientY
+                e.preventDefault()
+            }
         }
     }
 }
@@ -76,6 +96,8 @@ const data = ref<TreeOption[]>([{
 
 <template>
     <div>
+        <n-dropdown trigger="manual" size="small" placement="bottom-start" :show="showContextmenu"
+            :options="(optionsContextmenu as any)" :x="xPos" :y="yPos" @clickoutside="showContextmenu = false" />
         <n-tree block-line :data="data" selectable :node-props="nodeProps" expand-on-click
             :render-switcher-icon="renderSwitcherIcon" :default-expanded-keys="defaultExpandedKeys" />
     </div>
