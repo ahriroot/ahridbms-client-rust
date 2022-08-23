@@ -2,42 +2,38 @@
 import { h, ref, onBeforeMount } from 'vue'
 import {
     NTable, NLayout, NTag, NButton, NIcon, NModal, SelectRenderLabel, useLoadingBar,
-    NSpace, NCard, NSelect, NInput, useMessage, NSpin, NDropdown
+    NSpace, NCard, NSelect, NInput, useMessage, NSpin, NDropdown, NInputNumber
 } from 'naive-ui'
 import { Add, Reload, CloudUploadOutline, Trash, Key, Copy, ArrowUp, ArrowDown } from '@vicons/ionicons5'
 import { invoke } from '@tauri-apps/api/tauri'
 import useClipboard from "vue-clipboard3"
 import { Connection } from '@/types/Connection';
-import { setString } from '@/api/redis'
+import { setString, rpush, sadd, zadd, hmset } from '@/api/redis'
+import { AllKeys, Keyvalue } from '@/types/redis'
+import { diffDatetime } from '@/utils/datetime'
 
 const props = defineProps<{
     conn: Connection
     db: string
 }>()
-const emits = defineEmits<{
-    (e: 'handle', val: null): void
-}>()
-
-interface Keyvalue {
-    key: string
-    key_type: string
-    value: string
-    size: number
-    ttl: number
-}
-interface Data {
-    [key: string]: Keyvalue
-}
 
 const { toClipboard } = useClipboard();
 const message = useMessage()
 const loadingBar = useLoadingBar()
-const result = ref<Keyvalue[]>([])
-const showAdd = ref<boolean>(false)
+
+const result = ref<Keyvalue[]>([])  // 所有 keys
+const showAdd = ref<boolean>(false)  // 显示新建 key 模态框
+
+const showLoadingTable = ref<boolean>(false)  // table loading 动画
+const loadingCount = ref<number>(0)  // loading 动画计数
+
+const timer = ref<any>(null)  // 计时器
+const before = ref<Date>(new Date())
+const lastReload = ref<string>('less 1m')
 
 const init = async () => {
     loadingStart()
-    let res = await invoke<Data[]>('keys', { conn: props })
+    let res = await invoke<AllKeys[]>('keys', { conn: props })
     console.log(res)
     result.value = []
     res.forEach(item => {
@@ -45,6 +41,8 @@ const init = async () => {
             result.value.push(item[key])
         }
     })
+    before.value = new Date()
+    lastReload.value = await diffDatetime(before.value)
     loadingFinish()
 }
 
@@ -83,6 +81,29 @@ const fieldValue = ref<{
             value: string
         }[]
         ttl: string
+    },
+    set: {
+        key: string
+        value: {
+            value: string
+        }[]
+        ttl: string
+    },
+    zset: {
+        key: string
+        value: {
+            score: number
+            value: string
+        }[]
+        ttl: string
+    },
+    hash: {
+        key: string
+        value: {
+            key: string
+            value: string
+        }[]
+        ttl: string
     }
 }>({
     string: {
@@ -94,6 +115,35 @@ const fieldValue = ref<{
         key: '',
         value: [
             {
+                value: ''
+            }
+        ],
+        ttl: '-1'
+    },
+    set: {
+        key: '',
+        value: [
+            {
+                value: ''
+            }
+        ],
+        ttl: '-1'
+    },
+    zset: {
+        key: '',
+        value: [
+            {
+                score: 0,
+                value: ''
+            }
+        ],
+        ttl: '-1'
+    },
+    hash: {
+        key: '',
+        value: [
+            {
+                key: '',
                 value: ''
             }
         ],
@@ -115,6 +165,60 @@ const handleListItem = (index: number, opera: 1 | 2 | 3) => {
             break
         case 3:  // 删除
             fieldValue.value.list.value.splice(index, 1)
+            break
+    }
+}
+
+const handleSetItem = (index: number, opera: 1 | 2 | 3) => {
+    switch (opera) {
+        case 1:  // 向下
+            if (index < fieldValue.value.set.value.length) {
+                [fieldValue.value.set.value[index], fieldValue.value.set.value[index + 1]] = [fieldValue.value.set.value[index + 1], fieldValue.value.set.value[index]]
+            }
+            break
+        case 2:  // 向上
+            if (index > 0) {
+                [fieldValue.value.set.value[index - 1], fieldValue.value.set.value[index]] = [fieldValue.value.set.value[index], fieldValue.value.set.value[index - 1]]
+            }
+            break
+        case 3:  // 删除
+            fieldValue.value.set.value.splice(index, 1)
+            break
+    }
+}
+
+const handleZsetItem = (index: number, opera: 1 | 2 | 3) => {
+    switch (opera) {
+        case 1:  // 向下
+            if (index < fieldValue.value.zset.value.length) {
+                [fieldValue.value.zset.value[index], fieldValue.value.zset.value[index + 1]] = [fieldValue.value.zset.value[index + 1], fieldValue.value.zset.value[index]]
+            }
+            break
+        case 2:  // 向上
+            if (index > 0) {
+                [fieldValue.value.zset.value[index - 1], fieldValue.value.zset.value[index]] = [fieldValue.value.zset.value[index], fieldValue.value.zset.value[index - 1]]
+            }
+            break
+        case 3:  // 删除
+            fieldValue.value.zset.value.splice(index, 1)
+            break
+    }
+}
+
+const handleHashItem = (index: number, opera: 1 | 2 | 3) => {
+    switch (opera) {
+        case 1:  // 向下
+            if (index < fieldValue.value.hash.value.length) {
+                [fieldValue.value.hash.value[index], fieldValue.value.hash.value[index + 1]] = [fieldValue.value.hash.value[index + 1], fieldValue.value.hash.value[index]]
+            }
+            break
+        case 2:  // 向上
+            if (index > 0) {
+                [fieldValue.value.hash.value[index - 1], fieldValue.value.hash.value[index]] = [fieldValue.value.hash.value[index], fieldValue.value.hash.value[index - 1]]
+            }
+            break
+        case 3:  // 删除
+            fieldValue.value.hash.value.splice(index, 1)
             break
     }
 }
@@ -162,6 +266,7 @@ const renderLabel: SelectRenderLabel = (option) => {
     )
 }
 
+
 const handleReload = async () => {
     showLoadingTable.value = true
     await init()
@@ -171,10 +276,14 @@ const handleReloadKey = async () => {
     loadingStart()
     const res = await invoke<any>('get', { conn: props, key: detailKey.value })
     console.log(res)
-    detailTTL.value = res['String'].ttl.toString()
+    let tmp_ket = 'String'
+    for (const key in res) {
+        tmp_ket = key
+    }
+    detailTTL.value = res[tmp_ket].ttl.toString()
     result.value.forEach(item => {
-        if (item.key == res['String'].key) {
-            item.ttl = res['String'].ttl
+        if (item.key == res[tmp_ket].key) {
+            item.ttl = res[tmp_ket].ttl
         }
     })
     loadingFinish()
@@ -196,8 +305,6 @@ const handleRefresh = async () => {
     }
 }
 
-const showLoadingTable = ref<boolean>(false)
-const loadingCount = ref<number>(0)
 const loadingStart = () => {
     loadingCount.value++
     if (loadingCount.value == 1) {
@@ -215,7 +322,8 @@ const handleSubmitAdd = async () => {
     switch (fieldType.value) {
         case 'string':
             loadingStart()
-            if (await setString({ conn: props, key: fieldValue.value.string.key, value: fieldValue.value.string.value, ttl: Number(fieldValue.value.string.ttl) }) == "Ok") {
+            let string_res = await setString({ conn: props, key: fieldValue.value.string.key, value: fieldValue.value.string.value, ttl: Number(fieldValue.value.string.ttl) })
+            if (string_res == "OK") {
                 message.success('Success')
                 await handleReload()
             } else {
@@ -225,13 +333,50 @@ const handleSubmitAdd = async () => {
             break
         case 'list':
             loadingStart()
-            let values = fieldValue.value.list.value.map(item => item.value)
-            let res = await invoke<string>('rpush', { conn: props, key: fieldValue.value.list.key, value: values, ttl: Number(fieldValue.value.list.ttl) })
-            if (res == "Ok") {
+            let list_values = fieldValue.value.list.value.filter(item => item.value).map(item => item.value)
+            let list_res = await rpush({ conn: props, key: fieldValue.value.list.key, value: list_values, ttl: Number(fieldValue.value.list.ttl) })
+            if (list_res >= 0) {
+                message.success(`Success, ${list_res} items added`)
+                await handleReload()
+            } else {
+                console.log(list_res)
+                message.error('Error')
+            }
+            loadingFinish()
+            break
+        case 'set':
+            loadingStart()
+            let set_values = fieldValue.value.set.value.filter(item => item.value).map(item => item.value)
+            let set_res = await sadd({ conn: props, key: fieldValue.value.list.key, value: set_values, ttl: Number(fieldValue.value.list.ttl) })
+            if (set_res >= 0) {
+                message.success(`Success, ${set_res} items added`)
+                await handleReload()
+            } else {
+                console.log(set_res)
+                message.error('Error')
+            }
+            loadingFinish()
+            break
+        case 'zset':
+            loadingStart()
+            let zset_res = await zadd({ conn: props, key: fieldValue.value.zset.key, value: fieldValue.value.zset.value, ttl: Number(fieldValue.value.zset.ttl) })
+            if (zset_res >= 0) {
+                message.success(`Success, ${zset_res} items added`)
+                await handleReload()
+            } else {
+                console.log(zset_res)
+                message.error('Error')
+            }
+            loadingFinish()
+            break
+        case 'hash':
+            loadingStart()
+            let hash_res = await hmset({ conn: props, key: fieldValue.value.hash.key, value: fieldValue.value.hash.value, ttl: Number(fieldValue.value.hash.ttl) })
+            if (hash_res == 'OK') {
                 message.success('Success')
                 await handleReload()
             } else {
-                console.log(res)
+                console.log(hash_res)
                 message.error('Error')
             }
             loadingFinish()
@@ -292,6 +437,12 @@ const handleDetail = async (val: Keyvalue) => {
 
 onBeforeMount(async () => {
     await init()
+    if (timer.value) {
+        clearInterval(timer.value)
+    }
+    timer.value = setInterval(async () => {
+        lastReload.value = await diffDatetime(before.value)
+    }, 5000)
 })
 
 const dropdownList = ref([
@@ -337,7 +488,8 @@ const handleSelect = (val: string) => {
                         <n-input v-model:value="fieldValue.list.key" type="text" placeholder="Key" />
                         <n-space vertical>
                             <n-space v-for="(i, index) in fieldValue.list.value">
-                                <n-input v-model:value="i.value" type="text" placeholder="Value" size="small" />
+                                <n-input style="width: 368px" v-model:value="i.value" type="text" placeholder="Value"
+                                    size="small" />
                                 <n-button strong secondary type="info" size="small" @click="handleListItem(index, 3)">
                                     <template #icon>
                                         <n-icon>
@@ -371,6 +523,128 @@ const handleSelect = (val: string) => {
                         <n-input v-model:value="fieldValue.list.ttl" type="text" placeholder="TTL" />
                     </n-space>
                 </n-card>
+                <n-card v-else-if="fieldType == 'set'">
+                    <n-space vertical>
+                        <n-input v-model:value="fieldValue.set.key" type="text" placeholder="Key" />
+                        <n-space vertical>
+                            <n-space v-for="(i, index) in fieldValue.set.value">
+                                <n-input style="width: 368px" v-model:value="i.value" type="text" placeholder="Value"
+                                    size="small" />
+                                <n-button strong secondary type="info" size="small" @click="handleSetItem(index, 3)">
+                                    <template #icon>
+                                        <n-icon>
+                                            <trash />
+                                        </n-icon>
+                                    </template>
+                                </n-button>
+                                <n-button strong secondary type="info" size="small"
+                                    :disabled="index == fieldValue.set.value.length - 1"
+                                    @click="handleSetItem(index, 1)">
+                                    <template #icon>
+                                        <n-icon>
+                                            <arrow-down />
+                                        </n-icon>
+                                    </template>
+                                </n-button>
+                                <n-button strong secondary type="info" size="small" :disabled="index == 0"
+                                    @click="handleSetItem(index, 2)">
+                                    <template #icon>
+                                        <n-icon>
+                                            <arrow-up />
+                                        </n-icon>
+                                    </template>
+                                </n-button>
+                            </n-space>
+                            <n-button strong secondary type="info" size="small"
+                                @click="fieldValue.set.value.push({ value: '' })">
+                                Add
+                            </n-button>
+                        </n-space>
+                        <n-input v-model:value="fieldValue.set.ttl" type="text" placeholder="TTL" />
+                    </n-space>
+                </n-card>
+                <n-card v-else-if="fieldType == 'zset'">
+                    <n-space vertical>
+                        <n-input v-model:value="fieldValue.zset.key" type="text" placeholder="Key" />
+                        <n-space vertical>
+                            <n-space v-for="(i, index) in fieldValue.zset.value">
+                                <n-input-number style="width: 180px" v-model:value="i.score" placeholder="Score"
+                                    size="small" />
+                                <n-input v-model:value="i.value" type="text" placeholder="Value" size="small" />
+                                <n-button strong secondary type="info" size="small" @click="handleZsetItem(index, 3)">
+                                    <template #icon>
+                                        <n-icon>
+                                            <trash />
+                                        </n-icon>
+                                    </template>
+                                </n-button>
+                                <n-button strong secondary type="info" size="small"
+                                    :disabled="index == fieldValue.zset.value.length - 1"
+                                    @click="handleZsetItem(index, 1)">
+                                    <template #icon>
+                                        <n-icon>
+                                            <arrow-down />
+                                        </n-icon>
+                                    </template>
+                                </n-button>
+                                <n-button strong secondary type="info" size="small" :disabled="index == 0"
+                                    @click="handleZsetItem(index, 2)">
+                                    <template #icon>
+                                        <n-icon>
+                                            <arrow-up />
+                                        </n-icon>
+                                    </template>
+                                </n-button>
+                            </n-space>
+                            <n-button strong secondary type="info" size="small"
+                                @click="fieldValue.zset.value.push({ score: 0, value: '' })">
+                                Add
+                            </n-button>
+                        </n-space>
+                        <n-input v-model:value="fieldValue.zset.ttl" type="text" placeholder="TTL" />
+                    </n-space>
+                </n-card>
+                <n-card v-else-if="fieldType == 'hash'">
+                    <n-space vertical>
+                        <n-input v-model:value="fieldValue.hash.key" type="text" placeholder="Key" />
+                        <n-space vertical>
+                            <n-space v-for="(i, index) in fieldValue.hash.value">
+                                <n-input style="width: 180px" v-model:value="i.key" type="text" placeholder="Key"
+                                    size="small" />
+                                <n-input v-model:value="i.value" type="text" placeholder="Value" size="small" />
+                                <n-button strong secondary type="info" size="small" @click="handleHashItem(index, 3)">
+                                    <template #icon>
+                                        <n-icon>
+                                            <trash />
+                                        </n-icon>
+                                    </template>
+                                </n-button>
+                                <n-button strong secondary type="info" size="small"
+                                    :disabled="index == fieldValue.hash.value.length - 1"
+                                    @click="handleHashItem(index, 1)">
+                                    <template #icon>
+                                        <n-icon>
+                                            <arrow-down />
+                                        </n-icon>
+                                    </template>
+                                </n-button>
+                                <n-button strong secondary type="info" size="small" :disabled="index == 0"
+                                    @click="handleHashItem(index, 2)">
+                                    <template #icon>
+                                        <n-icon>
+                                            <arrow-up />
+                                        </n-icon>
+                                    </template>
+                                </n-button>
+                            </n-space>
+                            <n-button strong secondary type="info" size="small"
+                                @click="fieldValue.hash.value.push({ key: '', value: '' })">
+                                Add
+                            </n-button>
+                        </n-space>
+                        <n-input v-model:value="fieldValue.hash.ttl" type="text" placeholder="TTL" />
+                    </n-space>
+                </n-card>
                 <n-card v-else>
                 </n-card>
             </n-layout>
@@ -386,6 +660,7 @@ const handleSelect = (val: string) => {
             <div class="header">
                 <div></div>
                 <div>
+                    {{ lastReload }}
                     <n-dropdown trigger="hover" size="small" placement="bottom-start" :options="dropdownList"
                         @select="handleSelect">
                         <n-button strong secondary circle type="info" size="small" @click="showAdd = true">
@@ -511,15 +786,39 @@ const handleSelect = (val: string) => {
                 <div v-if="detailKeyType == 'string'">
                     <n-space vertical>
                         <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
-                            readonly></n-input>
+                            readonly placeholder="Key"></n-input>
                         <n-input v-model:value="detailValue" type="textarea"></n-input>
                     </n-space>
                 </div>
                 <div v-if="detailKeyType == 'list'">
                     <n-space vertical>
                         <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
-                            readonly></n-input>
+                            readonly placeholder="Key"></n-input>
                         <n-input v-for="i in detailValue" :value="i" type="text" disabled></n-input>
+                    </n-space>
+                </div>
+                <div v-if="detailKeyType == 'set'">
+                    <n-space vertical>
+                        <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
+                            readonly placeholder="Key"></n-input>
+                        <!-- <n-input v-for="i in detailValue" :value="i" type="text" disabled></n-input> -->
+                        {{ detailValue }}
+                    </n-space>
+                </div>
+                <div v-if="detailKeyType == 'zset'">
+                    <n-space vertical>
+                        <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
+                            readonly placeholder="Key"></n-input>
+                        <!-- <n-input v-for="i in detailValue" :value="i" type="text" disabled></n-input> -->
+                        {{ detailValue }}
+                    </n-space>
+                </div>
+                <div v-if="detailKeyType == 'hash'">
+                    <n-space vertical>
+                        <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
+                            readonly placeholder="Key"></n-input>
+                        <!-- <n-input v-for="i in detailValue" :value="i" type="text" disabled></n-input> -->
+                        {{ detailValue }}
                     </n-space>
                 </div>
             </n-layout>

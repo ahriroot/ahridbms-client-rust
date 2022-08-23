@@ -15,7 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         dbms_redis::expire,
         dbms_redis::key_space,
         dbms_redis::set_string,
-        dbms_redis::rpush
+        dbms_redis::rpush,
+        dbms_redis::sadd,
+        dbms_redis::zadd,
+        dbms_redis::hmset,
     ]);
     app.run(tauri::generate_context!())
         .expect("error while running ahridbms application");

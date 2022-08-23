@@ -10,9 +10,10 @@ import { nanoid } from 'nanoid'  // 唯一 id 生成器
 
 import { DBType, ConnectionComponents, RedisConnectInit, TabComponents } from '@/data/data'
 import { IConnectComponents, ITabComponents } from '@/types/data'
-import { Connection, RedisConnect } from '@/types/Connection'
+import { Connection } from '@/types/Connection'
 import { getConnections, saveConnections, getTabs, saveTabs } from '@/utils/storage'
 import { OpenTabMesagae } from '@/types/Message'
+import { RedisConnect } from './types/redis'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏

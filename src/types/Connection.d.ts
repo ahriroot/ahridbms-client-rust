@@ -1,4 +1,4 @@
-import RedisConnect from './redis/Conn.ts'
+import { RedisConnect } from './redis'
 
 interface Connection {
     id: string
@@ -6,4 +6,4 @@ interface Connection {
     info: RedisConnect
 }
 
-export { Connection, RedisConnect }
+export { Connection }
