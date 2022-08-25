@@ -1,5 +1,5 @@
 import RedisConnect from './Conn'
-import { Keyvalue, AllKeys } from './Data'
+import { Keyvalue, AllKeys, Response, INewFieldValue } from './Data'
 
 interface Connection {
     id: string
@@ -7,4 +7,4 @@ interface Connection {
     info: RedisConnect
 }
 
-export { Connection, RedisConnect, Keyvalue, AllKeys }
+export { Connection, RedisConnect, Keyvalue, AllKeys, Response, INewFieldValue }

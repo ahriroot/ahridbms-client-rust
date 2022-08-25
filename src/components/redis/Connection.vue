@@ -7,6 +7,7 @@ import { nanoid } from 'nanoid'
 
 import { OpenTabMesagae } from '@/types/Message'
 import { Connection } from '@/types/Connection'
+import { Response } from '@/types/redis'
 
 const props = defineProps<{
     conn: Connection
@@ -20,8 +21,8 @@ const currentScope = ref<string>('')
 const info = ref<any>({})
 
 onBeforeMount(async () => {
-    const res = await invoke<string>('key_space', { conn: { ...props, db: "0" } })
-    res.split('\n').forEach(item => {
+    const res = await invoke<Response<string>>('key_space', { conn: { ...props, db: "0" } })
+    res.data.split('\n').forEach(item => {
         item = item.trim()
         if (item.length > 0) {
             if (item.startsWith('#')) {

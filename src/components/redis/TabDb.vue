@@ -8,9 +8,12 @@ import { Add, Reload, CloudUploadOutline, Trash, Key, Copy, ArrowUp, ArrowDown }
 import { invoke } from '@tauri-apps/api/tauri'
 import useClipboard from "vue-clipboard3"
 import { Connection } from '@/types/Connection';
-import { setString, rpush, sadd, zadd, hmset } from '@/api/redis'
-import { AllKeys, Keyvalue } from '@/types/redis'
+import { keys, setString, rpush, sadd, zadd, hmset } from '@/api/redis'
+import { INewFieldValue, Keyvalue } from '@/types/redis'
 import { diffDatetime } from '@/utils/datetime'
+import { NewFieldValue } from '@/data/redis'
+
+window.$message = useMessage()
 
 const props = defineProps<{
     conn: Connection
@@ -33,16 +36,18 @@ const lastReload = ref<string>('less 1m')
 
 const init = async () => {
     loadingStart()
-    let res = await invoke<AllKeys[]>('keys', { conn: props })
-    console.log(res)
-    result.value = []
-    res.forEach(item => {
-        for (const key in item) {
-            result.value.push(item[key])
-        }
-    })
-    before.value = new Date()
-    lastReload.value = await diffDatetime(before.value)
+    try {
+        let res = await keys({ conn: props, arg: '*' })
+        result.value = []
+        res.forEach(item => {
+            for (const key in item) {
+                result.value.push(item[key])
+            }
+        })
+        before.value = new Date()
+        lastReload.value = await diffDatetime(before.value)
+    } catch {
+    }
     loadingFinish()
 }
 
@@ -69,87 +74,7 @@ const fieldTypeList = ref([
         value: 'hash'
     }
 ])
-const fieldValue = ref<{
-    string: {
-        key: string
-        value: string
-        ttl: string
-    },
-    list: {
-        key: string
-        value: {
-            value: string
-        }[]
-        ttl: string
-    },
-    set: {
-        key: string
-        value: {
-            value: string
-        }[]
-        ttl: string
-    },
-    zset: {
-        key: string
-        value: {
-            score: number
-            value: string
-        }[]
-        ttl: string
-    },
-    hash: {
-        key: string
-        value: {
-            key: string
-            value: string
-        }[]
-        ttl: string
-    }
-}>({
-    string: {
-        key: '',
-        value: '',
-        ttl: '-1'
-    },
-    list: {
-        key: '',
-        value: [
-            {
-                value: ''
-            }
-        ],
-        ttl: '-1'
-    },
-    set: {
-        key: '',
-        value: [
-            {
-                value: ''
-            }
-        ],
-        ttl: '-1'
-    },
-    zset: {
-        key: '',
-        value: [
-            {
-                score: 0,
-                value: ''
-            }
-        ],
-        ttl: '-1'
-    },
-    hash: {
-        key: '',
-        value: [
-            {
-                key: '',
-                value: ''
-            }
-        ],
-        ttl: '-1'
-    },
-})
+const fieldValue = ref<INewFieldValue>(NewFieldValue)
 
 const handleListItem = (index: number, opera: 1 | 2 | 3) => {
     switch (opera) {
@@ -294,7 +219,7 @@ const handleRefresh = async () => {
         case 'string':
             loadingStart()
             let res = await invoke('expire', { conn: props, key: detailKey.value, ttl: Number(detailTTL.value) })
-            if (res = "Ok") {
+            if (res == "Ok") {
                 message.success('Success')
                 await handleReload()
             } else {
@@ -312,7 +237,9 @@ const loadingStart = () => {
     }
 }
 const loadingFinish = () => {
-    loadingCount.value--
+    if (loadingCount.value > 0) {
+        loadingCount.value--
+    }
     if (loadingCount.value == 0) {
         loadingBar.finish()
     }
@@ -414,20 +341,36 @@ const handleDelete = async (val: Keyvalue | null) => {
 const handleCopy = async (val: any) => {
     if (val != null && val != undefined) {
         let str;
-        try {
-            str = JSON.stringify(val)
-        } catch (error) {
-            str = val
+        // 判断 val 是否为字符串
+        if (typeof val === 'string') {
+            str = val;
+        } else if (typeof val === 'object') {
+            try {
+                str = JSON.stringify(val)
+            } catch (error) {
+                str = val.toString()
+            }
+        } else {
+            str = val.toString()
         }
         await toClipboard(str)
         message.success('Cpoied!', { duration: 800 })
     }
 }
 
+
 const detailKey = ref<string | null>(null)
 const detailValue = ref<any>('')
 const detailTTL = ref<string>('')
 const detailKeyType = ref<string>('')
+const zsetToJson = (val: string[]) => {
+    let res: any = {}
+    let len = val.length / 2
+    for (let i = 0; i < len; i++) {
+        res[val[i * 2]] = val[i * 2 + 1]
+    }
+    return res
+}
 const handleDetail = async (val: Keyvalue) => {
     detailTTL.value = val.ttl.toString()
     detailKey.value = val.key
@@ -794,31 +737,61 @@ const handleSelect = (val: string) => {
                     <n-space vertical>
                         <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
                             readonly placeholder="Key"></n-input>
-                        <n-input v-for="i in detailValue" :value="i" type="text" disabled></n-input>
+                        <n-table :bordered="true" :single-line="false" size="small">
+                            <tbody>
+                                <tr v-for="(v, index) in detailValue">
+                                    <td class="list-index">{{ index }}</td>
+                                    <td class="list-value">
+                                        {{ v }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </n-table>
                     </n-space>
                 </div>
                 <div v-if="detailKeyType == 'set'">
                     <n-space vertical>
                         <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
                             readonly placeholder="Key"></n-input>
-                        <!-- <n-input v-for="i in detailValue" :value="i" type="text" disabled></n-input> -->
-                        {{ detailValue }}
+                        <n-table :bordered="true" :single-line="false" size="small">
+                            <tbody>
+                                <tr v-for="v in detailValue">
+                                    <td class="set-key">{{ v }}</td>
+                                </tr>
+                            </tbody>
+                        </n-table>
                     </n-space>
                 </div>
                 <div v-if="detailKeyType == 'zset'">
                     <n-space vertical>
                         <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
                             readonly placeholder="Key"></n-input>
-                        <!-- <n-input v-for="i in detailValue" :value="i" type="text" disabled></n-input> -->
-                        {{ detailValue }}
+                        <n-table :bordered="true" :single-line="false" size="small">
+                            <tbody>
+                                <tr v-for="(v, k) in zsetToJson(detailValue)">
+                                    <td class="zset-key">{{ k }}</td>
+                                    <td class="zset-value">
+                                        {{ v }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </n-table>
                     </n-space>
                 </div>
                 <div v-if="detailKeyType == 'hash'">
                     <n-space vertical>
                         <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
                             readonly placeholder="Key"></n-input>
-                        <!-- <n-input v-for="i in detailValue" :value="i" type="text" disabled></n-input> -->
-                        {{ detailValue }}
+                        <n-table :bordered="true" :single-line="false" size="small">
+                            <tbody>
+                                <tr v-for="(v, k) in detailValue">
+                                    <td class="hash-key">{{ k }}</td>
+                                    <td class="hash-value">
+                                        {{ v }}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </n-table>
                     </n-space>
                 </div>
             </n-layout>
