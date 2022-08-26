@@ -2,7 +2,7 @@ use redis;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use super::entity::*;
+use crate::dbms_redis::entity::*;
 
 #[tauri::command]
 pub async fn keys(conn: Connection, arg: String) -> Response<Vec<KeyValue>> {
@@ -425,7 +425,12 @@ pub struct HashValue {
 }
 
 #[tauri::command]
-pub async fn hmset(conn: Connection, key: String, value: Vec<HashValue>, ttl: i64) -> Response<String> {
+pub async fn hmset(
+    conn: Connection,
+    key: String,
+    value: Vec<HashValue>,
+    ttl: i64,
+) -> Response<String> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
         "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
