@@ -379,6 +379,10 @@ const handleDetail = async (val: Keyvalue) => {
 }
 
 onBeforeMount(async () => {
+    console.log(1)
+    const res = await invoke<any>('select', { skip: 0, limit: 10, page: 0, size: 0, table: 'user' })
+    console.log(res)
+    console.log(2)
     await init()
     if (timer.value) {
         clearInterval(timer.value)
