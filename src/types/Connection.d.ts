@@ -1,9 +1,10 @@
 import { RedisConnect } from './redis'
+import { PostgresConnect } from './postgres'
 
-interface Connection {
+interface Connection<T> {
     id: string
     db_type: string,
-    info: RedisConnect
-}
+    info: T
+}  // RedisConnect | PostgresConnect
 
 export { Connection }

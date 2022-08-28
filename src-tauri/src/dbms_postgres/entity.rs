@@ -33,7 +33,7 @@ impl<T> Response<T> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KV<T> {
     pub key: String,
-    pub value: T,
+    pub value: Option<T>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -65,4 +65,27 @@ pub enum Field {
     // other
     Json(KV<String>),
     Xml(KV<String>),
+    Xid(KV<u32>),
+    Aclitem(KV<String>),
+    AclitemArray(KV<Vec<String>>),
+
+    // ignore
+    Ignore(KV<String>),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Info {
+    pub name: String,
+    pub host: String,
+    pub port: String,
+    pub user: String,
+    pub pass: String,
+    pub db: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Connection {
+    pub id: String,
+    pub db_type: String,
+    pub info: Info,
 }

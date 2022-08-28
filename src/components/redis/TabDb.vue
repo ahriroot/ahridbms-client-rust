@@ -9,14 +9,14 @@ import { invoke } from '@tauri-apps/api/tauri'
 import useClipboard from "vue-clipboard3"
 import { Connection } from '@/types/Connection';
 import { keys, setString, rpush, sadd, zadd, hmset } from '@/api/redis'
-import { INewFieldValue, Keyvalue } from '@/types/redis'
+import { INewFieldValue, Keyvalue, RedisConnect } from '@/types/redis'
 import { diffDatetime } from '@/utils/datetime'
 import { NewFieldValue } from '@/data/redis'
 
 window.$message = useMessage()
 
 const props = defineProps<{
-    conn: Connection
+    conn: Connection<RedisConnect>
     db: string
 }>()
 
@@ -379,10 +379,6 @@ const handleDetail = async (val: Keyvalue) => {
 }
 
 onBeforeMount(async () => {
-    console.log(1)
-    const res = await invoke<any>('select', { skip: 0, limit: 10, page: 0, size: 0, table: 'user' })
-    console.log(res)
-    console.log(2)
     await init()
     if (timer.value) {
         clearInterval(timer.value)

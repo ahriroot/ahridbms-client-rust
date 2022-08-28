@@ -22,7 +22,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ahridbms::dbms_redis::api::hmset,
 
         // postgres
-        ahridbms::dbms_postgres::api::select,
+        ahridbms::dbms_postgres::api::pg_select,
+        ahridbms::dbms_postgres::api::pg_get_databases,
     ]);
     app.run(tauri::generate_context!())
         .expect("error while running ahridbms application");

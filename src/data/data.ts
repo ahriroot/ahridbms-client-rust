@@ -1,4 +1,5 @@
 import RedisConnect from '@/components/redis/Connection.vue'
+import PostgresConnect from '@/components/postgres/Connection.vue'
 
 import RedisVue from '@/components/redis/TabDb.vue'
 
@@ -15,6 +16,7 @@ const DBType = [
 
 const ConnectionComponents = {
     'redis': RedisConnect,
+    'postgres': PostgresConnect,
 }
 
 const TabComponents = {
@@ -30,4 +32,13 @@ const RedisConnectInit = {
     index: '0'
 }
 
-export { DBType, ConnectionComponents, TabComponents, RedisConnectInit }
+const PostgresConnectInit = {
+    name: '',
+    host: 'localhost',
+    port: '5432',
+    user: 'postgres',
+    pass: '',
+    db: ''
+}
+
+export { DBType, ConnectionComponents, TabComponents, RedisConnectInit, PostgresConnectInit }

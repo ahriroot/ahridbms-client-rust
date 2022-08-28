@@ -7,34 +7,40 @@ import { nanoid } from 'nanoid'
 
 import { OpenTabMesagae } from '@/types/Message'
 import { Connection } from '@/types/Connection'
-import { RedisConnect, Response } from '@/types/redis'
+import { Response } from '@/types/redis'
+import { PgDatabase, PostgresConnect } from '@/types/postgres'
+import { pgGetDatabases } from '@/api/postgres'
 
 const props = defineProps<{
-    conn: Connection<RedisConnect>
+    conn: Connection<PostgresConnect>
 }>()
 const emits = defineEmits<{
     (e: 'handleOpenTab', val: OpenTabMesagae): void
     (e: 'handleDeleteConnection', id: string): void
 }>()
 
-const currentScope = ref<string>('')
-const info = ref<any>({})
+const databases = ref<PgDatabase[]>([])
 
 onBeforeMount(async () => {
-    const res = await invoke<Response<string>>('key_space', { conn: { ...props, db: "0" } })
-    res.data.split('\n').forEach(item => {
-        item = item.trim()
-        if (item.length > 0) {
-            if (item.startsWith('#')) {
-                currentScope.value = item
-                info.value[currentScope.value] = []
-            } else {
-                if (info.value[currentScope.value]) {
-                    info.value[currentScope.value].push(item)
-                }
+    const res = await pgGetDatabases({ conn: props.conn })
+    res.forEach((db: any) => {
+        let database: any = {};
+        db.forEach((field: any) => {
+            for (const k in field) {
+                database[field[k].key] = field[k].value
             }
-        }
+
+        })
+        databases.value.push(database as PgDatabase)
     })
+    console.log(databases.value)
+
+    data.value = [{
+        key: `redis:${props.conn.info.name}`,
+        label: props.conn.info.name,
+        value: `redis:${props.conn.info.name}`,
+        children: rangeDB()
+    }]
 })
 
 const renderSwitcherIcon = () => {
@@ -76,29 +82,22 @@ const nodeProps = ({ option }: { option: any }) => {
 
 const rangeDB = (): TreeOption[] => {
     let tmp: TreeOption[] = []
-    for (let index = 0; index < 16; index++) {
+    databases.value.forEach((db: PgDatabase) => {
         tmp.push({
-            key: `db${index}`,
-            label: index.toString(),
-            value: index,
+            key: db.datname,
+            label: db.datname,
+            value: db.datname,
             prefix: () => h(NIcon, null, { default: () => h(ServerSharp) })
         })
-    }
+    })
     return tmp
 }
 
-const data = ref<TreeOption[]>([{
-    key: `redis:${props.conn.info.name}`,
-    label: props.conn.info.name,
-    value: `redis:${props.conn.info.name}`,
-    children: rangeDB()
-}])
+const data = ref<TreeOption[]>([])
 </script>
 
 <template>
     <div>
-        <n-dropdown trigger="manual" size="small" placement="bottom-start" :show="showContextmenu"
-            :options="(optionsContextmenu as any)" :x="xPos" :y="yPos" @clickoutside="showContextmenu = false" />
         <n-tree block-line :data="data" selectable :node-props="nodeProps" expand-on-click
             :render-switcher-icon="renderSwitcherIcon" :default-expanded-keys="defaultExpandedKeys" />
     </div>

@@ -8,20 +8,22 @@ import {
 import { ArrowForward, ServerSharp, Add } from '@vicons/ionicons5'
 import { nanoid } from 'nanoid'  // 唯一 id 生成器
 
-import { DBType, ConnectionComponents, RedisConnectInit, TabComponents } from '@/data/data'
+import { DBType, ConnectionComponents, RedisConnectInit, TabComponents, PostgresConnectInit } from '@/data/data'
 import { IConnectComponents, ITabComponents } from '@/types/data'
 import { Connection } from '@/types/Connection'
 import { getConnections, saveConnections, getTabs, saveTabs } from '@/utils/storage'
 import { OpenTabMesagae } from '@/types/Message'
-import { RedisConnect } from './types/redis'
+import { RedisConnect } from '@/types/redis'
+import { PostgresConnect } from '@/types/postgres'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏
 const showConn = ref<boolean>(false)  // 显示编辑连接窗口
 const dbTypeList = ref(DBType)  // 数据库列表
-const connList = ref<Connection[]>([])  // 数据库链接列表
+const connList = ref<Connection<RedisConnect>[]>([])  // 数据库链接列表
 const dbConn = ref<string>('redis')  // 正在编辑的连接类型
 const dbRedis = ref<RedisConnect>(RedisConnectInit)  // 默认 redis 数据库连接信息
+const dbPostgres = ref<PostgresConnect>(PostgresConnectInit)  // 默认 postgres 数据库连接信息
 const connComponents = shallowRef<IConnectComponents>(ConnectionComponents)  // 数据库连接组件
 
 // tab 组件
@@ -59,6 +61,13 @@ const handleSubmitConn = async () => {
                 id: nanoid(),
                 db_type: 'redis',
                 info: JSON.parse(JSON.stringify(dbRedis.value))
+            })
+            break
+        case 'postgres':
+            connList.value.push({
+                id: nanoid(),
+                db_type: 'postgres',
+                info: JSON.parse(JSON.stringify(dbPostgres.value))
             })
             break
     }
@@ -134,6 +143,20 @@ const handleClose = (val: string) => {
                                     <n-input v-model:value="dbRedis.pass" type="text" placeholder="Pass" />
                                 </n-space>
                                 <n-input v-model:value="dbRedis.index" type="text" placeholder="DB Index" />
+                            </n-space>
+                        </n-card>
+                        <n-card v-else-if="dbConn == 'postgres'">
+                            <n-space vertical>
+                                <n-input v-model:value="dbPostgres.name" type="text" placeholder="Name" />
+                                <n-space>
+                                    <n-input v-model:value="dbPostgres.host" type="text" placeholder="Host" />
+                                    <n-input v-model:value="dbPostgres.port" type="text" placeholder="Port" />
+                                </n-space>
+                                <n-space>
+                                    <n-input v-model:value="dbPostgres.user" type="text" placeholder="User" />
+                                    <n-input v-model:value="dbPostgres.pass" type="text" placeholder="Pass" />
+                                </n-space>
+                                <n-input v-model:value="dbPostgres.db" type="text" placeholder="DB Name" />
                             </n-space>
                         </n-card>
                         <n-card v-else>
