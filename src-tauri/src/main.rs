@@ -19,6 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ahridbms::dbms_redis::api::rpush,
         ahridbms::dbms_redis::api::sadd,
         ahridbms::dbms_redis::api::zadd,
+        ahridbms::dbms_redis::api::srem,
         ahridbms::dbms_redis::api::hmset,
 
         // postgres

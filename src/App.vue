@@ -15,6 +15,7 @@ import { getConnections, saveConnections, getTabs, saveTabs } from '@/utils/stor
 import { OpenTabMesagae } from '@/types/Message'
 import { RedisConnect } from '@/types/redis'
 import { PostgresConnect } from '@/types/postgres'
+import { useIndexStore } from '@/store'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏
@@ -28,9 +29,13 @@ const connComponents = shallowRef<IConnectComponents>(ConnectionComponents)  // 
 
 // tab 组件
 const tabComponents = shallowRef<ITabComponents>(TabComponents)
+
+const store = useIndexStore()
 /** ------------------ 变量 End ------------------ **/
 
 onBeforeMount(async () => {
+    let config = localStorage.getItem('config')
+    store.updateConfig(config ? JSON.parse(config) : { deleteNoConfirm: false })
     connList.value = await getConnections()
     let connIds = connList.value.map(item => item.id)  // 所有链接 id
     let tmp = await getTabs()  // 所有标签页

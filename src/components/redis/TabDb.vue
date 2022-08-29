@@ -8,7 +8,7 @@ import { Add, Reload, CloudUploadOutline, Trash, Key, Copy, ArrowUp, ArrowDown }
 import { invoke } from '@tauri-apps/api/tauri'
 import useClipboard from "vue-clipboard3"
 import { Connection } from '@/types/Connection';
-import { keys, setString, rpush, sadd, zadd, hmset } from '@/api/redis'
+import { keys, setString, rpush, sadd, zadd, hmset, srem } from '@/api/redis'
 import { INewFieldValue, Keyvalue, RedisConnect } from '@/types/redis'
 import { diffDatetime } from '@/utils/datetime'
 import { NewFieldValue } from '@/data/redis'
@@ -199,16 +199,19 @@ const handleReload = async () => {
 }
 const handleReloadKey = async () => {
     loadingStart()
-    const res = await invoke<any>('get', { conn: props, key: detailKey.value })
-    console.log(res)
-    let tmp_ket = 'String'
+    const response = await invoke<any>('get', { conn: props, key: detailKey.value })
+    let res = response.data
+    let tmp_key = 'String'
     for (const key in res) {
-        tmp_ket = key
+        tmp_key = key
     }
-    detailTTL.value = res[tmp_ket].ttl.toString()
+    detailTTL.value = res[tmp_key].ttl.toString()
+    detailValue.value = res[tmp_key].value
     result.value.forEach(item => {
-        if (item.key == res[tmp_ket].key) {
-            item.ttl = res[tmp_ket].ttl
+        if (item.key == res[tmp_key].key) {
+            item.ttl = res[tmp_key].ttl
+            item.size = res[tmp_key].size
+            item.value = res[tmp_key].value
         }
     })
     loadingFinish()
@@ -274,7 +277,7 @@ const handleSubmitAdd = async () => {
         case 'set':
             loadingStart()
             let set_values = fieldValue.value.set.value.filter(item => item.value).map(item => item.value)
-            let set_res = await sadd({ conn: props, key: fieldValue.value.list.key, value: set_values, ttl: Number(fieldValue.value.list.ttl) })
+            let set_res = await sadd({ conn: props, key: fieldValue.value.set.key, value: set_values, ttl: Number(fieldValue.value.set.ttl) })
             if (set_res >= 0) {
                 message.success(`Success, ${set_res} items added`)
                 await handleReload()
@@ -329,13 +332,27 @@ const handleDelete = async (val: Keyvalue | null) => {
     }
     loadingStart()
     let res = await invoke('del', { conn: props, key: key })
-    if (res = "Ok") {
+    if (res == "Ok") {
         message.success('Success')
         await handleReload()
     } else {
         message.error('Error')
     }
     loadingFinish()
+}
+
+const handleDeleteSetValue = async (v: string) => {
+    if (detailKey.value) {
+        loadingStart()
+        let res = await srem({ conn: props, key: detailKey.value, value: [v] })
+        if (res > -1) {
+            message.success(`Success, ${res} items deleted`)
+            await handleReloadKey()
+        } else {
+            message.error('Error')
+        }
+        loadingFinish()
+    }
 }
 
 const handleCopy = async (val: any) => {
@@ -757,6 +774,16 @@ const handleSelect = (val: string) => {
                             <tbody>
                                 <tr v-for="v in detailValue">
                                     <td class="set-key">{{ v }}</td>
+                                    <td class="set-opera">
+                                        <n-button strong secondary circle type="error" size="small"
+                                            @click="handleDeleteSetValue(v)">
+                                            <template #icon>
+                                                <n-icon>
+                                                    <trash />
+                                                </n-icon>
+                                            </template>
+                                        </n-button>
+                                    </td>
                                 </tr>
                             </tbody>
                         </n-table>
@@ -864,5 +891,9 @@ const handleSelect = (val: string) => {
 .td-opera .btns {
     display: flex;
     justify-content: space-between;
+}
+
+.set-opera {
+    width: 42px;
 }
 </style>

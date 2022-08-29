@@ -12,6 +12,7 @@
   "dependencies": {
     "@tauri-apps/api": "^1.0.2",
     "nanoid": "^4.0.0",
+    "pinia": "^2.0.21",
     "vue": "^3.2.37",
     "vue-clipboard3": "^2.0.0"
   },

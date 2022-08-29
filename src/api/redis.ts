@@ -23,6 +23,12 @@ interface SaddArgs extends InvokeArgs {
     ttl: number
 }
 
+interface SremArgs extends InvokeArgs {
+    conn: any
+    key: string
+    value: string[]
+}
+
 interface ZaddArgs extends InvokeArgs {
     conn: any
     key: string
@@ -76,6 +82,11 @@ const sadd = async (params: SaddArgs): Promise<number> => {
     return res
 }
 
+const srem = async (params: SremArgs): Promise<number> => {
+    let res = await request<number>('srem', params)
+    return res
+}
+
 const zadd = async (params: ZaddArgs): Promise<number> => {
     let res = await request<number>('zadd', params)
     return res
@@ -86,5 +97,5 @@ const hmset = async (params: HmsetArgs): Promise<string> => {
     return res
 }
 
-export { keys, setString, rpush, sadd, zadd, hmset }
+export { keys, setString, rpush, sadd, srem, zadd, hmset }
 

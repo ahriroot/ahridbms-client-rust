@@ -152,7 +152,7 @@ pub async fn get(conn: Connection, key: String) -> Response<KeyValue> {
     let result: Response<KeyValue>;
 
     if key_type == "string" {
-        let value: String = redis::cmd("get").arg(&key).query(&mut con).expect("value");
+        let value: String = redis::cmd("GET").arg(&key).query(&mut con).expect("value");
         let size: i64 = redis::cmd("MEMORY")
             .arg("usage")
             .arg(&key)
@@ -415,6 +415,24 @@ pub async fn zadd(conn: Connection, key: String, value: Vec<ZsetValue>, ttl: i64
             .query(&mut con)
             .expect("zadd ttl");
     }
+    Response::ok(result)
+}
+
+#[tauri::command]
+pub async fn srem(conn: Connection, key: String, value: Vec<String>) -> Response<i32> {
+    let conn_str = format!(
+        "redis://{}:{}@{}:{}/{}",
+        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+    );
+
+    let client = redis::Client::open(conn_str).expect("client");
+    let mut con: redis::Connection = client.get_connection().expect("con");
+    let mut cmd = redis::cmd("SREM");
+    let mut cmd = cmd.arg(&key);
+    for v in value {
+        cmd = cmd.arg(&v);
+    }
+    let result: i32 = cmd.query(&mut con).expect("srem");
     Response::ok(result)
 }
 

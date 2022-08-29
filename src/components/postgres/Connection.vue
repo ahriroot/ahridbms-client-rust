@@ -23,24 +23,27 @@ const databases = ref<PgDatabase[]>([])
 
 onBeforeMount(async () => {
     const res = await pgGetDatabases({ conn: props.conn })
-    res.forEach((db: any) => {
-        let database: any = {};
-        db.forEach((field: any) => {
-            for (const k in field) {
-                database[field[k].key] = field[k].value
-            }
+    console.log(res)
+    if (!res.is_error) {
+        res.forEach((db: any) => {
+            let database: any = {};
+            db.forEach((field: any) => {
+                for (const k in field) {
+                    database[field[k].key] = field[k].value
+                }
 
+            })
+            databases.value.push(database as PgDatabase)
         })
-        databases.value.push(database as PgDatabase)
-    })
-    console.log(databases.value)
+        console.log(databases.value)
 
-    data.value = [{
-        key: `redis:${props.conn.info.name}`,
-        label: props.conn.info.name,
-        value: `redis:${props.conn.info.name}`,
-        children: rangeDB()
-    }]
+        data.value = [{
+            key: `redis:${props.conn.info.name}`,
+            label: props.conn.info.name,
+            value: `redis:${props.conn.info.name}`,
+            children: rangeDB()
+        }]
+    }
 })
 
 const renderSwitcherIcon = () => {
@@ -93,7 +96,12 @@ const rangeDB = (): TreeOption[] => {
     return tmp
 }
 
-const data = ref<TreeOption[]>([])
+const data = ref<TreeOption[]>([{
+    key: `redis:${props.conn.info.name}`,
+    label: props.conn.info.name,
+    value: `redis:${props.conn.info.name}`,
+    children: []
+}])
 </script>
 
 <template>
