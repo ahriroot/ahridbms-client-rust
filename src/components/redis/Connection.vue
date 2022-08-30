@@ -62,6 +62,16 @@ const nodeProps = ({ option }: { option: any }) => {
                     props: {
                         onClick: () => {
                             emits('handleDeleteConnection', props.conn.id)
+                            showContextmenu.value = false
+                        }
+                    }
+                }, {
+                    label: 'Query',
+                    key: 'query',
+                    props: {
+                        onClick: () => {
+                            emits('handleOpenTab', { id: nanoid(), conn: props.conn, tab_type: 'query' })
+                            showContextmenu.value = false
                         }
                     }
                 }]

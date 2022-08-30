@@ -95,7 +95,9 @@ const handleOpenTab = (message: OpenTabMesagae) => {
     if (message) {
         if (message.conn.db_type === 'redis') {
             if (message.tab_type === 'query') {
-                console.log('redis query')
+                tabs.value.push(message)
+                tab.value = message.id
+                saveTabs(tabs.value)
             } else {
                 tabs.value.push(message)
                 tab.value = message.id

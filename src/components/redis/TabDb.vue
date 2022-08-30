@@ -4,7 +4,7 @@ import {
     NTable, NLayout, NTag, NButton, NIcon, NModal, SelectRenderLabel, useLoadingBar,
     NSpace, NCard, NSelect, NInput, useMessage, NSpin, NDropdown, NInputNumber
 } from 'naive-ui'
-import { Add, Reload, CloudUploadOutline, Trash, Key, Copy, ArrowUp, ArrowDown } from '@vicons/ionicons5'
+import { Add, Reload, CloudUploadOutline, Trash, Key, Copy, ArrowUp, ArrowDown, Pencil } from '@vicons/ionicons5'
 import { invoke } from '@tauri-apps/api/tauri'
 import useClipboard from "vue-clipboard3"
 import { Connection } from '@/types/Connection';
@@ -12,6 +12,7 @@ import { keys, setString, rpush, sadd, zadd, hmset, srem } from '@/api/redis'
 import { INewFieldValue, Keyvalue, RedisConnect } from '@/types/redis'
 import { diffDatetime } from '@/utils/datetime'
 import { NewFieldValue } from '@/data/redis'
+import EditorVue from '@/components/Editor.vue'
 
 window.$message = useMessage()
 
@@ -38,6 +39,7 @@ const init = async () => {
     loadingStart()
     try {
         let res = await keys({ conn: props, arg: '*' })
+        console.log(res)
         result.value = []
         res.forEach(item => {
             for (const key in item) {
@@ -149,6 +151,10 @@ const handleHashItem = (index: number, opera: 1 | 2 | 3) => {
 }
 
 const tagList = ref<any>({
+    'ReJSON-RL': {
+        tag: '',
+        text: 'JSON'
+    },
     string: {
         tag: 'success',
         text: 'STRING'
@@ -428,6 +434,11 @@ const handleSelect = (val: string) => {
     fieldType.value = val
     showAdd.value = true
 }
+
+const editListItem = ref({
+    index: -1,
+    value: ''
+})
 </script>
 
 <template>
@@ -435,7 +446,7 @@ const handleSelect = (val: string) => {
         <div style="height: 100%; position: relative;">
             <n-select :options="fieldTypeList" :render-label="renderLabel" v-model:value="fieldType" />
             <n-layout position="absolute" style="top: 50px; bottom: 50px; background: #2c2c32;"
-                :native-scrollbar="false" content-style="">
+                :native-scrollbar="false">
                 <n-card v-if="fieldType == 'string'">
                     <n-space vertical>
                         <n-input v-model:value="fieldValue.string.key" type="text" placeholder="Key" />
@@ -620,7 +631,7 @@ const handleSelect = (val: string) => {
             <div class="header">
                 <div></div>
                 <div>
-                    {{ lastReload }}
+                    {{  lastReload  }}
                     <n-dropdown trigger="hover" size="small" placement="bottom-start" :options="dropdownList"
                         @select="handleSelect">
                         <n-button strong secondary circle type="info" size="small" @click="showAdd = true">
@@ -649,12 +660,12 @@ const handleSelect = (val: string) => {
                             <tr v-for="i in result" style="cursor: pointer;" @click="handleDetail(i)">
                                 <td class="td-key">
                                     <n-tag :bordered="false" :type="tagList[i.key_type].tag" size="small">
-                                        {{ tagList[i.key_type].text }}
+                                        {{  tagList[i.key_type].text  }}
                                     </n-tag>
                                 </td>
-                                <td style="max-width: 200px; overflow: hidden;">{{ i.key }}</td>
-                                <td class="td-size">{{ i.size }} b</td>
-                                <td class="td-ttl">{{ i.ttl }} {{ i.ttl > 0 ? 's' : '' }}</td>
+                                <td style="max-width: 200px; overflow: hidden;">{{  i.key  }}</td>
+                                <td class="td-size">{{  i.size  }} b</td>
+                                <td class="td-ttl">{{  i.ttl  }} {{  i.ttl > 0 ? 's' : ''  }}</td>
                                 <td class="td-opera">
                                     <div class="btns">
                                         <n-button strong secondary circle type="info" size="small"
@@ -742,7 +753,18 @@ const handleSelect = (val: string) => {
                 </div>
             </div>
             <n-layout position="absolute" style="background: #282c34; top: 36px;  color: #fff; bottom: 0; padding: 10px"
-                :native-scrollbar="false">
+                :native-scrollbar="false" content-style="position: relative; top: 0; bottom: 0">
+                <div v-if="detailKeyType == 'ReJSON-RL'">
+                    <n-space vertical>
+                        <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
+                            readonly placeholder="Key"></n-input>
+                        <!-- <n-table :bordered="true" :single-line="false" size="small">
+                            <pre>{{  JSON.parse(detailValue)  }}</pre>
+                        </n-table> -->
+
+                        <EditorVue :value="detailValue" />
+                    </n-space>
+                </div>
                 <div v-if="detailKeyType == 'string'">
                     <n-space vertical>
                         <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
@@ -757,9 +779,32 @@ const handleSelect = (val: string) => {
                         <n-table :bordered="true" :single-line="false" size="small">
                             <tbody>
                                 <tr v-for="(v, index) in detailValue">
-                                    <td class="list-index">{{ index }}</td>
+                                    <td class="list-index" style="width: 80px">{{  index  }}</td>
                                     <td class="list-value">
-                                        {{ v }}
+                                        <n-input v-show="editListItem.index == index" v-model:value="editListItem.value"
+                                            size="small" @blur="editListItem.index = -1"></n-input>
+                                        <div v-show="editListItem.index != index"
+                                            @click="editListItem.index = index; editListItem.value = v">{{  v  }}</div>
+                                    </td>
+                                    <td class="list-opera">
+                                        <n-button v-show="editListItem.index != index" strong secondary circle
+                                            type="info" size="small"
+                                            @click="editListItem.index = index; editListItem.value = v">
+                                            <template #icon>
+                                                <n-icon>
+                                                    <pencil />
+                                                </n-icon>
+                                            </template>
+                                        </n-button>
+                                        <n-button v-show="editListItem.index == index" strong secondary circle
+                                            type="info" size="small"
+                                            @click="editListItem.index = -1">
+                                            <template #icon>
+                                                <n-icon>
+                                                    <reload />
+                                                </n-icon>
+                                            </template>
+                                        </n-button>
                                     </td>
                                 </tr>
                             </tbody>
@@ -773,7 +818,7 @@ const handleSelect = (val: string) => {
                         <n-table :bordered="true" :single-line="false" size="small">
                             <tbody>
                                 <tr v-for="v in detailValue">
-                                    <td class="set-key">{{ v }}</td>
+                                    <td class="set-key">{{  v  }}</td>
                                     <td class="set-opera">
                                         <n-button strong secondary circle type="error" size="small"
                                             @click="handleDeleteSetValue(v)">
@@ -796,9 +841,9 @@ const handleSelect = (val: string) => {
                         <n-table :bordered="true" :single-line="false" size="small">
                             <tbody>
                                 <tr v-for="(v, k) in zsetToJson(detailValue)">
-                                    <td class="zset-key">{{ k }}</td>
+                                    <td class="zset-key">{{  k  }}</td>
                                     <td class="zset-value">
-                                        {{ v }}
+                                        {{  v  }}
                                     </td>
                                 </tr>
                             </tbody>
@@ -812,9 +857,9 @@ const handleSelect = (val: string) => {
                         <n-table :bordered="true" :single-line="false" size="small">
                             <tbody>
                                 <tr v-for="(v, k) in detailValue">
-                                    <td class="hash-key">{{ k }}</td>
+                                    <td class="hash-key">{{  k  }}</td>
                                     <td class="hash-value">
-                                        {{ v }}
+                                        {{  v  }}
                                     </td>
                                 </tr>
                             </tbody>
@@ -893,7 +938,8 @@ const handleSelect = (val: string) => {
     justify-content: space-between;
 }
 
-.set-opera {
+.set-opera,
+.list-opera {
     width: 42px;
 }
 </style>

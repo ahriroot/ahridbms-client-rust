@@ -22,8 +22,29 @@ pub async fn keys(conn: Connection, arg: String) -> Response<Vec<KeyValue>> {
             .arg(&key)
             .query(&mut con)
             .expect("key_type");
+        println!("{}", key_type);
 
-        if key_type == "string" {
+        // key_type 以 json 开头
+        if key_type == "ReJSON-RL" {
+            let value: String = redis::cmd("JSON.GET")
+                .arg(&key)
+                .query(&mut con)
+                .expect("value");
+            let size: i64 = redis::cmd("MEMORY")
+                .arg("usage")
+                .arg(&key)
+                .query(&mut con)
+                .expect("size");
+            let ttl: i64 = redis::cmd("TTL").arg(&key).query(&mut con).expect("ttl");
+            let kv = KeyValue::ReJson(KV {
+                key: key.to_string(),
+                key_type: key_type.to_string(),
+                value: value,
+                size: size,
+                ttl: ttl,
+            });
+            all_data.push(kv);
+        } else if key_type == "string" {
             let value: String = redis::cmd("get").arg(&key).query(&mut con).expect("value");
             let size: i64 = redis::cmd("MEMORY")
                 .arg("usage")

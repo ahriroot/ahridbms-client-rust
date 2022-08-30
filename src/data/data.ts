@@ -1,7 +1,8 @@
 import RedisConnect from '@/components/redis/Connection.vue'
 import PostgresConnect from '@/components/postgres/Connection.vue'
 
-import RedisVue from '@/components/redis/TabDb.vue'
+import RedisTabVue from '@/components/redis/TabDb.vue'
+import RedisQueryVue from '@/components/redis/TabQuery.vue'
 
 const DBType = [
     {
@@ -20,7 +21,8 @@ const ConnectionComponents = {
 }
 
 const TabComponents = {
-    'redis:db': RedisVue
+    'redis:db': RedisTabVue,
+    'redis:query': RedisQueryVue,
 }
 
 const RedisConnectInit = {

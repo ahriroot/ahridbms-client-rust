@@ -38,6 +38,7 @@ pub struct KV<T> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum KeyValue {
+    ReJson(KV<String>),
     String(KV<String>),
     List(KV<Vec<String>>),
     Set(KV<HashSet<String>>),
