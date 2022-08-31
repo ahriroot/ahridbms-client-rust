@@ -3,6 +3,7 @@ import { ref, getCurrentInstance, onMounted, watch, shallowRef } from 'vue'
 import * as monaco from 'monaco-editor'
 import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js?worker'
+import { QuerySuggestionsOfRedis } from '@/data/data';
 
 // self.MonacoEnvironment = {
 //     getWorker() {
@@ -36,30 +37,11 @@ onMounted(() => {
         }
         monaco.languages.register({ id: "redis" })
         monaco.languages.registerCompletionItemProvider("redis", {
-            provideCompletionItems: () => ({
-                suggestions: [
-                    {
-                        label: "GET",
-                        kind: monaco.languages.CompletionItemKind.Function,
-                        insertText: "GET ${0:key}",
-                        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                        detail: "Get the value of a key",
-                    },
-                    {
-                        label: "JSON.GET",
-                        kind: monaco.languages.CompletionItemKind.Function,
-                        insertText: "GET ${0:key}",
-                        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                        detail: "Get Json data",
-                    },
-                    {
-                        label: "JSON.SET",
-                        kind: monaco.languages.CompletionItemKind.Function,
-                        insertText: "GET ${1:key} $ ${0:json_str}",
-                        insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-                        detail: "SET Json data",
-                    },
-                ]
+            provideCompletionItems: async () => ({
+                suggestions: await QuerySuggestionsOfRedis(
+                    monaco.languages.CompletionItemKind,
+                    monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+                )
             } as any)
         })
         if (editorRef.value) {

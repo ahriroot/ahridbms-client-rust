@@ -43,4 +43,31 @@ const PostgresConnectInit = {
     db: ''
 }
 
-export { DBType, ConnectionComponents, TabComponents, RedisConnectInit, PostgresConnectInit }
+const QuerySuggestionsOfRedis = async (kind: any, snippet: any) => ([
+    {
+        label: "GET",
+        kind: kind.Function,
+        insertText: "GET ${0:key}",
+        insertTextRules: snippet,
+        detail: "Get the value of a key",
+    },
+    {
+        label: "JSON.GET",
+        kind: kind.Function,
+        insertText: "GET ${0:key}",
+        insertTextRules: snippet,
+        detail: "Get Json data",
+    },
+    {
+        label: "JSON.SET",
+        kind: kind.Function,
+        insertText: "GET ${1:key} $ ${0:json_str}",
+        insertTextRules: snippet,
+        detail: "SET Json data",
+    },
+])
+
+export {
+    DBType, ConnectionComponents, TabComponents, RedisConnectInit, PostgresConnectInit,
+    QuerySuggestionsOfRedis
+}
