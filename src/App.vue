@@ -39,9 +39,15 @@ onBeforeMount(async () => {
     connList.value = await getConnections()
     let connIds = connList.value.map(item => item.id)  // 所有链接 id
     let tmp = await getTabs()  // 所有标签页
-    tabs.value = tmp.filter((item: OpenTabMesagae) => connIds.includes(item.conn.id))  // 存在连接的标签页
+    let current_tab = localStorage.getItem('current_tab')
+    tabs.value = tmp.filter((item: OpenTabMesagae) => {
+        if (item.id == current_tab) {
+            tab.value = current_tab
+        }
+        return connIds.includes(item.conn.id)
+    })  // 存在连接的标签页
     saveTabs(tabs.value)
-    if (tabs.value.length > 0) {
+    if (tabs.value.length > 0 && !tab.value) {
         // 切换到第一个标签页
         tab.value = tabs.value[0].id
     }
@@ -119,6 +125,10 @@ const handleDeleteConnection = async (id: string) => {
     saveTabs(tabs.value)
 }
 
+const handleTabChanged = (val: string) => {
+    localStorage.setItem('current_tab', val)
+}
+
 // 关闭标签页
 const handleClose = (val: string) => {
     tabs.value = tabs.value.filter(item => item.id !== val)
@@ -177,7 +187,7 @@ const handleClose = (val: string) => {
 
                 <div id="main">
                     <aside class="side" :class="showSide ? '' : 'show'"></aside>
-                    <main class="main">
+                    <main class="main" :class="showSide ? '' : 'show'">
                         <div class="connection">
                             <div class="header">
                                 <n-button strong secondary size="small" @click.stop="showConn = true">
@@ -205,10 +215,10 @@ const handleClose = (val: string) => {
                         <div class="content">
                             <header class="header"></header>
                             <section class="workspace">
-                                <n-tabs v-model:value="tab" type="card" closable tab-style="min-width: 80px;"
-                                    @close="handleClose" size="small">
-                                    <n-tab-pane v-for="i in tabs" :key="i.id" :tab="`${i.tab_type}@${i.conn.info.name}`"
-                                        :name="i.id">
+                                <n-tabs v-model:value="tab" @update:value="handleTabChanged" type="card" closable
+                                    tab-style="min-width: 80px;" @close="handleClose" size="small">
+                                    <n-tab-pane display-directive="show" v-for="i in tabs" :key="i.id"
+                                        :tab="`${i.tab_type}@${i.conn.info.name}`" :name="i.id">
                                         <component :key="i.id"
                                             :is="tabComponents[`${i.conn.db_type}:${i.tab_type == 'query' ? 'query' : 'db'}`]"
                                             :conn="i.conn" :db="i.tab_type" />
@@ -248,9 +258,6 @@ const handleClose = (val: string) => {
     left: 0;
     right: 0;
     bottom: 0;
-    /* height: 100vh;
-    width: 100vw; */
-    display: flex;
 
 }
 
@@ -259,22 +266,37 @@ const handleClose = (val: string) => {
     background: #333842;
     overflow: hidden;
     transition: .3s;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
 }
 
 #main .side.show {
-    width: 0;
+    left: -50px;
 }
 
 #main .main {
-    flex: 1;
     background: #282c34;
-    display: flex;
+    transition: .3s;
+    position: absolute;
+    top: 0;
+    left: 50px;
+    right: 0;
+    bottom: 0;
+}
+
+#main .main.show {
+    left: 0;
 }
 
 #main .main .connection {
     width: 250px;
     background: #21252b;
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
 }
 
 #main .main .connection .header {
@@ -317,9 +339,12 @@ const handleClose = (val: string) => {
 }
 
 #main .main .content {
-    flex: 1;
     background: #282c34;
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 250px;
+    right: 0;
+    bottom: 0;
 }
 
 #main .main .content .header {

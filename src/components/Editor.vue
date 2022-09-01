@@ -62,6 +62,27 @@ onMounted(() => {
                 emits('handle', currenValue);
             });
         }
+    } else if (props.type == 'json') {
+        if (editorRef.value) {
+            self.MonacoEnvironment = {
+                getWorker: () => new JsonWorker()
+            }
+            monacoEditor.value = monaco.editor.create(editorRef.value, {
+                value: JSON.stringify(JSON.parse(props.value), null, '\t'),
+                readOnly: false,
+                theme: 'vs-dark',
+                selectOnLineNumbers: true,
+                language: "json",
+                automaticLayout: true
+            });
+            setTimeout(() => {
+                monacoEditor.value?.getAction('editor.action.formatDocument').run();
+            }, 100)
+            monacoEditor.value?.onDidChangeModelContent(() => {
+                const currenValue = monacoEditor.value.getValue();
+                emits('handle', currenValue);
+            });
+        }
     }
 })
 </script>

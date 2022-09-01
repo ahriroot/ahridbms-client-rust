@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { h, ref, onBeforeMount } from 'vue'
+import { h, ref, onBeforeMount, computed } from 'vue'
 import {
     NTable, NLayout, NTag, NButton, NIcon, NModal, SelectRenderLabel, useLoadingBar,
     NSpace, NCard, NSelect, NInput, useMessage, NSpin, NDropdown, NInputNumber
 } from 'naive-ui'
-import { Add, Reload, CloudUploadOutline, Trash, Key, Copy, ArrowUp, ArrowDown, Pencil } from '@vicons/ionicons5'
+import { Add, Reload, CloudUploadOutline, Trash, Key, Copy, ArrowUp, ArrowDown, Pencil, Checkmark } from '@vicons/ionicons5'
 import { invoke } from '@tauri-apps/api/tauri'
 import useClipboard from "vue-clipboard3"
 import { Connection } from '@/types/Connection';
@@ -74,6 +74,10 @@ const fieldTypeList = ref([
     {
         label: 'HASH',
         value: 'hash'
+    },
+    {
+        label: 'JSON',
+        value: 'ReJSON-RL'
     }
 ])
 const fieldValue = ref<INewFieldValue>(NewFieldValue)
@@ -207,6 +211,7 @@ const handleReloadKey = async () => {
     loadingStart()
     const response = await invoke<any>('get', { conn: props, key: detailKey.value })
     let res = response.data
+    console.log(res)
     let tmp_key = 'String'
     for (const key in res) {
         tmp_key = key
@@ -386,14 +391,19 @@ const detailKey = ref<string | null>(null)
 const detailValue = ref<any>('')
 const detailTTL = ref<string>('')
 const detailKeyType = ref<string>('')
-const zsetToJson = (val: string[]) => {
-    let res: any = {}
-    let len = val.length / 2
+const zsetToJson = computed(() => {
+    console.log(detailValue.value)
+    let res: any = []
+    let len = detailValue.value.length / 2
     for (let i = 0; i < len; i++) {
-        res[val[i * 2]] = val[i * 2 + 1]
+        res.push({
+            score: detailValue.value[i],
+            member: detailValue.value[len + i]
+        })
     }
     return res
-}
+})
+
 const handleDetail = async (val: Keyvalue) => {
     detailTTL.value = val.ttl.toString()
     detailKey.value = val.key
@@ -427,6 +437,9 @@ const dropdownList = ref([
     }, {
         label: 'HASH',
         key: 'hash'
+    }, {
+        label: 'JSON',
+        key: 'ReJSON-RL'
     }
 ])
 
@@ -439,6 +452,19 @@ const editListItem = ref({
     index: -1,
     value: ''
 })
+
+const editZsetItem = ref<{
+    key: string | null
+    value: string
+}>({
+    key: null,
+    value: ''
+})
+
+// String Value Opera
+const handleStringReset = async () => {
+
+}
 </script>
 
 <template>
@@ -447,7 +473,14 @@ const editListItem = ref({
             <n-select :options="fieldTypeList" :render-label="renderLabel" v-model:value="fieldType" />
             <n-layout position="absolute" style="top: 50px; bottom: 50px; background: #2c2c32;"
                 :native-scrollbar="false">
-                <n-card v-if="fieldType == 'string'">
+                <n-card v-if="fieldType == 'ReJSON-RL'">
+                    <n-space vertical>
+                        <n-input v-model:value="fieldValue.string.key" type="text" placeholder="Key" />
+                        <n-input v-model:value="fieldValue.string.value" type="textarea" placeholder="Value" />
+                        <n-input v-model:value="fieldValue.string.ttl" type="text" placeholder="TTL" />
+                    </n-space>
+                </n-card>
+                <n-card v-else-if="fieldType == 'string'">
                     <n-space vertical>
                         <n-input v-model:value="fieldValue.string.key" type="text" placeholder="Key" />
                         <n-input v-model:value="fieldValue.string.value" type="textarea" placeholder="Value" />
@@ -631,7 +664,7 @@ const editListItem = ref({
             <div class="header">
                 <div></div>
                 <div>
-                    {{  lastReload  }}
+                    {{ lastReload }}
                     <n-dropdown trigger="hover" size="small" placement="bottom-start" :options="dropdownList"
                         @select="handleSelect">
                         <n-button strong secondary circle type="info" size="small" @click="showAdd = true">
@@ -660,12 +693,12 @@ const editListItem = ref({
                             <tr v-for="i in result" style="cursor: pointer;" @click="handleDetail(i)">
                                 <td class="td-key">
                                     <n-tag :bordered="false" :type="tagList[i.key_type].tag" size="small">
-                                        {{  tagList[i.key_type].text  }}
+                                        {{ tagList[i.key_type].text }}
                                     </n-tag>
                                 </td>
-                                <td style="max-width: 200px; overflow: hidden;">{{  i.key  }}</td>
-                                <td class="td-size">{{  i.size  }} b</td>
-                                <td class="td-ttl">{{  i.ttl  }} {{  i.ttl > 0 ? 's' : ''  }}</td>
+                                <td style="max-width: 200px; overflow: hidden;">{{ i.key }}</td>
+                                <td class="td-size">{{ i.size }} b</td>
+                                <td class="td-ttl">{{ i.ttl }} {{ i.ttl > 0 ? 's' : '' }}</td>
                                 <td class="td-opera">
                                     <div class="btns">
                                         <n-button strong secondary circle type="info" size="small"
@@ -752,134 +785,182 @@ const editListItem = ref({
                     </n-button>
                 </div>
             </div>
-            <n-layout position="absolute" style="background: #282c34; top: 36px;  color: #fff; bottom: 0; padding: 10px"
-                :native-scrollbar="false" content-style="position: relative; top: 0; bottom: 0">
-                <div v-if="detailKeyType == 'ReJSON-RL'">
-                    <n-space vertical>
-                        <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
-                            readonly placeholder="Key"></n-input>
-                        <!-- <n-table :bordered="true" :single-line="false" size="small">
-                            <pre>{{  JSON.parse(detailValue)  }}</pre>
-                        </n-table> -->
-
-                        <EditorVue :value="detailValue" />
-                    </n-space>
+            <div class="value" style="padding: 4px">
+                <n-input v-model:value="detailKey" type="textarea" readonly placeholder="Key" :rows="3"></n-input>
+                <div v-if="detailKeyType == 'list'" style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                    <n-button strong secondary size="small" @click="handleReloadKey">
+                        LPOP
+                    </n-button>&nbsp;<n-button strong secondary size="small" @click="handleReloadKey">
+                        RPOP
+                    </n-button>&nbsp;
+                    <n-button strong secondary size="small" @click="handleReloadKey">
+                        <template #icon>
+                            <n-icon>
+                                <reload />
+                            </n-icon>
+                        </template>
+                    </n-button>&nbsp;
+                    <n-button strong secondary size="small" @click="handleStringReset">
+                        <template #icon>
+                            <n-icon>
+                                <checkmark />
+                            </n-icon>
+                        </template>
+                    </n-button>
                 </div>
-                <div v-if="detailKeyType == 'string'">
-                    <n-space vertical>
-                        <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
-                            readonly placeholder="Key"></n-input>
-                        <n-input v-model:value="detailValue" type="textarea"></n-input>
-                    </n-space>
+                <div v-else-if="detailKeyType == 'zset'"
+                    style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                    <n-input size="small" type="text" placeholder="Memeber" />&nbsp;
+                    <n-input size="small" type="text" placeholder="Score" />&nbsp;
+                    <n-button strong secondary size="small" @click="handleStringReset">
+                        <template #icon>
+                            <n-icon>
+                                <checkmark />
+                            </n-icon>
+                        </template>
+                    </n-button>&nbsp;
+                    <n-button strong secondary size="small" @click="handleReloadKey">
+                        <template #icon>
+                            <n-icon>
+                                <reload />
+                            </n-icon>
+                        </template>
+                    </n-button>
                 </div>
-                <div v-if="detailKeyType == 'list'">
-                    <n-space vertical>
-                        <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
-                            readonly placeholder="Key"></n-input>
-                        <n-table :bordered="true" :single-line="false" size="small">
-                            <tbody>
-                                <tr v-for="(v, index) in detailValue">
-                                    <td class="list-index" style="width: 80px">{{  index  }}</td>
-                                    <td class="list-value">
-                                        <n-input v-show="editListItem.index == index" v-model:value="editListItem.value"
-                                            size="small" @blur="editListItem.index = -1"></n-input>
-                                        <div v-show="editListItem.index != index"
-                                            @click="editListItem.index = index; editListItem.value = v">{{  v  }}</div>
-                                    </td>
-                                    <td class="list-opera">
-                                        <n-button v-show="editListItem.index != index" strong secondary circle
-                                            type="info" size="small"
-                                            @click="editListItem.index = index; editListItem.value = v">
-                                            <template #icon>
-                                                <n-icon>
-                                                    <pencil />
-                                                </n-icon>
-                                            </template>
-                                        </n-button>
-                                        <n-button v-show="editListItem.index == index" strong secondary circle
-                                            type="info" size="small"
-                                            @click="editListItem.index = -1">
-                                            <template #icon>
-                                                <n-icon>
-                                                    <reload />
-                                                </n-icon>
-                                            </template>
-                                        </n-button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </n-table>
-                    </n-space>
+                <div style="position: absolute; top: 120px; left: 4px; right: 4px; bottom: 36px;">
+                    <n-layout position="absolute"
+                        style="background: #282c34; top: 0; left: 0; right: 0; bottom: 0; color: #fff;"
+                        :native-scrollbar="false" content-style="position: relative; top: 0; bottom: 0">
+                        <div v-if="detailKeyType == 'ReJSON-RL'">
+                            <EditorVue :value="detailValue" type="json" />
+                        </div>
+                        <div v-else-if="detailKeyType == 'string'" style="height: 100%">
+                            <n-input style="height: 100%" v-model:value="detailValue" type="textarea"
+                                :autosize="{ minRows: 10 }"></n-input>
+                        </div>
+                        <div v-else-if="detailKeyType == 'list'">
+                            <n-table :bordered="true" :single-line="false" size="small">
+                                <tbody>
+                                    <tr v-for="(v, index) in detailValue">
+                                        <td class="list-index" style="width: 120px">{{ index }}</td>
+                                        <td class="list-value">
+                                            <n-input v-show="editListItem.index == index"
+                                                v-model:value="editListItem.value" size="small"
+                                                @blur="editListItem.index = -1"></n-input>
+                                            <div v-show="editListItem.index != index"
+                                                @click="editListItem.index = index; editListItem.value = v">{{ v }}
+                                            </div>
+                                        </td>
+                                        <td class="list-opera">
+                                            <n-button v-show="editListItem.index != index" strong secondary circle
+                                                type="info" size="small"
+                                                @click="editListItem.index = index; editListItem.value = v">
+                                                <template #icon>
+                                                    <n-icon>
+                                                        <pencil />
+                                                    </n-icon>
+                                                </template>
+                                            </n-button>
+                                            <n-button v-show="editListItem.index == index" strong secondary circle
+                                                type="info" size="small" @click="editListItem.index = -1">
+                                                <template #icon>
+                                                    <n-icon>
+                                                        <checkmark />
+                                                    </n-icon>
+                                                </template>
+                                            </n-button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </n-table>
+                        </div>
+                        <div v-else-if="detailKeyType == 'set'">
+                            <n-table :bordered="true" :single-line="false" size="small">
+                                <tbody>
+                                    <tr v-for="v in detailValue">
+                                        <td class="set-key">{{ v }}</td>
+                                        <td class="set-opera">
+                                            <n-button strong secondary circle type="error" size="small"
+                                                @click="handleDeleteSetValue(v)">
+                                                <template #icon>
+                                                    <n-icon>
+                                                        <trash />
+                                                    </n-icon>
+                                                </template>
+                                            </n-button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </n-table>
+                        </div>
+                        <div v-else-if="detailKeyType == 'zset'">
+                            <n-table :bordered="true" :single-line="false" size="small">
+                                <tbody>
+                                    <tr v-for="i in zsetToJson">
+                                        <td class="zset-member">{{ i.member }}</td>
+                                        <td class="zset-score" style="width: 120px">
+                                            <n-input v-show="editZsetItem.key == i.member"
+                                                v-model:value="editZsetItem.value" size="small"
+                                                @blur="editZsetItem.key = null"></n-input>
+                                            <div v-show="editZsetItem.key != i.member"
+                                                @click="editZsetItem.key = i.member; editZsetItem.value = i.score">{{
+                                                        i.score
+                                                }}
+                                            </div>
+                                        </td>
+                                        <td class="zset-opera">
+                                            <n-button v-show="editZsetItem.key != i.member" strong secondary circle
+                                                type="info" size="small"
+                                                @click="editZsetItem.key = i.member; editZsetItem.value = i.score">
+                                                <template #icon>
+                                                    <n-icon>
+                                                        <pencil />
+                                                    </n-icon>
+                                                </template>
+                                            </n-button>
+                                            <n-button v-show="editZsetItem.key == i.member" strong secondary circle
+                                                type="info" size="small" @click="editZsetItem.key = null">
+                                                <template #icon>
+                                                    <n-icon>
+                                                        <checkmark />
+                                                    </n-icon>
+                                                </template>
+                                            </n-button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </n-table>
+                        </div>
+                        <div v-else-if="detailKeyType == 'hash'">
+                            <n-table :bordered="true" :single-line="false" size="small">
+                                <tbody>
+                                    <tr v-for="(v, k) in detailValue">
+                                        <td class="hash-key">{{ k }}</td>
+                                        <td class="hash-value">
+                                            {{ v }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </n-table>
+                        </div>
+                    </n-layout>
                 </div>
-                <div v-if="detailKeyType == 'set'">
-                    <n-space vertical>
-                        <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
-                            readonly placeholder="Key"></n-input>
-                        <n-table :bordered="true" :single-line="false" size="small">
-                            <tbody>
-                                <tr v-for="v in detailValue">
-                                    <td class="set-key">{{  v  }}</td>
-                                    <td class="set-opera">
-                                        <n-button strong secondary circle type="error" size="small"
-                                            @click="handleDeleteSetValue(v)">
-                                            <template #icon>
-                                                <n-icon>
-                                                    <trash />
-                                                </n-icon>
-                                            </template>
-                                        </n-button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </n-table>
-                    </n-space>
-                </div>
-                <div v-if="detailKeyType == 'zset'">
-                    <n-space vertical>
-                        <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
-                            readonly placeholder="Key"></n-input>
-                        <n-table :bordered="true" :single-line="false" size="small">
-                            <tbody>
-                                <tr v-for="(v, k) in zsetToJson(detailValue)">
-                                    <td class="zset-key">{{  k  }}</td>
-                                    <td class="zset-value">
-                                        {{  v  }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </n-table>
-                    </n-space>
-                </div>
-                <div v-if="detailKeyType == 'hash'">
-                    <n-space vertical>
-                        <n-input v-model:value="detailKey" :type="`${detailKey.length > 60 ? 'textarea' : 'text'}`"
-                            readonly placeholder="Key"></n-input>
-                        <n-table :bordered="true" :single-line="false" size="small">
-                            <tbody>
-                                <tr v-for="(v, k) in detailValue">
-                                    <td class="hash-key">{{  k  }}</td>
-                                    <td class="hash-value">
-                                        {{  v  }}
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </n-table>
-                    </n-space>
-                </div>
-            </n-layout>
+            </div>
         </div>
     </div>
 </template>
 <style scoped>
 .keys {
     height: 100%;
-    display: flex;
+    position: relative;
 }
 
 .keys .list {
-    position: relative;
-    height: 100%;
     width: 50%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
     border-right: #333842 2px solid;
 }
 
@@ -897,9 +978,11 @@ const editListItem = ref({
 }
 
 .keys .content {
-    position: relative;
-    height: 100%;
-    width: 50%;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    right: 0;
+    bottom: 0;
     border-left: #333842 2px solid;
 }
 
@@ -913,6 +996,16 @@ const editListItem = ref({
     justify-content: space-between;
     align-items: center;
     padding: 0 10px;
+    background: #282c34;
+    border-bottom: #333842 1px solid;
+}
+
+.keys .content .value {
+    position: absolute;
+    top: 36px;
+    left: 0;
+    bottom: 0;
+    width: 100%;
     background: #282c34;
     border-bottom: #333842 1px solid;
 }
@@ -939,6 +1032,7 @@ const editListItem = ref({
 }
 
 .set-opera,
+.zset-opera,
 .list-opera {
     width: 42px;
 }

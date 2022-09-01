@@ -22,7 +22,6 @@ pub async fn keys(conn: Connection, arg: String) -> Response<Vec<KeyValue>> {
             .arg(&key)
             .query(&mut con)
             .expect("key_type");
-        println!("{}", key_type);
 
         // key_type 以 json 开头
         if key_type == "ReJSON-RL" {
@@ -230,6 +229,7 @@ pub async fn get(conn: Connection, key: String) -> Response<KeyValue> {
             .arg(&key)
             .arg(0)
             .arg(-1)
+            .arg("WITHSCORES")
             .query(&mut con)
             .expect("value");
         let size: i64 = redis::cmd("MEMORY")
@@ -415,7 +415,6 @@ pub struct ZsetValue {
 
 #[tauri::command]
 pub async fn zadd(conn: Connection, key: String, value: Vec<ZsetValue>, ttl: i64) -> Response<i32> {
-    println!("{}", key);
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
         "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
