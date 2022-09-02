@@ -1,11 +1,12 @@
 import { Connection } from '@/types/Connection';
 import { OpenTabMesagae } from '@/types/Message';
+import { RedisConnect } from '@/types/redis';
 
-const saveConnections = async (connections: Connection[]) => {
+const saveConnections = async (connections: Connection<RedisConnect>[]) => {
     localStorage.setItem('connections', JSON.stringify(connections))
 }
 
-const getConnections = async (): Promise<Connection[]> => {
+const getConnections = async (): Promise<Connection<RedisConnect>[]> => {
     const connections = localStorage.getItem('connections')
     return connections ? JSON.parse(connections) : []
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, ref, shallowRef, onBeforeMount } from 'vue'
+import { h, ref, shallowRef, onBeforeMount, onMounted } from 'vue'
 import {
     darkTheme, NConfigProvider, NGlobalStyle, NIcon, NLayout,
     NButton, NModal, NSelect, SelectRenderLabel, NInput, NCard, NSpace,
@@ -34,6 +34,8 @@ const store = useIndexStore()
 /** ------------------ 变量 End ------------------ **/
 
 onBeforeMount(async () => {
+    width.value = Number(localStorage.getItem('ahridbms-sidebar-width')) || 500
+    oldWidth.value = width.value
     let config = localStorage.getItem('config')
     store.updateConfig(config ? JSON.parse(config) : { deleteNoConfirm: false })
     connList.value = await getConnections()
@@ -50,6 +52,53 @@ onBeforeMount(async () => {
     if (tabs.value.length > 0 && !tab.value) {
         // 切换到第一个标签页
         tab.value = tabs.value[0].id
+    }
+})
+
+const sidebarRef = shallowRef<HTMLElement | null>(null)
+const contentRef = shallowRef<HTMLElement | null>(null)
+const resizeable = ref<boolean>(false)
+const width = ref(250)
+const oldWidth = ref(250)
+const cursor = ref('default')
+const currentMoveX = ref(0)
+onMounted(async () => {
+    if (sidebarRef.value && contentRef.value) {
+        sidebarRef.value.addEventListener('mousedown', (ev) => {
+            if (cursor.value == 'ew-resize') {
+                resizeable.value = true
+                currentMoveX.value = ev.clientX
+                oldWidth.value = width.value
+            }
+        })
+        contentRef.value.addEventListener('mousedown', (ev) => {
+            if (cursor.value == 'ew-resize') {
+                resizeable.value = true
+                currentMoveX.value = ev.clientX
+                oldWidth.value = width.value
+            }
+        })
+        document.body.addEventListener('mousemove', (ev) => {
+            if (sidebarRef.value && (width.value - 4 < ev.offsetX && ev.offsetX < width.value + 4)) {
+                cursor.value = 'ew-resize'
+            } else {
+                cursor.value = 'default'
+            }
+            if (resizeable.value) {
+                const tmp = oldWidth.value + ev.clientX - currentMoveX.value
+                if (tmp < 150) {
+                    width.value = 150
+                } else if (tmp > 1000) {
+                    width.value = 1000
+                } else {
+                    width.value = tmp
+                    localStorage.setItem('ahridbms-sidebar-width', width.value.toString())
+                }
+            }
+        })
+        document.body.addEventListener('mouseup', (ev) => {
+            resizeable.value = false
+        })
     }
 })
 
@@ -185,10 +234,11 @@ const handleClose = (val: string) => {
                     </n-space>
                 </n-modal>
 
-                <div id="main">
-                    <aside class="side" :class="showSide ? '' : 'show'"></aside>
-                    <main class="main" :class="showSide ? '' : 'show'">
-                        <div class="connection">
+                <div id="main" class="nocopy">
+                    <aside class="side nocopy" :class="showSide ? '' : 'show'"></aside>
+                    <main class="main" :class="showSide ? '' : 'show'"
+                        :style="`cursor: ${resizeable ? 'ew-resize' : cursor}`">
+                        <div class="connection nocopy" ref="sidebarRef" :style="`width: ${width}px`">
                             <div class="header">
                                 <n-button strong secondary size="small" @click.stop="showConn = true">
                                     <template #icon>
@@ -212,8 +262,9 @@ const handleClose = (val: string) => {
                                 </n-icon>
                             </div>
                         </div>
-                        <div class="content">
-                            <header class="header"></header>
+                        <div class="content" ref="contentRef" :style="`left: ${width}px`">
+                            <header class=" header">
+                            </header>
                             <section class="workspace">
                                 <n-tabs v-model:value="tab" @update:value="handleTabChanged" type="card" closable
                                     tab-style="min-width: 80px;" @close="handleClose" size="small">
@@ -258,7 +309,6 @@ const handleClose = (val: string) => {
     left: 0;
     right: 0;
     bottom: 0;
-
 }
 
 #main .side {
@@ -291,7 +341,6 @@ const handleClose = (val: string) => {
 }
 
 #main .main .connection {
-    width: 250px;
     background: #21252b;
     position: absolute;
     top: 0;
@@ -303,7 +352,6 @@ const handleClose = (val: string) => {
     height: 32px;
     padding: 0 2px;
     display: flex;
-    /* justify-content: center; */
     align-items: center;
 }
 
@@ -342,7 +390,6 @@ const handleClose = (val: string) => {
     background: #282c34;
     position: absolute;
     top: 0;
-    left: 250px;
     right: 0;
     bottom: 0;
 }

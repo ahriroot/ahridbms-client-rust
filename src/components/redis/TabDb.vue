@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { h, ref, onBeforeMount, computed } from 'vue'
+import { h, shallowRef, ref, onBeforeMount, onMounted, computed } from 'vue'
 import {
     NTable, NLayout, NTag, NButton, NIcon, NModal, SelectRenderLabel, useLoadingBar,
-    NSpace, NCard, NSelect, NInput, useMessage, NSpin, NDropdown, NInputNumber
+    NSpace, NCard, NSelect, NInput, useMessage, NSpin, NDropdown, NInputNumber, NTooltip
 } from 'naive-ui'
-import { Add, Reload, CloudUploadOutline, Trash, Key, Copy, ArrowUp, ArrowDown, Pencil, Checkmark } from '@vicons/ionicons5'
+import { Add, Reload, Trash, Key, Copy, ArrowUp, ArrowDown, Pencil, Checkmark, CaretBack, CaretForward, TimeOutline } from '@vicons/ionicons5'
 import { invoke } from '@tauri-apps/api/tauri'
 import useClipboard from "vue-clipboard3"
 import { Connection } from '@/types/Connection';
@@ -34,6 +34,45 @@ const loadingCount = ref<number>(0)  // loading 动画计数
 const timer = ref<any>(null)  // 计时器
 const before = ref<Date>(new Date())
 const lastReload = ref<string>('less 1m')
+
+const sidebarRef = shallowRef<HTMLElement | null>(null)
+const resizeable = ref<boolean>(false)
+const width = ref(500)
+const oldWidth = ref(500)
+const cursor = ref('default')
+const currentMoveX = ref(0)
+onMounted(() => {
+    if (sidebarRef.value) {
+        sidebarRef.value.addEventListener('mousedown', (ev) => {
+            if (cursor.value == 'ew-resize') {
+                resizeable.value = true
+                currentMoveX.value = ev.clientX
+                oldWidth.value = width.value
+            }
+        })
+        document.body.addEventListener('mousemove', (ev) => {
+            if (sidebarRef.value && (width.value - 4 < ev.offsetX && ev.offsetX < width.value + 4)) {
+                cursor.value = 'ew-resize'
+            } else {
+                cursor.value = 'default'
+            }
+            if (resizeable.value) {
+                const tmp = oldWidth.value + ev.clientX - currentMoveX.value
+                if (tmp < 300) {
+                    width.value = 300
+                } else if (tmp > 1000) {
+                    width.value = 1000
+                } else {
+                    width.value = tmp
+                    localStorage.setItem('redis-sidebar-width', width.value.toString())
+                }
+            }
+        })
+        document.body.addEventListener('mouseup', (ev) => {
+            resizeable.value = false
+        })
+    }
+})
 
 const init = async () => {
     loadingStart()
@@ -412,6 +451,8 @@ const handleDetail = async (val: Keyvalue) => {
 }
 
 onBeforeMount(async () => {
+    width.value = Number(localStorage.getItem('redis-sidebar-width')) || 500
+    oldWidth.value = width.value
     await init()
     if (timer.value) {
         clearInterval(timer.value)
@@ -659,8 +700,8 @@ const handleStringReset = async () => {
         </div>
     </n-modal>
 
-    <div class="keys">
-        <div class="list">
+    <div class="keys" :style="`cursor: ${resizeable ? 'ew-resize' : cursor}`">
+        <div class="list" ref="sidebarRef" :style="`width: ${width}px`">
             <div class="header">
                 <div></div>
                 <div>
@@ -685,9 +726,8 @@ const handleStringReset = async () => {
                     </n-button>
                 </div>
             </div>
-            <n-layout position="absolute" style="top: 36px;  color: #fff; height: 100%;" :native-scrollbar="false"
-                content-style="">
-                <n-spin :show="showLoadingTable">
+            <n-layout position="absolute" style="top: 36px;  color: #fff; height: 100%;" :native-scrollbar="false">
+                <n-spin :show="showLoadingTable" class="copy">
                     <n-table :bordered="true" :single-line="false" size="small">
                         <tbody>
                             <tr v-for="i in result" style="cursor: pointer;" @click="handleDetail(i)">
@@ -733,8 +773,8 @@ const handleStringReset = async () => {
                 </n-spin>
             </n-layout>
         </div>
-        <div class="content" v-if="detailKey == null"></div>
-        <div class="content" v-else>
+        <div class="content" :style="`left: ${width}px`" v-if="detailKey == null"></div>
+        <div class="content" :style="`left: ${width}px`" v-else>
             <div class="header">
                 <div></div>
                 <div style="display: flex; align-items: center;">
@@ -747,26 +787,38 @@ const handleStringReset = async () => {
                     <n-button strong secondary circle type="info" size="small" @click="handleRefresh">
                         <template #icon>
                             <n-icon>
-                                <cloud-upload-outline />
+                                <time-outline />
                             </n-icon>
                         </template>
                     </n-button>
                     &nbsp;
-                    <n-button strong secondary circle type="info" size="small" @click.stop="handleCopy(detailKey)">
-                        <template #icon>
-                            <n-icon>
-                                <key />
-                            </n-icon>
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary circle type="info" size="small"
+                                @click.stop="handleCopy(detailKey)">
+                                <template #icon>
+                                    <n-icon>
+                                        <key />
+                                    </n-icon>
+                                </template>
+                            </n-button>
                         </template>
-                    </n-button>
+                        复制 Key
+                    </n-tooltip>
                     &nbsp;
-                    <n-button strong secondary circle type="info" size="small" @click.stop="handleCopy(detailValue)">
-                        <template #icon>
-                            <n-icon>
-                                <copy />
-                            </n-icon>
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary circle type="info" size="small"
+                                @click.stop="handleCopy(detailValue)">
+                                <template #icon>
+                                    <n-icon>
+                                        <copy />
+                                    </n-icon>
+                                </template>
+                            </n-button>
                         </template>
-                    </n-button>
+                        复制 Value
+                    </n-tooltip>
                     &nbsp;
                     <n-button strong secondary circle type="info" size="small" @click="handleReloadKey">
                         <template #icon>
@@ -787,45 +839,173 @@ const handleStringReset = async () => {
             </div>
             <div class="value" style="padding: 4px">
                 <n-input v-model:value="detailKey" type="textarea" readonly placeholder="Key" :rows="3"></n-input>
-                <div v-if="detailKeyType == 'list'" style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                <div v-if="detailKeyType == 'string'" style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small" @click="handleStringReset">
+                                <template #icon>
+                                    <n-icon>
+                                        <checkmark />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+                        </template>
+                        保存
+                    </n-tooltip>
+                    &nbsp;
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small" @click="handleReloadKey">
+                                <template #icon>
+                                    <n-icon>
+                                        <reload />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+                        </template>
+                        刷新
+                    </n-tooltip>
+                </div>
+                <div v-else-if="detailKeyType == 'list'"
+                    style="padding: 4px 0; display: flex; justify-content: flex-end;">
                     <n-button strong secondary size="small" @click="handleReloadKey">
-                        LPOP
-                    </n-button>&nbsp;<n-button strong secondary size="small" @click="handleReloadKey">
-                        RPOP
+                        <template #icon>
+                            <n-icon>
+                                <caret-back />
+                            </n-icon>
+                        </template>
                     </n-button>&nbsp;
                     <n-button strong secondary size="small" @click="handleReloadKey">
                         <template #icon>
                             <n-icon>
-                                <reload />
+                                <caret-forward />
                             </n-icon>
                         </template>
                     </n-button>&nbsp;
-                    <n-button strong secondary size="small" @click="handleStringReset">
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small" @click="handleStringReset">
+                                <template #icon>
+                                    <n-icon>
+                                        <checkmark />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+                        </template>
+                        保存
+                    </n-tooltip>&nbsp;
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small" @click="handleReloadKey">
+                                <template #icon>
+                                    <n-icon>
+                                        <reload />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+                        </template>
+                        刷新
+                    </n-tooltip>
+                </div>
+                <div v-else-if="detailKeyType == 'set'"
+                    style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                    <n-button strong secondary size="small" @click="handleReloadKey">
                         <template #icon>
                             <n-icon>
-                                <checkmark />
+                                <add />
                             </n-icon>
                         </template>
-                    </n-button>
+                    </n-button>&nbsp;
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small" @click="handleReloadKey">
+                                <template #icon>
+                                    <n-icon>
+                                        <reload />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+                        </template>
+                        刷新
+                    </n-tooltip>
                 </div>
                 <div v-else-if="detailKeyType == 'zset'"
                     style="padding: 4px 0; display: flex; justify-content: flex-end;">
                     <n-input size="small" type="text" placeholder="Memeber" />&nbsp;
                     <n-input size="small" type="text" placeholder="Score" />&nbsp;
-                    <n-button strong secondary size="small" @click="handleStringReset">
-                        <template #icon>
-                            <n-icon>
-                                <checkmark />
-                            </n-icon>
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small" @click="handleStringReset">
+                                <template #icon>
+                                    <n-icon>
+                                        <checkmark />
+                                    </n-icon>
+                                </template>
+                            </n-button>
                         </template>
-                    </n-button>&nbsp;
+                        保存
+                    </n-tooltip>&nbsp;
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small" @click="handleReloadKey">
+                                <template #icon>
+                                    <n-icon>
+                                        <reload />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+                        </template>
+                        刷新
+                    </n-tooltip>
+                </div>
+                <div v-else-if="detailKeyType == 'hash'"
+                    style="padding: 4px 0; display: flex; justify-content: flex-end;">
                     <n-button strong secondary size="small" @click="handleReloadKey">
                         <template #icon>
                             <n-icon>
-                                <reload />
+                                <add />
                             </n-icon>
                         </template>
-                    </n-button>
+                    </n-button>&nbsp;
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small" @click="handleReloadKey">
+                                <template #icon>
+                                    <n-icon>
+                                        <reload />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+                        </template>
+                        刷新
+                    </n-tooltip>
+                </div>
+                <div v-else-if="detailKeyType == 'ReJSON-RL'"
+                    style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small" @click="handleStringReset">
+                                <template #icon>
+                                    <n-icon>
+                                        <checkmark />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+                        </template>
+                        保存
+                    </n-tooltip>&nbsp;
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small" @click="handleReloadKey">
+                                <template #icon>
+                                    <n-icon>
+                                        <reload />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+                        </template>
+                        刷新
+                    </n-tooltip>
                 </div>
                 <div style="position: absolute; top: 120px; left: 4px; right: 4px; bottom: 36px;">
                     <n-layout position="absolute"
@@ -956,7 +1136,6 @@ const handleStringReset = async () => {
 }
 
 .keys .list {
-    width: 50%;
     position: absolute;
     top: 0;
     left: 0;
@@ -980,7 +1159,6 @@ const handleStringReset = async () => {
 .keys .content {
     position: absolute;
     top: 0;
-    left: 50%;
     right: 0;
     bottom: 0;
     border-left: #333842 2px solid;
