@@ -5,6 +5,7 @@ import {
     NButton, NModal, NSelect, SelectRenderLabel, NInput, NCard, NSpace,
     NTabs, NTabPane, NLoadingBarProvider, NMessageProvider
 } from 'naive-ui'
+import { invoke } from '@tauri-apps/api/tauri'
 import { ArrowForward, ServerSharp, Add } from '@vicons/ionicons5'
 import { nanoid } from 'nanoid'  // 唯一 id 生成器
 
@@ -100,6 +101,10 @@ onMounted(async () => {
             resizeable.value = false
         })
     }
+
+    setTimeout(async () => {
+        await invoke('close_splashscreen')
+    }, 1000)
 })
 
 // 新建连接时不同类型的数据库图标

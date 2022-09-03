@@ -4,24 +4,27 @@
 )]
 
 use ahridbms;
+use tauri::Manager;
+use tauri_plugin_redis;
+use tauri_plugin_test;
+
+#[tauri::command]
+async fn close_splashscreen(window: tauri::Window) {
+    // Close splashscreen
+    if let Some(splashscreen) = window.get_window("splashscreen") {
+        splashscreen.close().unwrap();
+    }
+    // Show main window
+    window.get_window("main").unwrap().show().unwrap();
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = tauri::Builder::default();
+    app = app.plugin(tauri_plugin_test::init());
+    app = app.plugin(tauri_plugin_redis::init());
     app = app.invoke_handler(tauri::generate_handler![
-        // redis
-        ahridbms::dbms_redis::api::keys,
-        ahridbms::dbms_redis::api::get,
-        ahridbms::dbms_redis::api::del,
-        ahridbms::dbms_redis::api::expire,
-        ahridbms::dbms_redis::api::key_space,
-        ahridbms::dbms_redis::api::set_string,
-        ahridbms::dbms_redis::api::rpush,
-        ahridbms::dbms_redis::api::sadd,
-        ahridbms::dbms_redis::api::zadd,
-        ahridbms::dbms_redis::api::srem,
-        ahridbms::dbms_redis::api::hmset,
-
+        close_splashscreen,
         // postgres
         ahridbms::dbms_postgres::api::pg_select,
         ahridbms::dbms_postgres::api::pg_get_databases,

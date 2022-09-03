@@ -2,7 +2,7 @@ use redis;
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeSet, HashMap, HashSet};
 
-use crate::dbms_redis::entity::*;
+use crate::entity::*;
 
 #[tauri::command]
 pub async fn keys(conn: Connection, arg: String) -> Response<Vec<KeyValue>> {
@@ -171,7 +171,25 @@ pub async fn get(conn: Connection, key: String) -> Response<KeyValue> {
 
     let result: Response<KeyValue>;
 
-    if key_type == "string" {
+    if key_type == "ReJSON-RL" {
+        let value: String = redis::cmd("JSON.GET")
+            .arg(&key)
+            .query(&mut con)
+            .expect("value");
+        let size: i64 = redis::cmd("MEMORY")
+            .arg("usage")
+            .arg(&key)
+            .query(&mut con)
+            .expect("size");
+        let ttl: i64 = redis::cmd("TTL").arg(&key).query(&mut con).expect("ttl");
+        result = Response::ok(KeyValue::ReJson(KV {
+            key: key.to_string(),
+            key_type: key_type.to_string(),
+            value: value,
+            size: size,
+            ttl: ttl,
+        }));
+    } else if key_type == "string" {
         let value: String = redis::cmd("GET").arg(&key).query(&mut con).expect("value");
         let size: i64 = redis::cmd("MEMORY")
             .arg("usage")

@@ -23,7 +23,11 @@ redis = "0.21.5"
 postgres = "0.19.3"
 tokio-postgres = "0.7.7"
 
+[dependencies.tauri-plugin-test]
+path = "../tauri-plugin-test"
 
+[dependencies.tauri-plugin-redis]
+path = "../tauri-plugin-redis"
 
 [features]
 # by default Tauri runs in production mode

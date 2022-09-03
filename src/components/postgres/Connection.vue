@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { h, ref, onBeforeMount } from 'vue'
-import { invoke } from '@tauri-apps/api/tauri'
 import { NTree, NIcon, TreeOption, DropdownOption, NDropdown } from 'naive-ui'
 import { ServerSharp, ChevronForward } from '@vicons/ionicons5'
 import { nanoid } from 'nanoid'

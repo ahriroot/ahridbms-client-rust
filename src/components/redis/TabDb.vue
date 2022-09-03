@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, shallowRef, ref, onBeforeMount, onMounted, computed } from 'vue'
+import { h, shallowRef, ref, onBeforeMount, onMounted, computed, VNodeRef, nextTick } from 'vue'
 import {
     NTable, NLayout, NTag, NButton, NIcon, NModal, SelectRenderLabel, useLoadingBar,
     NSpace, NCard, NSelect, NInput, useMessage, NSpin, NDropdown, NInputNumber, NTooltip
@@ -41,6 +41,7 @@ const width = ref(500)
 const oldWidth = ref(500)
 const cursor = ref('default')
 const currentMoveX = ref(0)
+const editorRef = shallowRef<any>(undefined)
 onMounted(() => {
     if (sidebarRef.value) {
         sidebarRef.value.addEventListener('mousedown', (ev) => {
@@ -78,7 +79,6 @@ const init = async () => {
     loadingStart()
     try {
         let res = await keys({ conn: props, arg: '*' })
-        console.log(res)
         result.value = []
         res.forEach(item => {
             for (const key in item) {
@@ -248,17 +248,22 @@ const handleReload = async () => {
 }
 const handleReloadKey = async () => {
     loadingStart()
-    const response = await invoke<any>('get', { conn: props, key: detailKey.value })
+    const response = await invoke<any>('plugin:redis|get', { conn: props, key: detailKey.value })
     let res = response.data
-    console.log(res)
     let tmp_key = 'String'
     for (const key in res) {
         tmp_key = key
     }
     detailTTL.value = res[tmp_key].ttl.toString()
     detailValue.value = res[tmp_key].value
-    result.value.forEach(item => {
+    result.value.forEach(async item => {
         if (item.key == res[tmp_key].key) {
+            if (item.key_type == 'ReJSON-RL') {
+                if (!editorRef.value) {
+                    await nextTick()
+                }
+                editorRef.value?.setValue(res[tmp_key].value)
+            }
             item.ttl = res[tmp_key].ttl
             item.size = res[tmp_key].size
             item.value = res[tmp_key].value
@@ -271,7 +276,7 @@ const handleRefresh = async () => {
     switch (fieldType.value) {
         case 'string':
             loadingStart()
-            let res = await invoke('expire', { conn: props, key: detailKey.value, ttl: Number(detailTTL.value) })
+            let res = await invoke('plugin:redis|expire', { conn: props, key: detailKey.value, ttl: Number(detailTTL.value) })
             if (res == "Ok") {
                 message.success('Success')
                 await handleReload()
@@ -381,7 +386,7 @@ const handleDelete = async (val: Keyvalue | null) => {
         detailKey.value = null
     }
     loadingStart()
-    let res = await invoke('del', { conn: props, key: key })
+    let res = await invoke('plugin:redis|del', { conn: props, key: key })
     if (res == "Ok") {
         message.success('Success')
         await handleReload()
@@ -431,7 +436,6 @@ const detailValue = ref<any>('')
 const detailTTL = ref<string>('')
 const detailKeyType = ref<string>('')
 const zsetToJson = computed(() => {
-    console.log(detailValue.value)
     let res: any = []
     let len = detailValue.value.length / 2
     for (let i = 0; i < len; i++) {
@@ -737,7 +741,7 @@ const handleStringReset = async () => {
                                     </n-tag>
                                 </td>
                                 <td style="max-width: 200px; overflow: hidden;">{{ i.key }}</td>
-                                <td class="td-size">{{ i.size }} b</td>
+                                <td class="td-size">{{ i.size }} B</td>
                                 <td class="td-ttl">{{ i.ttl }} {{ i.ttl > 0 ? 's' : '' }}</td>
                                 <td class="td-opera">
                                     <div class="btns">
@@ -1012,7 +1016,7 @@ const handleStringReset = async () => {
                         style="background: #282c34; top: 0; left: 0; right: 0; bottom: 0; color: #fff;"
                         :native-scrollbar="false" content-style="position: relative; top: 0; bottom: 0">
                         <div v-if="detailKeyType == 'ReJSON-RL'">
-                            <EditorVue :value="detailValue" type="json" />
+                            <EditorVue ref="editorRef" :value="detailValue" type="json" />
                         </div>
                         <div v-else-if="detailKeyType == 'string'" style="height: 100%">
                             <n-input style="height: 100%" v-model:value="detailValue" type="textarea"

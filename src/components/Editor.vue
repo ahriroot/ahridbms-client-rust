@@ -1,15 +1,10 @@
 <script setup lang="ts">
-import { ref, getCurrentInstance, onMounted, watch, shallowRef } from 'vue'
+import { onMounted, shallowRef } from 'vue'
 import * as monaco from 'monaco-editor'
 import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js?worker'
-import { QuerySuggestionsOfRedis } from '@/data/data';
+import { QuerySuggestionsOfRedis } from '@/data/data'
 
-// self.MonacoEnvironment = {
-//     getWorker() {
-//         return new JsonWorker();
-//     },
-// }
 
 const props = defineProps<{
     value: string
@@ -26,7 +21,7 @@ if (props.type == undefined) {
 }
 
 const monacoEditor = shallowRef<any>(null)
-const editorRef = ref<HTMLElement | null>(null)
+const editorRef = shallowRef<HTMLElement | null>(null)
 
 onMounted(() => {
 
@@ -51,16 +46,16 @@ onMounted(() => {
                 theme: 'vs-dark',
                 selectOnLineNumbers: true,
                 language: "redis",
-            });
+            })
             // monacoEditor.value?.trigger('format', 'editor.action.formatDocument')
             setTimeout(() => {
-                monacoEditor.value?.getAction('editor.action.formatDocument').run();
+                monacoEditor.value?.getAction('editor.action.formatDocument').run()
             }, 100)
             // 监听值变化
             monacoEditor.value?.onDidChangeModelContent(() => {
-                const currenValue = monacoEditor.value.getValue();
-                emits('handle', currenValue);
-            });
+                const currenValue = monacoEditor.value.getValue()
+                emits('handle', currenValue)
+            })
         }
     } else if (props.type == 'json') {
         if (editorRef.value) {
@@ -74,16 +69,25 @@ onMounted(() => {
                 selectOnLineNumbers: true,
                 language: "json",
                 automaticLayout: true
-            });
+            })
             setTimeout(() => {
-                monacoEditor.value?.getAction('editor.action.formatDocument').run();
+                monacoEditor.value?.getAction('editor.action.formatDocument').run()
             }, 100)
             monacoEditor.value?.onDidChangeModelContent(() => {
-                const currenValue = monacoEditor.value.getValue();
-                emits('handle', currenValue);
-            });
+                const currenValue = monacoEditor.value.getValue()
+                emits('handle', currenValue)
+            })
         }
     }
+})
+
+const setValue = async (val: string) => {
+    monacoEditor.value?.setValue(val)
+    monacoEditor.value?.getAction('editor.action.formatDocument').run()
+}
+
+defineExpose({
+    setValue
 })
 </script>
     

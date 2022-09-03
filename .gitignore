@@ -1,3 +1,4 @@
+/**/target/
 # Logs
 logs
 *.log
@@ -11,7 +12,8 @@ node_modules
 # dist
 dist-ssr
 *.local
-dist/
+dist/*
+!dist/splashscreen.html
 
 # Editor directories and files
 .vscode/*

@@ -21,7 +21,7 @@ const currentScope = ref<string>('')
 const info = ref<any>({})
 
 onBeforeMount(async () => {
-    const res = await invoke<Response<string>>('key_space', { conn: { ...props, db: "0" } })
+    const res = await invoke<Response<string>>('plugin:redis|key_space', { conn: { ...props, db: "0" } })
     res.data.split('\n').forEach(item => {
         item = item.trim()
         if (item.length > 0) {

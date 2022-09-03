@@ -63,37 +63,37 @@ const request = async <T>(command: string, params: any): Promise<T> => {
 }
 
 const keys = async (params: InvokeArgs): Promise<AllKeys[]> => {
-    let res = await request<AllKeys[]>('keys', params)
+    let res = await request<AllKeys[]>('plugin:redis|keys', params)
     return res
 }
 
 const setString = async (params: SetStringArgs): Promise<string> => {
-    let res = await request<string>('set_string', params)
+    let res = await request<string>('plugin:redis|set_string', params)
     return res
 }
 
 const rpush = async (params: RPushArgs): Promise<number> => {
-    let res = await request<number>('rpush', params)
+    let res = await request<number>('plugin:redis|rpush', params)
     return res
 }
 
 const sadd = async (params: SaddArgs): Promise<number> => {
-    let res = await request<number>('sadd', params)
+    let res = await request<number>('plugin:redis|sadd', params)
     return res
 }
 
 const srem = async (params: SremArgs): Promise<number> => {
-    let res = await request<number>('srem', params)
+    let res = await request<number>('plugin:redis|srem', params)
     return res
 }
 
 const zadd = async (params: ZaddArgs): Promise<number> => {
-    let res = await request<number>('zadd', params)
+    let res = await request<number>('plugin:redis|zadd', params)
     return res
 }
 
 const hmset = async (params: HmsetArgs): Promise<string> => {
-    let res = await request<string>('hmset', params)
+    let res = await request<string>('plugin:redis|hmset', params)
     return res
 }
 
