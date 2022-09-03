@@ -509,3 +509,33 @@ pub async fn hmset(
     }
     Response::ok(result)
 }
+
+#[tauri::command]
+pub async fn reset(conn: Connection, key: String, value: String) -> Response<String> {
+    let conn_str = format!(
+        "redis://{}:{}@{}:{}/{}",
+        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+    );
+
+    let client = redis::Client::open(conn_str).expect("client");
+    let mut con: redis::Connection = client.get_connection().expect("con");
+
+    let ttl: i64 = redis::cmd("TTL").arg(&key).query(&mut con).expect("ttl");
+
+    if ttl > 0 {
+        let key_space_info: String = redis::cmd("SETEX")
+            .arg(&key)
+            .arg(ttl)
+            .arg(&value)
+            .query(&mut con)
+            .expect("set_string");
+        return Response::ok(key_space_info);
+    } else {
+        let key_space_info: String = redis::cmd("SET")
+            .arg(&key)
+            .arg(&value)
+            .query(&mut con)
+            .expect("set_string");
+        return Response::ok(key_space_info);
+    }
+}

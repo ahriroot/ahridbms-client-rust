@@ -30,7 +30,7 @@
                 "icons/icon.ico"
             ],
             "identifier": "com.ahriknow.dbms",
-            "longDescription": "",
+            "longDescription": "开源数据库管理工具 / Open source database management tool. (redis, postgresql, mysql, mongodb, etc. Developing...)",
             "macOS": {
                 "entitlements": null,
                 "exceptionDomain": "",
@@ -39,7 +39,7 @@
                 "signingIdentity": null
             },
             "resources": [],
-            "shortDescription": "",
+            "shortDescription": "开源数据库管理工具",
             "targets": "all",
             "windows": {
                 "certificateThumbprint": null,

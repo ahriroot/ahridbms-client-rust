@@ -7,7 +7,7 @@ import { QuerySuggestionsOfRedis } from '@/data/data'
 
 
 const props = defineProps<{
-    value: string
+    value: any
     type?: string
 }>()
 const emits = defineEmits<{
@@ -24,7 +24,6 @@ const monacoEditor = shallowRef<any>(null)
 const editorRef = shallowRef<HTMLElement | null>(null)
 
 onMounted(() => {
-
     if (props.type == 'redis_query') {
         console.log('redis_query')
         self.MonacoEnvironment = {
@@ -59,11 +58,17 @@ onMounted(() => {
         }
     } else if (props.type == 'json') {
         if (editorRef.value) {
+            let json = ''
+            try {
+                json = JSON.stringify(JSON.parse(props.value), null, '\t')
+            } catch (e) {
+                json = ''
+            }
             self.MonacoEnvironment = {
                 getWorker: () => new JsonWorker()
             }
             monacoEditor.value = monaco.editor.create(editorRef.value, {
-                value: JSON.stringify(JSON.parse(props.value), null, '\t'),
+                value: json,
                 readOnly: false,
                 theme: 'vs-dark',
                 selectOnLineNumbers: true,
@@ -82,12 +87,22 @@ onMounted(() => {
 })
 
 const setValue = async (val: string) => {
-    monacoEditor.value?.setValue(val)
+    let json = ''
+    try {
+        json = JSON.stringify(JSON.parse(val), null, '\t')
+    } catch (e) {
+        json = ''
+    }
+    monacoEditor.value?.setValue(json)
     monacoEditor.value?.getAction('editor.action.formatDocument').run()
 }
 
+const getValue = async (): Promise<string | undefined> => {
+    return monacoEditor.value?.getValue()
+}
+
 defineExpose({
-    setValue
+    setValue, getValue
 })
 </script>
     

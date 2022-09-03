@@ -5,8 +5,6 @@
 
 use ahridbms;
 use tauri::Manager;
-use tauri_plugin_redis;
-use tauri_plugin_test;
 
 #[tauri::command]
 async fn close_splashscreen(window: tauri::Window) {
@@ -21,8 +19,23 @@ async fn close_splashscreen(window: tauri::Window) {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = tauri::Builder::default();
-    app = app.plugin(tauri_plugin_test::init());
-    app = app.plugin(tauri_plugin_redis::init());
+
+    // 循环 drives
+    let drives = vec!["test", "redis"];
+    for drive in drives {
+        match drive {
+            "test" => {
+                use tauri_plugin_test;
+                app = app.plugin(tauri_plugin_test::init());
+            }
+            "redis" => {
+                use tauri_plugin_redis;
+                app = app.plugin(tauri_plugin_redis::init());
+            }
+            _ => {}
+        }
+    }
+    
     app = app.invoke_handler(tauri::generate_handler![
         close_splashscreen,
         // postgres

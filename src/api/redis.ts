@@ -49,6 +49,27 @@ interface HmsetArgs extends InvokeArgs {
     ttl: number
 }
 
+interface DelArgs extends InvokeArgs {
+    conn: any
+    key: string
+}
+
+interface GetArgs extends InvokeArgs {
+    conn: any
+    key: string
+}
+
+interface ExpireArgs extends InvokeArgs {
+    conn: any
+    key: string
+    ttl: number
+}
+
+interface ResetStringArgs extends InvokeArgs {
+    conn: any
+    key: string
+}
+
 const request = async <T>(command: string, params: any): Promise<T> => {
     let res = await invoke<Response<T>>(command, params)
     if (res.code !== 10000) {
@@ -97,5 +118,25 @@ const hmset = async (params: HmsetArgs): Promise<string> => {
     return res
 }
 
-export { keys, setString, rpush, sadd, srem, zadd, hmset }
+const del = async (params: DelArgs): Promise<string> => {
+    let res = await request<string>('plugin:redis|del', params)
+    return res
+}
+
+const get = async (params: GetArgs): Promise<any> => {
+    let res = await request<any>('plugin:redis|get', params)
+    return res
+}
+
+const expire = async (params: ExpireArgs): Promise<any> => {
+    let res = await request<any>('plugin:redis|expire', params)
+    return res
+}
+
+const resetString = async (params: ResetStringArgs): Promise<any> => {
+    let res = await request<any>('plugin:redis|reset', params)
+    return res
+}
+
+export { keys, setString, rpush, sadd, srem, zadd, hmset, del, get, expire, resetString }
 

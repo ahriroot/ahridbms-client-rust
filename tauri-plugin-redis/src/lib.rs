@@ -21,6 +21,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         api::zadd,
         api::srem,
         api::hmset,
+        api::reset
     ]);
     plugin.build()
 }

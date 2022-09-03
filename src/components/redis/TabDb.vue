@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import { h, shallowRef, ref, onBeforeMount, onMounted, computed, VNodeRef, nextTick } from 'vue'
+import { h, shallowRef, ref, onBeforeMount, onMounted, computed, nextTick } from 'vue'
 import {
     NTable, NLayout, NTag, NButton, NIcon, NModal, SelectRenderLabel, useLoadingBar,
     NSpace, NCard, NSelect, NInput, useMessage, NSpin, NDropdown, NInputNumber, NTooltip
 } from 'naive-ui'
 import { Add, Reload, Trash, Key, Copy, ArrowUp, ArrowDown, Pencil, Checkmark, CaretBack, CaretForward, TimeOutline } from '@vicons/ionicons5'
-import { invoke } from '@tauri-apps/api/tauri'
 import useClipboard from "vue-clipboard3"
-import { Connection } from '@/types/Connection';
-import { keys, setString, rpush, sadd, zadd, hmset, srem } from '@/api/redis'
+import { Connection } from '@/types/Connection'
+import { keys, setString, rpush, sadd, zadd, hmset, srem, del, get, expire, resetString } from '@/api/redis'
 import { INewFieldValue, Keyvalue, RedisConnect } from '@/types/redis'
 import { diffDatetime } from '@/utils/datetime'
 import { NewFieldValue } from '@/data/redis'
@@ -21,7 +20,7 @@ const props = defineProps<{
     db: string
 }>()
 
-const { toClipboard } = useClipboard();
+const { toClipboard } = useClipboard()
 const message = useMessage()
 const loadingBar = useLoadingBar()
 
@@ -32,16 +31,18 @@ const showLoadingTable = ref<boolean>(false)  // table loading 动画
 const loadingCount = ref<number>(0)  // loading 动画计数
 
 const timer = ref<any>(null)  // 计时器
-const before = ref<Date>(new Date())
-const lastReload = ref<string>('less 1m')
+const before = ref<Date>(new Date())  // 上次刷新时间
+const lastReload = ref<string>('less 1m')  // 距离上次刷新时间
 
-const sidebarRef = shallowRef<HTMLElement | null>(null)
-const resizeable = ref<boolean>(false)
-const width = ref(500)
-const oldWidth = ref(500)
-const cursor = ref('default')
-const currentMoveX = ref(0)
-const editorRef = shallowRef<any>(undefined)
+const editorNewRef = shallowRef<any>(undefined)  // 新建 json 数据编辑器
+
+const sidebarRef = shallowRef<HTMLElement | null>(null)  // 左边 html 元素
+const resizeable = ref<boolean>(false)  // 正在调整大小
+const width = ref(500)  // 左边实时宽度
+const oldWidth = ref(500)  // 左边开始宽度
+const cursor = ref('default')  // 默认鼠标显示
+const currentMoveX = ref(0)  // 鼠标移动距离
+const editorRef = shallowRef<any>(undefined)  // 显示 json 数据编辑器
 onMounted(() => {
     if (sidebarRef.value) {
         sidebarRef.value.addEventListener('mousedown', (ev) => {
@@ -69,7 +70,7 @@ onMounted(() => {
                 }
             }
         })
-        document.body.addEventListener('mouseup', (ev) => {
+        document.body.addEventListener('mouseup', (_) => {
             resizeable.value = false
         })
     }
@@ -77,8 +78,7 @@ onMounted(() => {
 
 const init = async () => {
     loadingStart()
-    try {
-        let res = await keys({ conn: props, arg: '*' })
+    keys({ conn: props, arg: '*' }).then(async (res) => {
         result.value = []
         res.forEach(item => {
             for (const key in item) {
@@ -87,9 +87,9 @@ const init = async () => {
         })
         before.value = new Date()
         lastReload.value = await diffDatetime(before.value)
-    } catch {
-    }
-    loadingFinish()
+    }).finally(() => {
+        loadingFinish()
+    })
 }
 
 const fieldType = ref<string>('string')
@@ -248,44 +248,45 @@ const handleReload = async () => {
 }
 const handleReloadKey = async () => {
     loadingStart()
-    const response = await invoke<any>('plugin:redis|get', { conn: props, key: detailKey.value })
-    let res = response.data
-    let tmp_key = 'String'
-    for (const key in res) {
-        tmp_key = key
+    if (!detailKey.value) {
+        return
     }
-    detailTTL.value = res[tmp_key].ttl.toString()
-    detailValue.value = res[tmp_key].value
-    result.value.forEach(async item => {
-        if (item.key == res[tmp_key].key) {
-            if (item.key_type == 'ReJSON-RL') {
-                if (!editorRef.value) {
-                    await nextTick()
-                }
-                editorRef.value?.setValue(res[tmp_key].value)
-            }
-            item.ttl = res[tmp_key].ttl
-            item.size = res[tmp_key].size
-            item.value = res[tmp_key].value
+    get({ conn: props, key: detailKey.value }).then((res: any) => {
+        let tmp_key = 'String'
+        for (const key in res) {
+            tmp_key = key
         }
+        detailTTL.value = res[tmp_key].ttl.toString()
+        detailValue.value = res[tmp_key].value
+        result.value.forEach(async item => {
+            if (item.key == res[tmp_key].key) {
+                if (item.key_type == 'ReJSON-RL') {
+                    if (!editorRef.value) {
+                        await nextTick()
+                    }
+                    editorRef.value?.setValue(res[tmp_key].value)
+                }
+                item.ttl = res[tmp_key].ttl
+                item.size = res[tmp_key].size
+                item.value = res[tmp_key].value
+            }
+        })
+    }).finally(() => {
+        loadingFinish()
     })
-    loadingFinish()
 }
 
 const handleRefresh = async () => {
-    switch (fieldType.value) {
-        case 'string':
-            loadingStart()
-            let res = await invoke('plugin:redis|expire', { conn: props, key: detailKey.value, ttl: Number(detailTTL.value) })
-            if (res == "Ok") {
-                message.success('Success')
-                await handleReload()
-            } else {
-                message.error('Error')
-            }
-            loadingFinish()
-            break
+    loadingStart()
+    if (!detailKey.value) {
+        return
     }
+    expire({ conn: props, key: detailKey.value, ttl: Number(detailTTL.value) }).then(async (res: string) => {
+        message.success(res)
+        await handleReload()
+    }).finally(() => {
+        loadingFinish()
+    })
 }
 
 const loadingStart = () => {
@@ -303,68 +304,71 @@ const loadingFinish = () => {
     }
 }
 
+/**
+ * 确定添加数据
+ */
 const handleSubmitAdd = async () => {
     switch (fieldType.value) {
         case 'string':
             loadingStart()
-            let string_res = await setString({ conn: props, key: fieldValue.value.string.key, value: fieldValue.value.string.value, ttl: Number(fieldValue.value.string.ttl) })
-            if (string_res == "OK") {
-                message.success('Success')
+            setString({ conn: props, key: fieldValue.value.string.key, value: fieldValue.value.string.value, ttl: Number(fieldValue.value.string.ttl) }).then(async res => {
+                message.success(res)
                 await handleReload()
-            } else {
-                message.error('Error')
-            }
-            loadingFinish()
+            }).finally(() => {
+                loadingFinish()
+            })
             break
         case 'list':
             loadingStart()
             let list_values = fieldValue.value.list.value.filter(item => item.value).map(item => item.value)
-            let list_res = await rpush({ conn: props, key: fieldValue.value.list.key, value: list_values, ttl: Number(fieldValue.value.list.ttl) })
-            if (list_res >= 0) {
-                message.success(`Success, ${list_res} items added`)
+            rpush({ conn: props, key: fieldValue.value.list.key, value: list_values, ttl: Number(fieldValue.value.list.ttl) }).then(async res => {
+                message.success(`Success, ${res} items added`)
                 await handleReload()
-            } else {
-                console.log(list_res)
-                message.error('Error')
-            }
-            loadingFinish()
+            }).finally(() => {
+                loadingFinish()
+            })
             break
         case 'set':
             loadingStart()
             let set_values = fieldValue.value.set.value.filter(item => item.value).map(item => item.value)
-            let set_res = await sadd({ conn: props, key: fieldValue.value.set.key, value: set_values, ttl: Number(fieldValue.value.set.ttl) })
-            if (set_res >= 0) {
-                message.success(`Success, ${set_res} items added`)
+            sadd({ conn: props, key: fieldValue.value.set.key, value: set_values, ttl: Number(fieldValue.value.set.ttl) }).then(async res => {
+                message.success(`Success, ${res} items added`)
                 await handleReload()
-            } else {
-                console.log(set_res)
-                message.error('Error')
-            }
-            loadingFinish()
+            }).finally(() => {
+                loadingFinish()
+            })
             break
         case 'zset':
             loadingStart()
-            let zset_res = await zadd({ conn: props, key: fieldValue.value.zset.key, value: fieldValue.value.zset.value, ttl: Number(fieldValue.value.zset.ttl) })
-            if (zset_res >= 0) {
-                message.success(`Success, ${zset_res} items added`)
+            zadd({ conn: props, key: fieldValue.value.zset.key, value: fieldValue.value.zset.value, ttl: Number(fieldValue.value.zset.ttl) }).then(async res => {
+                message.success(`Success, ${res} items added`)
                 await handleReload()
-            } else {
-                console.log(zset_res)
-                message.error('Error')
-            }
-            loadingFinish()
+            }).finally(() => {
+                loadingFinish()
+            })
             break
         case 'hash':
             loadingStart()
-            let hash_res = await hmset({ conn: props, key: fieldValue.value.hash.key, value: fieldValue.value.hash.value, ttl: Number(fieldValue.value.hash.ttl) })
-            if (hash_res == 'OK') {
-                message.success('Success')
+            hmset({ conn: props, key: fieldValue.value.hash.key, value: fieldValue.value.hash.value, ttl: Number(fieldValue.value.hash.ttl) }).then(async res => {
+                message.success(res)
                 await handleReload()
-            } else {
-                console.log(hash_res)
-                message.error('Error')
+            }).finally(() => {
+                loadingFinish()
+            })
+            break
+        case 'ReJSON-RL':
+            if (!editorNewRef.value) {
+                await nextTick()
             }
-            loadingFinish()
+            console.log(await editorNewRef.value?.getValue())
+            // let json_res = await setJson({ conn: props, key: fieldValue.value.json.key, value: fieldValue.value.json.value, ttl: Number(fieldValue.value.json.ttl) })
+            // if (json_res == 'OK') {
+            //     message.success('Success')
+            //     await handleReload()
+            // } else {
+            //     console.log(json_res)
+            //     message.error('Error')
+            // }
             break
     }
     showAdd.value = false
@@ -374,6 +378,9 @@ const handleCancelAdd = async () => {
     showAdd.value = false
 }
 
+/**
+ * 删除数据
+ */
 const handleDelete = async (val: Keyvalue | null) => {
     let key = ''
     if (val) {
@@ -386,36 +393,24 @@ const handleDelete = async (val: Keyvalue | null) => {
         detailKey.value = null
     }
     loadingStart()
-    let res = await invoke('plugin:redis|del', { conn: props, key: key })
-    if (res == "Ok") {
-        message.success('Success')
+    del({ conn: props, key: key }).then(async res => {
+        message.success(res)
         await handleReload()
-    } else {
-        message.error('Error')
-    }
-    loadingFinish()
-}
-
-const handleDeleteSetValue = async (v: string) => {
-    if (detailKey.value) {
-        loadingStart()
-        let res = await srem({ conn: props, key: detailKey.value, value: [v] })
-        if (res > -1) {
-            message.success(`Success, ${res} items deleted`)
-            await handleReloadKey()
-        } else {
-            message.error('Error')
-        }
+    }).finally(() => {
         loadingFinish()
-    }
+    })
 }
 
+/**
+ * 复制数据到剪切板
+ * @param val 要复制的数据
+ */
 const handleCopy = async (val: any) => {
     if (val != null && val != undefined) {
-        let str;
+        let str
         // 判断 val 是否为字符串
         if (typeof val === 'string') {
-            str = val;
+            str = val
         } else if (typeof val === 'object') {
             try {
                 str = JSON.stringify(val)
@@ -430,12 +425,11 @@ const handleCopy = async (val: any) => {
     }
 }
 
-
-const detailKey = ref<string | null>(null)
-const detailValue = ref<any>('')
-const detailTTL = ref<string>('')
-const detailKeyType = ref<string>('')
-const zsetToJson = computed(() => {
+const detailKey = ref<string | null>(null)  // 当前显示数据的 key
+const detailValue = ref<any>('')  // 当前显示数据的 value
+const detailTTL = ref<string>('')  // 当前显示数据的 ttl
+const detailKeyType = ref<string>('')  // 当前显示数据的 keyType
+const zsetToJson = computed(() => {  // zset 转 [json]
     let res: any = []
     let len = detailValue.value.length / 2
     for (let i = 0; i < len; i++) {
@@ -447,11 +441,21 @@ const zsetToJson = computed(() => {
     return res
 })
 
+
+/**
+ * 显示详细数据
+ */
 const handleDetail = async (val: Keyvalue) => {
     detailTTL.value = val.ttl.toString()
     detailKey.value = val.key
     detailValue.value = val.value
     detailKeyType.value = val.key_type
+    if (val.key_type == 'ReJSON-RL') {
+        if (!editorRef.value) {
+            await nextTick()
+        }
+        editorRef.value?.setValue(val.value)
+    }
 }
 
 onBeforeMount(async () => {
@@ -466,6 +470,7 @@ onBeforeMount(async () => {
     }, 5000)
 })
 
+// 新建数据快速选择数据类型
 const dropdownList = ref([
     {
         label: 'STRING',
@@ -488,16 +493,22 @@ const dropdownList = ref([
     }
 ])
 
+/**
+ * 快速创建数据
+ * @param val 数据类型
+ */
 const handleSelect = (val: string) => {
     fieldType.value = val
-    showAdd.value = true
+    showAdd.value = true  // 显示新建数据弹窗
 }
 
+// 正在编辑的 list 中的数据
 const editListItem = ref({
     index: -1,
     value: ''
 })
 
+// 正在编辑的 zset 中的数据
 const editZsetItem = ref<{
     key: string | null
     value: string
@@ -508,7 +519,32 @@ const editZsetItem = ref<{
 
 // String Value Opera
 const handleStringReset = async () => {
+    if (detailKey.value) {
+        loadingStart()
+        resetString({ conn: props, key: detailKey.value, value: detailValue.value }).then(async res => {
+            message.success(res)
+            await handleReloadKey()
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
 
+// Set Value Opera
+/**
+ * 删除 set 类型数据的 某一项
+ * @param v 要删除的数据 
+ */
+const handleDeleteSetValue = async (v: string) => {
+    if (detailKey.value) {
+        loadingStart()
+        srem({ conn: props, key: detailKey.value, value: [v] }).then(async res => {
+            message.success(`Success, ${res} items deleted`)
+            await handleReloadKey()
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
 }
 </script>
 
@@ -518,14 +554,15 @@ const handleStringReset = async () => {
             <n-select :options="fieldTypeList" :render-label="renderLabel" v-model:value="fieldType" />
             <n-layout position="absolute" style="top: 50px; bottom: 50px; background: #2c2c32;"
                 :native-scrollbar="false">
-                <n-card v-if="fieldType == 'ReJSON-RL'">
+                <n-card v-show="fieldType == 'ReJSON-RL'">
                     <n-space vertical>
                         <n-input v-model:value="fieldValue.string.key" type="text" placeholder="Key" />
                         <n-input v-model:value="fieldValue.string.value" type="textarea" placeholder="Value" />
+                        <EditorVue ref="editorNewRef" value="" type="json" />
                         <n-input v-model:value="fieldValue.string.ttl" type="text" placeholder="TTL" />
                     </n-space>
                 </n-card>
-                <n-card v-else-if="fieldType == 'string'">
+                <n-card v-if="fieldType == 'string'">
                     <n-space vertical>
                         <n-input v-model:value="fieldValue.string.key" type="text" placeholder="Key" />
                         <n-input v-model:value="fieldValue.string.value" type="textarea" placeholder="Value" />
@@ -1015,10 +1052,10 @@ const handleStringReset = async () => {
                     <n-layout position="absolute"
                         style="background: #282c34; top: 0; left: 0; right: 0; bottom: 0; color: #fff;"
                         :native-scrollbar="false" content-style="position: relative; top: 0; bottom: 0">
-                        <div v-if="detailKeyType == 'ReJSON-RL'">
+                        <div v-show="detailKeyType == 'ReJSON-RL'">
                             <EditorVue ref="editorRef" :value="detailValue" type="json" />
                         </div>
-                        <div v-else-if="detailKeyType == 'string'" style="height: 100%">
+                        <div v-if="detailKeyType == 'string'" style="height: 100%">
                             <n-input style="height: 100%" v-model:value="detailValue" type="textarea"
                                 :autosize="{ minRows: 10 }"></n-input>
                         </div>
