@@ -5,10 +5,10 @@ use std::collections::{BTreeSet, HashMap, HashSet};
 use crate::entity::*;
 
 #[tauri::command]
-pub async fn keys(conn: Connection, arg: String) -> Response<Vec<KeyValue>> {
+pub async fn keys(conn: Connection, arg: String, db: String) -> Response<Vec<KeyValue>> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let mut all_data: Vec<KeyValue> = Vec::new();
@@ -155,10 +155,10 @@ pub async fn keys(conn: Connection, arg: String) -> Response<Vec<KeyValue>> {
 }
 
 #[tauri::command]
-pub async fn get(conn: Connection, key: String) -> Response<KeyValue> {
+pub async fn get(conn: Connection, key: String, db: String) -> Response<KeyValue> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let client = redis::Client::open(conn_str).expect("client");
@@ -294,10 +294,10 @@ pub async fn get(conn: Connection, key: String) -> Response<KeyValue> {
 }
 
 #[tauri::command]
-pub async fn del(conn: Connection, key: String) -> Response<String> {
+pub async fn del(conn: Connection, key: String, db: String) -> Response<String> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let client = redis::Client::open(conn_str).expect("client");
@@ -308,10 +308,10 @@ pub async fn del(conn: Connection, key: String) -> Response<String> {
 }
 
 #[tauri::command]
-pub async fn expire(conn: Connection, key: String, ttl: i64) -> Response<String> {
+pub async fn expire(conn: Connection, key: String, ttl: i64, db: String) -> Response<String> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let client = redis::Client::open(conn_str).expect("client");
@@ -326,18 +326,18 @@ pub async fn expire(conn: Connection, key: String, ttl: i64) -> Response<String>
 }
 
 #[tauri::command]
-pub async fn key_space(conn: Connection) -> Response<String> {
+pub async fn info(conn: Connection, db: String) -> Response<String> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let client = redis::Client::open(conn_str).expect("client");
     let mut con: redis::Connection = client.get_connection().expect("con");
 
-    let key_space_info: String = redis::cmd("INFO").query(&mut con).expect("keyspace");
+    let info: String = redis::cmd("INFO").query(&mut con).expect("keyspace");
 
-    Response::ok(key_space_info)
+    Response::ok(info)
 }
 
 #[tauri::command]
@@ -346,10 +346,11 @@ pub async fn set_string(
     key: String,
     value: String,
     ttl: i64,
+    db: String,
 ) -> Response<String> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let client = redis::Client::open(conn_str).expect("client");
@@ -374,10 +375,16 @@ pub async fn set_string(
 }
 
 #[tauri::command]
-pub async fn rpush(conn: Connection, key: String, value: Vec<String>, ttl: i64) -> Response<i32> {
+pub async fn rpush(
+    conn: Connection,
+    key: String,
+    value: Vec<String>,
+    ttl: i64,
+    db: String,
+) -> Response<i32> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let client = redis::Client::open(conn_str).expect("client");
@@ -400,10 +407,41 @@ pub async fn rpush(conn: Connection, key: String, value: Vec<String>, ttl: i64) 
 }
 
 #[tauri::command]
-pub async fn sadd(conn: Connection, key: String, value: Vec<String>, ttl: i64) -> Response<i32> {
+pub async fn lset(
+    conn: Connection,
+    key: String,
+    index: i64,
+    value: String,
+    db: String,
+) -> Response<String> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
+    );
+
+    let client = redis::Client::open(conn_str).expect("client");
+    let mut con: redis::Connection = client.get_connection().expect("con");
+
+    let result: String = redis::cmd("LSET")
+        .arg(&key)
+        .arg(index)
+        .arg(&value)
+        .query(&mut con)
+        .expect("lset");
+    Response::ok(result)
+}
+
+#[tauri::command]
+pub async fn sadd(
+    conn: Connection,
+    key: String,
+    value: Vec<String>,
+    ttl: i64,
+    db: String,
+) -> Response<i32> {
+    let conn_str = format!(
+        "redis://{}:{}@{}:{}/{}",
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let client = redis::Client::open(conn_str).expect("client");
@@ -432,10 +470,16 @@ pub struct ZsetValue {
 }
 
 #[tauri::command]
-pub async fn zadd(conn: Connection, key: String, value: Vec<ZsetValue>, ttl: i64) -> Response<i32> {
+pub async fn zadd(
+    conn: Connection,
+    key: String,
+    value: Vec<ZsetValue>,
+    ttl: i64,
+    db: String,
+) -> Response<i32> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let client = redis::Client::open(conn_str).expect("client");
@@ -457,10 +501,10 @@ pub async fn zadd(conn: Connection, key: String, value: Vec<ZsetValue>, ttl: i64
 }
 
 #[tauri::command]
-pub async fn srem(conn: Connection, key: String, value: Vec<String>) -> Response<i32> {
+pub async fn srem(conn: Connection, key: String, value: Vec<String>, db: String) -> Response<i32> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let client = redis::Client::open(conn_str).expect("client");
@@ -486,10 +530,11 @@ pub async fn hmset(
     key: String,
     value: Vec<HashValue>,
     ttl: i64,
+    db: String,
 ) -> Response<String> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let client = redis::Client::open(conn_str).expect("client");
@@ -511,10 +556,10 @@ pub async fn hmset(
 }
 
 #[tauri::command]
-pub async fn reset(conn: Connection, key: String, value: String) -> Response<String> {
+pub async fn reset(conn: Connection, key: String, value: String, db: String) -> Response<String> {
     let conn_str = format!(
         "redis://{}:{}@{}:{}/{}",
-        "", conn.conn.info.pass, conn.conn.info.host, conn.conn.info.port, conn.db
+        "", conn.info.pass, conn.info.host, conn.info.port, db
     );
 
     let client = redis::Client::open(conn_str).expect("client");

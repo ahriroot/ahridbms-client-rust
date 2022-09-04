@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, shallowRef, ref, onBeforeMount, onMounted, computed, nextTick } from 'vue'
+import { h, shallowRef, ref, onBeforeMount, onMounted, computed, nextTick, watch } from 'vue'
 import {
     NTable, NLayout, NTag, NButton, NIcon, NModal, SelectRenderLabel, useLoadingBar,
     NSpace, NCard, NSelect, NInput, useMessage, NSpin, NDropdown, NInputNumber, NTooltip
@@ -7,11 +7,12 @@ import {
 import { Add, Reload, Trash, Key, Copy, ArrowUp, ArrowDown, Pencil, Checkmark, CaretBack, CaretForward, TimeOutline } from '@vicons/ionicons5'
 import useClipboard from "vue-clipboard3"
 import { Connection } from '@/types/Connection'
-import { keys, setString, rpush, sadd, zadd, hmset, srem, del, get, expire, resetString } from '@/api/redis'
+import { keys, setString, rpush, sadd, zadd, hmset, srem, del, get, expire, resetString, lset } from '@/api/redis'
 import { INewFieldValue, Keyvalue, RedisConnect } from '@/types/redis'
 import { diffDatetime } from '@/utils/datetime'
 import { NewFieldValue } from '@/data/redis'
 import EditorVue from '@/components/Editor.vue'
+import DetailListVue from '@/components/redis/DetailList.vue'
 
 window.$message = useMessage()
 
@@ -78,7 +79,7 @@ onMounted(() => {
 
 const init = async () => {
     loadingStart()
-    keys({ conn: props, arg: '*' }).then(async (res) => {
+    keys({ conn: props.conn, arg: '*', db: props.db }).then(async (res) => {
         result.value = []
         res.forEach(item => {
             for (const key in item) {
@@ -251,7 +252,7 @@ const handleReloadKey = async () => {
     if (!detailKey.value) {
         return
     }
-    get({ conn: props, key: detailKey.value }).then((res: any) => {
+    get({ conn: props.conn, key: detailKey.value, db: props.db }).then((res: any) => {
         let tmp_key = 'String'
         for (const key in res) {
             tmp_key = key
@@ -281,7 +282,7 @@ const handleRefresh = async () => {
     if (!detailKey.value) {
         return
     }
-    expire({ conn: props, key: detailKey.value, ttl: Number(detailTTL.value) }).then(async (res: string) => {
+    expire({ conn: props.conn, key: detailKey.value, ttl: Number(detailTTL.value), db: props.db }).then(async (res: string) => {
         message.success(res)
         await handleReload()
     }).finally(() => {
@@ -311,7 +312,7 @@ const handleSubmitAdd = async () => {
     switch (fieldType.value) {
         case 'string':
             loadingStart()
-            setString({ conn: props, key: fieldValue.value.string.key, value: fieldValue.value.string.value, ttl: Number(fieldValue.value.string.ttl) }).then(async res => {
+            setString({ conn: props.conn, key: fieldValue.value.string.key, value: fieldValue.value.string.value, ttl: Number(fieldValue.value.string.ttl), db: props.db }).then(async res => {
                 message.success(res)
                 await handleReload()
             }).finally(() => {
@@ -321,7 +322,7 @@ const handleSubmitAdd = async () => {
         case 'list':
             loadingStart()
             let list_values = fieldValue.value.list.value.filter(item => item.value).map(item => item.value)
-            rpush({ conn: props, key: fieldValue.value.list.key, value: list_values, ttl: Number(fieldValue.value.list.ttl) }).then(async res => {
+            rpush({ conn: props.conn, key: fieldValue.value.list.key, value: list_values, ttl: Number(fieldValue.value.list.ttl), db: props.db }).then(async res => {
                 message.success(`Success, ${res} items added`)
                 await handleReload()
             }).finally(() => {
@@ -331,7 +332,7 @@ const handleSubmitAdd = async () => {
         case 'set':
             loadingStart()
             let set_values = fieldValue.value.set.value.filter(item => item.value).map(item => item.value)
-            sadd({ conn: props, key: fieldValue.value.set.key, value: set_values, ttl: Number(fieldValue.value.set.ttl) }).then(async res => {
+            sadd({ conn: props.conn, key: fieldValue.value.set.key, value: set_values, ttl: Number(fieldValue.value.set.ttl), db: props.db }).then(async res => {
                 message.success(`Success, ${res} items added`)
                 await handleReload()
             }).finally(() => {
@@ -340,7 +341,7 @@ const handleSubmitAdd = async () => {
             break
         case 'zset':
             loadingStart()
-            zadd({ conn: props, key: fieldValue.value.zset.key, value: fieldValue.value.zset.value, ttl: Number(fieldValue.value.zset.ttl) }).then(async res => {
+            zadd({ conn: props.conn, key: fieldValue.value.zset.key, value: fieldValue.value.zset.value, ttl: Number(fieldValue.value.zset.ttl), db: props.db }).then(async res => {
                 message.success(`Success, ${res} items added`)
                 await handleReload()
             }).finally(() => {
@@ -349,7 +350,7 @@ const handleSubmitAdd = async () => {
             break
         case 'hash':
             loadingStart()
-            hmset({ conn: props, key: fieldValue.value.hash.key, value: fieldValue.value.hash.value, ttl: Number(fieldValue.value.hash.ttl) }).then(async res => {
+            hmset({ conn: props.conn, key: fieldValue.value.hash.key, value: fieldValue.value.hash.value, ttl: Number(fieldValue.value.hash.ttl), db: props.db }).then(async res => {
                 message.success(res)
                 await handleReload()
             }).finally(() => {
@@ -393,7 +394,7 @@ const handleDelete = async (val: Keyvalue | null) => {
         detailKey.value = null
     }
     loadingStart()
-    del({ conn: props, key: key }).then(async res => {
+    del({ conn: props.conn, key: key, db: props.db }).then(async res => {
         message.success(res)
         await handleReload()
     }).finally(() => {
@@ -425,27 +426,54 @@ const handleCopy = async (val: any) => {
     }
 }
 
+const detailFilter = ref<string>('')  // 过滤显示 detailValue 内容
 const detailKey = ref<string | null>(null)  // 当前显示数据的 key
 const detailValue = ref<any>('')  // 当前显示数据的 value
 const detailTTL = ref<string>('')  // 当前显示数据的 ttl
 const detailKeyType = ref<string>('')  // 当前显示数据的 keyType
 const zsetToJson = computed(() => {  // zset 转 [json]
     let res: any = []
-    let len = detailValue.value.length / 2
-    for (let i = 0; i < len; i++) {
-        res.push({
-            score: detailValue.value[i],
-            member: detailValue.value[len + i]
+    if (detailKeyType.value == 'zset') {
+        let len = detailValue.value.length / 2
+        for (let i = 0; i < len; i++) {
+            res.push({
+                score: detailValue.value[i],
+                member: detailValue.value[len + i]
+            })
+        }
+    }
+    return res
+})
+const listToJson = computed(() => {  // hash 转 [json]
+    let res: any = []
+    if (detailKeyType.value == 'list') {
+        detailValue.value.forEach((item: any, index: number) => {
+            res.push({
+                index: index,
+                value: item
+            })
         })
     }
     return res
 })
-
+const hashToJson = computed(() => {  // hash 转 [json]
+    let res: any = []
+    if (detailKeyType.value == 'hash') {
+        for (let k in detailValue.value) {
+            res.push({
+                field: k,
+                value: detailValue.value[k]
+            })
+        }
+    }
+    return res
+})
 
 /**
  * 显示详细数据
  */
 const handleDetail = async (val: Keyvalue) => {
+    detailFilter.value = ''
     detailTTL.value = val.ttl.toString()
     detailKey.value = val.key
     detailValue.value = val.value
@@ -502,11 +530,34 @@ const handleSelect = (val: string) => {
     showAdd.value = true  // 显示新建数据弹窗
 }
 
+watch(() => detailFilter.value, async () => {
+    editListItem.value.index = -1
+    editZsetItem.value.key = null
+})
+
 // 正在编辑的 list 中的数据
 const editListItem = ref({
     index: -1,
     value: ''
 })
+const handleEditListItem = async () => {
+    if(detailKey.value && editListItem.value.index >= 0){
+        loadingStart()
+        lset({
+            conn: props.conn,
+            key: detailKey.value,
+            index: editListItem.value.index,
+            value: editListItem.value.value,
+            db: props.db
+        }).then(async res => {
+            message.success(res)
+            await handleReloadKey()
+            editListItem.value.index = -1
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
 
 // 正在编辑的 zset 中的数据
 const editZsetItem = ref<{
@@ -521,7 +572,7 @@ const editZsetItem = ref<{
 const handleStringReset = async () => {
     if (detailKey.value) {
         loadingStart()
-        resetString({ conn: props, key: detailKey.value, value: detailValue.value }).then(async res => {
+        resetString({ conn: props.conn, key: detailKey.value, value: detailValue.value, db: props.db }).then(async res => {
             message.success(res)
             await handleReloadKey()
         }).finally(() => {
@@ -538,7 +589,7 @@ const handleStringReset = async () => {
 const handleDeleteSetValue = async (v: string) => {
     if (detailKey.value) {
         loadingStart()
-        srem({ conn: props, key: detailKey.value, value: [v] }).then(async res => {
+        srem({ conn: props.conn, key: detailKey.value, value: [v], db: props.db }).then(async res => {
             message.success(`Success, ${res} items deleted`)
             await handleReloadKey()
         }).finally(() => {
@@ -909,31 +960,59 @@ const handleDeleteSetValue = async (v: string) => {
                 </div>
                 <div v-else-if="detailKeyType == 'list'"
                     style="padding: 4px 0; display: flex; justify-content: flex-end;">
-                    <n-button strong secondary size="small" @click="handleReloadKey">
-                        <template #icon>
-                            <n-icon>
-                                <caret-back />
-                            </n-icon>
-                        </template>
-                    </n-button>&nbsp;
-                    <n-button strong secondary size="small" @click="handleReloadKey">
-                        <template #icon>
-                            <n-icon>
-                                <caret-forward />
-                            </n-icon>
-                        </template>
-                    </n-button>&nbsp;
+                    <n-input size="small" v-model:value="detailFilter" type="text" placeholder="Filter" />&nbsp;
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-button strong secondary size="small" @click="handleStringReset">
+                            <n-button strong secondary size="small">
                                 <template #icon>
                                     <n-icon>
-                                        <checkmark />
+                                        <caret-back />
                                     </n-icon>
                                 </template>
                             </n-button>
+
                         </template>
-                        保存
+                        LPOP
+                    </n-tooltip>&nbsp;
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small">
+                                <template #icon>
+                                    <n-icon>
+                                        <caret-forward />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+
+                        </template>
+                        RPOP
+                    </n-tooltip>&nbsp;
+                    <n-input size="small" type="text" placeholder="Push" />&nbsp;
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small">
+                                <template #icon>
+                                    <n-icon>
+                                        <caret-forward />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+
+                        </template>
+                        LPUSH
+                    </n-tooltip>&nbsp;
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary size="small">
+                                <template #icon>
+                                    <n-icon>
+                                        <caret-back />
+                                    </n-icon>
+                                </template>
+                            </n-button>
+
+                        </template>
+                        RPUSH
                     </n-tooltip>&nbsp;
                     <n-tooltip trigger="hover">
                         <template #trigger>
@@ -950,6 +1029,8 @@ const handleDeleteSetValue = async (v: string) => {
                 </div>
                 <div v-else-if="detailKeyType == 'set'"
                     style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                    <n-input size="small" v-model:value="detailFilter" type="text" placeholder="Filter" />&nbsp;
+                    <n-input size="small" type="text" placeholder="New Member" />&nbsp;
                     <n-button strong secondary size="small" @click="handleReloadKey">
                         <template #icon>
                             <n-icon>
@@ -972,6 +1053,7 @@ const handleDeleteSetValue = async (v: string) => {
                 </div>
                 <div v-else-if="detailKeyType == 'zset'"
                     style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                    <n-input size="small" v-model:value="detailFilter" type="text" placeholder="Filter" />&nbsp;
                     <n-input size="small" type="text" placeholder="Memeber" />&nbsp;
                     <n-input size="small" type="text" placeholder="Score" />&nbsp;
                     <n-tooltip trigger="hover">
@@ -1001,6 +1083,7 @@ const handleDeleteSetValue = async (v: string) => {
                 </div>
                 <div v-else-if="detailKeyType == 'hash'"
                     style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                    <n-input size="small" v-model:value="detailFilter" type="text" placeholder="Filter" />&nbsp;
                     <n-button strong secondary size="small" @click="handleReloadKey">
                         <template #icon>
                             <n-icon>
@@ -1062,28 +1145,30 @@ const handleDeleteSetValue = async (v: string) => {
                         <div v-else-if="detailKeyType == 'list'">
                             <n-table :bordered="true" :single-line="false" size="small">
                                 <tbody>
-                                    <tr v-for="(v, index) in detailValue">
-                                        <td class="list-index" style="width: 120px">{{ index }}</td>
+                                    <tr
+                                        v-for="i in listToJson.filter((item: any) => !detailFilter || item.index == parseInt(detailFilter))">
+                                        <td class="list-index" style="width: 120px">{{ i.index }}</td>
                                         <td class="list-value">
-                                            <n-input v-show="editListItem.index == index"
-                                                v-model:value="editListItem.value" size="small"
-                                                @blur="editListItem.index = -1"></n-input>
-                                            <div v-show="editListItem.index != index"
-                                                @click="editListItem.index = index; editListItem.value = v">{{ v }}
+                                            <div v-show="editListItem.index != i.index"
+                                                @click="editListItem.index = i.index; editListItem.value = i.value">{{
+                                                i.value }}
                                             </div>
+                                            <n-input v-show="editListItem.index == i.index"
+                                                v-model:value="editListItem.value" size="small"
+                                                @keyup.enter.native="handleEditListItem"></n-input>
                                         </td>
                                         <td class="list-opera">
-                                            <n-button v-show="editListItem.index != index" strong secondary circle
+                                            <n-button v-show="editListItem.index != i.index" strong secondary circle
                                                 type="info" size="small"
-                                                @click="editListItem.index = index; editListItem.value = v">
+                                                @click="editListItem.index = i.index; editListItem.value = i.value">
                                                 <template #icon>
                                                     <n-icon>
                                                         <pencil />
                                                     </n-icon>
                                                 </template>
                                             </n-button>
-                                            <n-button v-show="editListItem.index == index" strong secondary circle
-                                                type="info" size="small" @click="editListItem.index = -1">
+                                            <n-button v-show="editListItem.index == i.index" strong secondary circle
+                                                type="info" size="small" @click="handleEditListItem">
                                                 <template #icon>
                                                     <n-icon>
                                                         <checkmark />
@@ -1098,7 +1183,8 @@ const handleDeleteSetValue = async (v: string) => {
                         <div v-else-if="detailKeyType == 'set'">
                             <n-table :bordered="true" :single-line="false" size="small">
                                 <tbody>
-                                    <tr v-for="v in detailValue">
+                                    <tr
+                                        v-for="v in detailValue.filter((item: string) => !detailFilter || item.includes(detailFilter))">
                                         <td class="set-key">{{ v }}</td>
                                         <td class="set-opera">
                                             <n-button strong secondary circle type="error" size="small"
@@ -1117,15 +1203,15 @@ const handleDeleteSetValue = async (v: string) => {
                         <div v-else-if="detailKeyType == 'zset'">
                             <n-table :bordered="true" :single-line="false" size="small">
                                 <tbody>
-                                    <tr v-for="i in zsetToJson">
+                                    <tr
+                                        v-for="i in zsetToJson.filter((item: any) => !detailFilter || item.member.includes(detailFilter))">
                                         <td class="zset-member">{{ i.member }}</td>
                                         <td class="zset-score" style="width: 120px">
                                             <n-input v-show="editZsetItem.key == i.member"
-                                                v-model:value="editZsetItem.value" size="small"
-                                                @blur="editZsetItem.key = null"></n-input>
+                                                v-model:value="editZsetItem.value" size="small"></n-input>
                                             <div v-show="editZsetItem.key != i.member"
                                                 @click="editZsetItem.key = i.member; editZsetItem.value = i.score">{{
-                                                        i.score
+                                                i.score
                                                 }}
                                             </div>
                                         </td>
@@ -1155,10 +1241,11 @@ const handleDeleteSetValue = async (v: string) => {
                         <div v-else-if="detailKeyType == 'hash'">
                             <n-table :bordered="true" :single-line="false" size="small">
                                 <tbody>
-                                    <tr v-for="(v, k) in detailValue">
-                                        <td class="hash-key">{{ k }}</td>
+                                    <tr
+                                        v-for="i in hashToJson.filter((item: any) => !detailFilter || item.field.includes(detailFilter))">
+                                        <td class="hash-key">{{ i.field }}</td>
                                         <td class="hash-value">
-                                            {{ v }}
+                                            {{ i.value }}
                                         </td>
                                     </tr>
                                 </tbody>

@@ -58,14 +58,8 @@ pub struct Info {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Conn {
+pub struct Connection {
     pub id: String,
     pub db_type: String,
     pub info: Info,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Connection {
-    pub conn: Conn,
-    pub db: String,
 }

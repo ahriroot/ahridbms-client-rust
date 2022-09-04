@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, ref, shallowRef, onBeforeMount, onMounted } from 'vue'
+import { h, ref, shallowRef, onBeforeMount, onMounted, computed } from 'vue'
 import {
     darkTheme, NConfigProvider, NGlobalStyle, NIcon, NLayout,
     NButton, NModal, NSelect, SelectRenderLabel, NInput, NCard, NSpace,
@@ -9,14 +9,15 @@ import { invoke } from '@tauri-apps/api/tauri'
 import { ArrowForward, ServerSharp, Add } from '@vicons/ionicons5'
 import { nanoid } from 'nanoid'  // 唯一 id 生成器
 
-import { DBType, ConnectionComponents, RedisConnectInit, TabComponents, PostgresConnectInit } from '@/data/data'
-import { IConnectComponents, ITabComponents } from '@/types/data'
+import { DBType, ConnectionComponents, RedisConnectInit, TabComponents, PostgresConnectInit, InfoComponents } from '@/data/data'
+import { IConnectComponents, IInfoComponents, ITabComponents } from '@/types/data'
 import { Connection } from '@/types/Connection'
 import { getConnections, saveConnections, getTabs, saveTabs } from '@/utils/storage'
 import { OpenTabMesagae } from '@/types/Message'
 import { RedisConnect } from '@/types/redis'
 import { PostgresConnect } from '@/types/postgres'
 import { useIndexStore } from '@/store'
+import RedisInfoVue from '@/components/redis/Info.vue'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏
@@ -30,6 +31,10 @@ const connComponents = shallowRef<IConnectComponents>(ConnectionComponents)  // 
 
 // tab 组件
 const tabComponents = shallowRef<ITabComponents>(TabComponents)
+
+// info 组件
+const infoComponents = shallowRef<IInfoComponents>(InfoComponents)
+const showInfo = ref<boolean>(false)
 
 const store = useIndexStore()
 /** ------------------ 变量 End ------------------ **/
@@ -191,6 +196,10 @@ const handleClose = (val: string) => {
     }
     saveTabs(tabs.value)
 }
+
+const currentTabConn = computed(() => {
+    return tabs.value.find(item => item.id === tab.value)?.conn
+})
 </script>
 
 <template>
@@ -269,6 +278,9 @@ const handleClose = (val: string) => {
                         </div>
                         <div class="content" ref="contentRef" :style="`left: ${width}px`">
                             <header class=" header">
+                                <div v-for="i in connList" v-show="i.id == tabs.find(t => t.id == tab)?.conn.id">
+                                    <component :key="i.id" :is="infoComponents[i.db_type]" :conn="i" />
+                                </div>
                             </header>
                             <section class="workspace">
                                 <n-tabs v-model:value="tab" @update:value="handleTabChanged" type="card" closable

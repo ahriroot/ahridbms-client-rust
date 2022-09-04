@@ -2,18 +2,34 @@ import { invoke, InvokeArgs } from "@tauri-apps/api/tauri"
 import { AllKeys, Response } from '@/types/redis'
 
 
+interface KeysArgs extends InvokeArgs {
+    conn: any
+    arg: string
+    db: string
+}
+
 interface SetStringArgs extends InvokeArgs {
     conn: any
     key: string
     value: string
     ttl: number
+    db: string
 }
 
-interface RPushArgs extends InvokeArgs {
+interface RpushArgs extends InvokeArgs {
     conn: any
     key: string
     value: string[]
     ttl: number
+    db: string
+}
+
+interface LsetArgs extends InvokeArgs {
+    conn: any
+    key: string
+    index: number
+    value: string
+    db: string
 }
 
 interface SaddArgs extends InvokeArgs {
@@ -21,12 +37,14 @@ interface SaddArgs extends InvokeArgs {
     key: string
     value: string[]
     ttl: number
+    db: string
 }
 
 interface SremArgs extends InvokeArgs {
     conn: any
     key: string
     value: string[]
+    db: string
 }
 
 interface ZaddArgs extends InvokeArgs {
@@ -37,6 +55,7 @@ interface ZaddArgs extends InvokeArgs {
         value: string
     }[]
     ttl: number
+    db: string
 }
 
 interface HmsetArgs extends InvokeArgs {
@@ -47,27 +66,32 @@ interface HmsetArgs extends InvokeArgs {
         value: string
     }[]
     ttl: number
+    db: string
 }
 
 interface DelArgs extends InvokeArgs {
     conn: any
     key: string
+    db: string
 }
 
 interface GetArgs extends InvokeArgs {
     conn: any
     key: string
+    db: string
 }
 
 interface ExpireArgs extends InvokeArgs {
     conn: any
     key: string
     ttl: number
+    db: string
 }
 
 interface ResetStringArgs extends InvokeArgs {
     conn: any
     key: string
+    db: string
 }
 
 const request = async <T>(command: string, params: any): Promise<T> => {
@@ -83,7 +107,12 @@ const request = async <T>(command: string, params: any): Promise<T> => {
     return res.data
 }
 
-const keys = async (params: InvokeArgs): Promise<AllKeys[]> => {
+const info = async (params: InvokeArgs): Promise<string> => {
+    let res = await request<any>('plugin:redis|info', params)
+    return res
+}
+
+const keys = async (params: KeysArgs): Promise<AllKeys[]> => {
     let res = await request<AllKeys[]>('plugin:redis|keys', params)
     return res
 }
@@ -93,8 +122,13 @@ const setString = async (params: SetStringArgs): Promise<string> => {
     return res
 }
 
-const rpush = async (params: RPushArgs): Promise<number> => {
+const rpush = async (params: RpushArgs): Promise<number> => {
     let res = await request<number>('plugin:redis|rpush', params)
+    return res
+}
+
+const lset = async (params: LsetArgs): Promise<string> => {
+    let res = await request<string>('plugin:redis|lset', params)
     return res
 }
 
@@ -138,5 +172,5 @@ const resetString = async (params: ResetStringArgs): Promise<any> => {
     return res
 }
 
-export { keys, setString, rpush, sadd, srem, zadd, hmset, del, get, expire, resetString }
+export { info, keys, setString, rpush, lset, sadd, srem, zadd, hmset, del, get, expire, resetString }
 

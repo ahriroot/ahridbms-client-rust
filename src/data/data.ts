@@ -3,6 +3,7 @@ import PostgresConnect from '@/components/postgres/Connection.vue'
 
 import RedisTabVue from '@/components/redis/TabDb.vue'
 import RedisQueryVue from '@/components/redis/TabQuery.vue'
+import RedisInfoVue from '@/components/redis/Info.vue'
 
 const DBType = [
     {
@@ -23,6 +24,10 @@ const ConnectionComponents = {
 const TabComponents = {
     'redis:db': RedisTabVue,
     'redis:query': RedisQueryVue,
+}
+
+const InfoComponents = {
+    'redis': RedisInfoVue
 }
 
 const RedisConnectInit = {
@@ -68,6 +73,6 @@ const QuerySuggestionsOfRedis = async (kind: any, snippet: any) => ([
 ])
 
 export {
-    DBType, ConnectionComponents, TabComponents, RedisConnectInit, PostgresConnectInit,
+    DBType, ConnectionComponents, TabComponents, InfoComponents, RedisConnectInit, PostgresConnectInit,
     QuerySuggestionsOfRedis
 }

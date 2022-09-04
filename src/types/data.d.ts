@@ -5,3 +5,7 @@ export interface IConnectComponents {
 export interface ITabComponents {
     [key: string]: any
 }
+
+export interface IInfoComponents {
+    [key: string]: any
+}
