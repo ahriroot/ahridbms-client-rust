@@ -47,7 +47,7 @@ export interface INewFieldValue {
     hash: {
         key: string
         value: {
-            key: string
+            field: string
             value: string
         }[]
         ttl: string

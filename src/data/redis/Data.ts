@@ -36,7 +36,7 @@ const NewFieldValue = {
         key: '',
         value: [
             {
-                key: '',
+                field: '',
                 value: ''
             }
         ],

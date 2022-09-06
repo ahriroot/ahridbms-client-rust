@@ -69,6 +69,21 @@ const oldWidth = ref(250)
 const cursor = ref('default')
 const currentMoveX = ref(0)
 onMounted(async () => {
+    try {
+        let conns_str = localStorage.getItem('connections')
+        if (conns_str) {
+            let conns = JSON.parse(conns_str)
+            let cs: any = []
+            conns.forEach((c: any) => {
+                if (c.db_type == 'redis') {
+                    cs.push(c)
+                }
+            });
+            localStorage.setItem('connections', JSON.stringify(cs))
+        }
+    } catch (error) {
+
+    }
     if (sidebarRef.value && contentRef.value) {
         sidebarRef.value.addEventListener('mousedown', (ev) => {
             if (cursor.value == 'ew-resize') {
@@ -134,11 +149,12 @@ const handleSubmitConn = async () => {
             })
             break
         case 'postgres':
-            connList.value.push({
-                id: nanoid(),
-                db_type: 'postgres',
-                info: JSON.parse(JSON.stringify(dbPostgres.value))
-            })
+            // connList.value.push({
+            //     id: nanoid(),
+            //     db_type: 'postgres',
+            //     info: JSON.parse(JSON.stringify(dbPostgres.value))
+            // })
+            alert('开发中')
             break
     }
     await saveConnections(connList.value)
@@ -277,7 +293,7 @@ const currentTabConn = computed(() => {
                             </div>
                         </div>
                         <div class="content" ref="contentRef" :style="`left: ${width}px`">
-                            <header class=" header">
+                            <header class="header">
                                 <div v-for="i in connList" v-show="i.id == tabs.find(t => t.id == tab)?.conn.id">
                                     <component :key="i.id" :is="infoComponents[i.db_type]" :conn="i" />
                                 </div>
@@ -417,6 +433,9 @@ const currentTabConn = computed(() => {
     left: 0;
     right: 0;
     height: 30px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
 }
 
 #main .main .content .workspace {

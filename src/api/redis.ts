@@ -1,5 +1,11 @@
 import { invoke, InvokeArgs } from "@tauri-apps/api/tauri"
 import { AllKeys, Response } from '@/types/redis'
+import { reset } from "./resis/string"
+import { lpush, rpush, lpop, rpop, lset } from "./resis/list"
+import { sadd, srem } from "./resis/set"
+import { zadd, zrem } from "./resis/zset"
+import { hset, hdel } from "./resis/hash"
+import { json_set } from "./resis/json"
 
 
 interface KeysArgs extends InvokeArgs {
@@ -12,59 +18,6 @@ interface SetStringArgs extends InvokeArgs {
     conn: any
     key: string
     value: string
-    ttl: number
-    db: string
-}
-
-interface RpushArgs extends InvokeArgs {
-    conn: any
-    key: string
-    value: string[]
-    ttl: number
-    db: string
-}
-
-interface LsetArgs extends InvokeArgs {
-    conn: any
-    key: string
-    index: number
-    value: string
-    db: string
-}
-
-interface SaddArgs extends InvokeArgs {
-    conn: any
-    key: string
-    value: string[]
-    ttl: number
-    db: string
-}
-
-interface SremArgs extends InvokeArgs {
-    conn: any
-    key: string
-    value: string[]
-    db: string
-}
-
-interface ZaddArgs extends InvokeArgs {
-    conn: any
-    key: string
-    value: {
-        score: number
-        value: string
-    }[]
-    ttl: number
-    db: string
-}
-
-interface HmsetArgs extends InvokeArgs {
-    conn: any
-    key: string
-    value: {
-        key: string
-        value: string
-    }[]
     ttl: number
     db: string
 }
@@ -85,12 +38,6 @@ interface ExpireArgs extends InvokeArgs {
     conn: any
     key: string
     ttl: number
-    db: string
-}
-
-interface ResetStringArgs extends InvokeArgs {
-    conn: any
-    key: string
     db: string
 }
 
@@ -117,38 +64,8 @@ const keys = async (params: KeysArgs): Promise<AllKeys[]> => {
     return res
 }
 
-const setString = async (params: SetStringArgs): Promise<string> => {
-    let res = await request<string>('plugin:redis|set_string', params)
-    return res
-}
-
-const rpush = async (params: RpushArgs): Promise<number> => {
-    let res = await request<number>('plugin:redis|rpush', params)
-    return res
-}
-
-const lset = async (params: LsetArgs): Promise<string> => {
-    let res = await request<string>('plugin:redis|lset', params)
-    return res
-}
-
-const sadd = async (params: SaddArgs): Promise<number> => {
-    let res = await request<number>('plugin:redis|sadd', params)
-    return res
-}
-
-const srem = async (params: SremArgs): Promise<number> => {
-    let res = await request<number>('plugin:redis|srem', params)
-    return res
-}
-
-const zadd = async (params: ZaddArgs): Promise<number> => {
-    let res = await request<number>('plugin:redis|zadd', params)
-    return res
-}
-
-const hmset = async (params: HmsetArgs): Promise<string> => {
-    let res = await request<string>('plugin:redis|hmset', params)
+const set = async (params: SetStringArgs): Promise<string> => {
+    let res = await request<string>('plugin:redis|set', params)
     return res
 }
 
@@ -167,10 +84,13 @@ const expire = async (params: ExpireArgs): Promise<any> => {
     return res
 }
 
-const resetString = async (params: ResetStringArgs): Promise<any> => {
-    let res = await request<any>('plugin:redis|reset', params)
-    return res
+export {
+    info, keys, set, del, get, expire,
+    reset,  // string
+    lpush, rpush, lpop, rpop, lset,  // list
+    sadd, srem,  // set
+    zadd, zrem,  // zset
+    hset, hdel,  // hash
+    json_set  // json
 }
-
-export { info, keys, setString, rpush, lset, sadd, srem, zadd, hmset, del, get, expire, resetString }
 

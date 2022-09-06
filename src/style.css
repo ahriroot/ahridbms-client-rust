@@ -1,3 +1,8 @@
+html,
+body {
+  background-color: #333842;
+}
+
 /* 禁止复制 */
 .nocopy {
   -webkit-user-select: none;

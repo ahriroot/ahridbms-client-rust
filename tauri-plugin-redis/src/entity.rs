@@ -1,6 +1,5 @@
-use std::collections::{BTreeSet, HashMap, HashSet};
-
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Response<T> {
@@ -42,9 +41,21 @@ pub enum KeyValue {
     String(KV<String>),
     List(KV<Vec<String>>),
     Set(KV<HashSet<String>>),
-    Zset(KV<BTreeSet<String>>),
+    Zset(KV<Vec<String>>),
     Hash(KV<HashMap<String, String>>),
     Null(KV<String>),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ZsetValue {
+    pub score: f64,
+    pub value: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HashValue {
+    pub field: String,
+    pub value: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

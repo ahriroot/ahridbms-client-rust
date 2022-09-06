@@ -1,6 +1,12 @@
+pub mod hash;
+pub mod json;
+pub mod list;
+pub mod set;
+pub mod string;
+pub mod zset;
+
 use redis;
-use serde::{Deserialize, Serialize};
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{HashMap, HashSet};
 
 use crate::entity::*;
 
@@ -100,7 +106,7 @@ pub async fn keys(conn: Connection, arg: String, db: String) -> Response<Vec<Key
             });
             all_data.push(kv);
         } else if key_type == "zset" {
-            let value: BTreeSet<String> = redis::cmd("ZRANGE")
+            let value: Vec<String> = redis::cmd("ZRANGE")
                 .arg(&key)
                 .arg(0)
                 .arg(-1)
@@ -243,7 +249,7 @@ pub async fn get(conn: Connection, key: String, db: String) -> Response<KeyValue
             ttl: ttl,
         }));
     } else if key_type == "zset" {
-        let value: BTreeSet<String> = redis::cmd("ZRANGE")
+        let value: Vec<String> = redis::cmd("ZRANGE")
             .arg(&key)
             .arg(0)
             .arg(-1)
@@ -317,11 +323,18 @@ pub async fn expire(conn: Connection, key: String, ttl: i64, db: String) -> Resp
     let client = redis::Client::open(conn_str).expect("client");
     let mut con: redis::Connection = client.get_connection().expect("con");
 
-    let _res: i32 = redis::cmd("EXPIRE")
-        .arg(&key)
-        .arg(ttl)
-        .query(&mut con)
-        .expect("del");
+    if ttl > 0 {
+        let _res: i32 = redis::cmd("EXPIRE")
+            .arg(&key)
+            .arg(ttl)
+            .query(&mut con)
+            .expect("del");
+    } else if ttl == -1 {
+        let _res: i32 = redis::cmd("PERSIST")
+            .arg(&key)
+            .query(&mut con)
+            .expect("persist");
+    }
     Response::ok("OK".to_string())
 }
 
@@ -338,249 +351,4 @@ pub async fn info(conn: Connection, db: String) -> Response<String> {
     let info: String = redis::cmd("INFO").query(&mut con).expect("keyspace");
 
     Response::ok(info)
-}
-
-#[tauri::command]
-pub async fn set_string(
-    conn: Connection,
-    key: String,
-    value: String,
-    ttl: i64,
-    db: String,
-) -> Response<String> {
-    let conn_str = format!(
-        "redis://{}:{}@{}:{}/{}",
-        "", conn.info.pass, conn.info.host, conn.info.port, db
-    );
-
-    let client = redis::Client::open(conn_str).expect("client");
-    let mut con: redis::Connection = client.get_connection().expect("con");
-
-    if ttl > 0 {
-        let key_space_info: String = redis::cmd("SETEX")
-            .arg(&key)
-            .arg(ttl)
-            .arg(&value)
-            .query(&mut con)
-            .expect("set_string");
-        return Response::ok(key_space_info);
-    } else {
-        let key_space_info: String = redis::cmd("SET")
-            .arg(&key)
-            .arg(&value)
-            .query(&mut con)
-            .expect("set_string");
-        return Response::ok(key_space_info);
-    }
-}
-
-#[tauri::command]
-pub async fn rpush(
-    conn: Connection,
-    key: String,
-    value: Vec<String>,
-    ttl: i64,
-    db: String,
-) -> Response<i32> {
-    let conn_str = format!(
-        "redis://{}:{}@{}:{}/{}",
-        "", conn.info.pass, conn.info.host, conn.info.port, db
-    );
-
-    let client = redis::Client::open(conn_str).expect("client");
-    let mut con: redis::Connection = client.get_connection().expect("con");
-
-    let mut cmd = redis::cmd("RPUSH");
-    let mut cmd = cmd.arg(&key);
-    for v in value {
-        cmd = cmd.arg(&v);
-    }
-    let result: i32 = cmd.query(&mut con).expect("rpush");
-    if ttl > 0 {
-        let _res: i32 = redis::cmd("EXPIRE")
-            .arg(&key)
-            .arg(ttl)
-            .query(&mut con)
-            .expect("rpush ttl");
-    }
-    Response::ok(result)
-}
-
-#[tauri::command]
-pub async fn lset(
-    conn: Connection,
-    key: String,
-    index: i64,
-    value: String,
-    db: String,
-) -> Response<String> {
-    let conn_str = format!(
-        "redis://{}:{}@{}:{}/{}",
-        "", conn.info.pass, conn.info.host, conn.info.port, db
-    );
-
-    let client = redis::Client::open(conn_str).expect("client");
-    let mut con: redis::Connection = client.get_connection().expect("con");
-
-    let result: String = redis::cmd("LSET")
-        .arg(&key)
-        .arg(index)
-        .arg(&value)
-        .query(&mut con)
-        .expect("lset");
-    Response::ok(result)
-}
-
-#[tauri::command]
-pub async fn sadd(
-    conn: Connection,
-    key: String,
-    value: Vec<String>,
-    ttl: i64,
-    db: String,
-) -> Response<i32> {
-    let conn_str = format!(
-        "redis://{}:{}@{}:{}/{}",
-        "", conn.info.pass, conn.info.host, conn.info.port, db
-    );
-
-    let client = redis::Client::open(conn_str).expect("client");
-    let mut con: redis::Connection = client.get_connection().expect("con");
-
-    let mut cmd = redis::cmd("SADD");
-    let mut cmd = cmd.arg(&key);
-    for v in value {
-        cmd = cmd.arg(&v);
-    }
-    let result: i32 = cmd.query(&mut con).expect("sadd");
-    if ttl > 0 {
-        let _res: i32 = redis::cmd("EXPIRE")
-            .arg(&key)
-            .arg(ttl)
-            .query(&mut con)
-            .expect("sadd ttl");
-    }
-    Response::ok(result)
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ZsetValue {
-    score: f64,
-    value: String,
-}
-
-#[tauri::command]
-pub async fn zadd(
-    conn: Connection,
-    key: String,
-    value: Vec<ZsetValue>,
-    ttl: i64,
-    db: String,
-) -> Response<i32> {
-    let conn_str = format!(
-        "redis://{}:{}@{}:{}/{}",
-        "", conn.info.pass, conn.info.host, conn.info.port, db
-    );
-
-    let client = redis::Client::open(conn_str).expect("client");
-    let mut con: redis::Connection = client.get_connection().expect("con");
-    let mut cmd = redis::cmd("ZADD");
-    let mut cmd = cmd.arg(&key);
-    for v in value {
-        cmd = cmd.arg(&v.score).arg(&v.value);
-    }
-    let result: i32 = cmd.query(&mut con).expect("zadd");
-    if ttl > 0 {
-        let _res: i32 = redis::cmd("EXPIRE")
-            .arg(&key)
-            .arg(ttl)
-            .query(&mut con)
-            .expect("zadd ttl");
-    }
-    Response::ok(result)
-}
-
-#[tauri::command]
-pub async fn srem(conn: Connection, key: String, value: Vec<String>, db: String) -> Response<i32> {
-    let conn_str = format!(
-        "redis://{}:{}@{}:{}/{}",
-        "", conn.info.pass, conn.info.host, conn.info.port, db
-    );
-
-    let client = redis::Client::open(conn_str).expect("client");
-    let mut con: redis::Connection = client.get_connection().expect("con");
-    let mut cmd = redis::cmd("SREM");
-    let mut cmd = cmd.arg(&key);
-    for v in value {
-        cmd = cmd.arg(&v);
-    }
-    let result: i32 = cmd.query(&mut con).expect("srem");
-    Response::ok(result)
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct HashValue {
-    key: String,
-    value: String,
-}
-
-#[tauri::command]
-pub async fn hmset(
-    conn: Connection,
-    key: String,
-    value: Vec<HashValue>,
-    ttl: i64,
-    db: String,
-) -> Response<String> {
-    let conn_str = format!(
-        "redis://{}:{}@{}:{}/{}",
-        "", conn.info.pass, conn.info.host, conn.info.port, db
-    );
-
-    let client = redis::Client::open(conn_str).expect("client");
-    let mut con: redis::Connection = client.get_connection().expect("con");
-    let mut cmd = redis::cmd("HMSET");
-    let mut cmd = cmd.arg(&key);
-    for v in value {
-        cmd = cmd.arg(&v.key).arg(&v.value);
-    }
-    let result: String = cmd.query(&mut con).expect("hmset");
-    if ttl > 0 {
-        let _res: i32 = redis::cmd("EXPIRE")
-            .arg(&key)
-            .arg(ttl)
-            .query(&mut con)
-            .expect("hmset ttl");
-    }
-    Response::ok(result)
-}
-
-#[tauri::command]
-pub async fn reset(conn: Connection, key: String, value: String, db: String) -> Response<String> {
-    let conn_str = format!(
-        "redis://{}:{}@{}:{}/{}",
-        "", conn.info.pass, conn.info.host, conn.info.port, db
-    );
-
-    let client = redis::Client::open(conn_str).expect("client");
-    let mut con: redis::Connection = client.get_connection().expect("con");
-
-    let ttl: i64 = redis::cmd("TTL").arg(&key).query(&mut con).expect("ttl");
-
-    if ttl > 0 {
-        let key_space_info: String = redis::cmd("SETEX")
-            .arg(&key)
-            .arg(ttl)
-            .arg(&value)
-            .query(&mut con)
-            .expect("set_string");
-        return Response::ok(key_space_info);
-    } else {
-        let key_space_info: String = redis::cmd("SET")
-            .arg(&key)
-            .arg(&value)
-            .query(&mut con)
-            .expect("set_string");
-        return Response::ok(key_space_info);
-    }
 }

@@ -7,7 +7,7 @@ import {
 import { Add, Reload, Trash, Key, Copy, ArrowUp, ArrowDown, Pencil, Checkmark, CaretBack, CaretForward, TimeOutline } from '@vicons/ionicons5'
 import useClipboard from "vue-clipboard3"
 import { Connection } from '@/types/Connection'
-import { keys, setString, rpush, sadd, zadd, hmset, srem, del, get, expire, resetString, lset } from '@/api/redis'
+import { keys, set, rpush, sadd, zadd, hset, srem, del, get, expire, reset, lset, lpop, rpop, lpush, zrem, json_set, hdel } from '@/api/redis'
 import { INewFieldValue, Keyvalue, RedisConnect } from '@/types/redis'
 import { diffDatetime } from '@/utils/datetime'
 import { NewFieldValue } from '@/data/redis'
@@ -312,7 +312,7 @@ const handleSubmitAdd = async () => {
     switch (fieldType.value) {
         case 'string':
             loadingStart()
-            setString({ conn: props.conn, key: fieldValue.value.string.key, value: fieldValue.value.string.value, ttl: Number(fieldValue.value.string.ttl), db: props.db }).then(async res => {
+            set({ conn: props.conn, key: fieldValue.value.string.key, value: fieldValue.value.string.value, ttl: Number(fieldValue.value.string.ttl), db: props.db }).then(async res => {
                 message.success(res)
                 await handleReload()
             }).finally(() => {
@@ -350,7 +350,7 @@ const handleSubmitAdd = async () => {
             break
         case 'hash':
             loadingStart()
-            hmset({ conn: props.conn, key: fieldValue.value.hash.key, value: fieldValue.value.hash.value, ttl: Number(fieldValue.value.hash.ttl), db: props.db }).then(async res => {
+            hset({ conn: props.conn, key: fieldValue.value.hash.key, value: fieldValue.value.hash.value, ttl: Number(fieldValue.value.hash.ttl), db: props.db }).then(async res => {
                 message.success(res)
                 await handleReload()
             }).finally(() => {
@@ -431,19 +431,6 @@ const detailKey = ref<string | null>(null)  // 当前显示数据的 key
 const detailValue = ref<any>('')  // 当前显示数据的 value
 const detailTTL = ref<string>('')  // 当前显示数据的 ttl
 const detailKeyType = ref<string>('')  // 当前显示数据的 keyType
-const zsetToJson = computed(() => {  // zset 转 [json]
-    let res: any = []
-    if (detailKeyType.value == 'zset') {
-        let len = detailValue.value.length / 2
-        for (let i = 0; i < len; i++) {
-            res.push({
-                score: detailValue.value[i],
-                member: detailValue.value[len + i]
-            })
-        }
-    }
-    return res
-})
 const listToJson = computed(() => {  // hash 转 [json]
     let res: any = []
     if (detailKeyType.value == 'list') {
@@ -453,6 +440,19 @@ const listToJson = computed(() => {  // hash 转 [json]
                 value: item
             })
         })
+    }
+    return res
+})
+const zsetToJson = computed(() => {  // zset 转 [json]
+    let res: any = []
+    if (detailKeyType.value == 'zset') {
+        let len = detailValue.value.length
+        for (let i = 0; i < len; i += 2) {
+            res.push({
+                member: detailValue.value[i],
+                score: Number(detailValue.value[i + 1])
+            })
+        }
     }
     return res
 })
@@ -532,16 +532,74 @@ const handleSelect = (val: string) => {
 
 watch(() => detailFilter.value, async () => {
     editListItem.value.index = -1
-    editZsetItem.value.key = null
+    editZsetItem.value.member = null
 })
 
-// 正在编辑的 list 中的数据
-const editListItem = ref({
+// String Value Opera
+const handleStringReset = async () => {
+    if (detailKey.value) {
+        loadingStart()
+        reset({ conn: props.conn, key: detailKey.value, value: detailValue.value, db: props.db }).then(async res => {
+            message.success(res)
+            await handleReloadKey()
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+
+// List Value Opera
+const handleLpop = async () => {
+    if (detailKey.value) {
+        lpop({ conn: props.conn, key: detailKey.value, db: props.db }).then(async res => {
+            message.success(res)
+            await handleReloadKey()
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+const handleRpop = async () => {
+    if (detailKey.value) {
+        rpop({ conn: props.conn, key: detailKey.value, db: props.db }).then(async res => {
+            message.success(res)
+            await handleReloadKey()
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+const newListValue = ref<string>('')
+const handleLpush = async () => {
+    if (newListValue.value && detailKey.value) {
+        loadingStart()
+        lpush({ conn: props.conn, key: detailKey.value, value: [newListValue.value], ttl: -2, db: props.db }).then(async res => {
+            message.success(`Success, ${res} items added`)
+            await handleReloadKey()
+            newListValue.value = ''
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+const handleRpush = async () => {
+    if (newListValue.value && detailKey.value) {
+        loadingStart()
+        rpush({ conn: props.conn, key: detailKey.value, value: [newListValue.value], ttl: -2, db: props.db }).then(async res => {
+            message.success(`Success, ${res} items added`)
+            await handleReloadKey()
+            newListValue.value = ''
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+const editListItem = ref({ // 正在编辑的 list 中的数据
     index: -1,
     value: ''
 })
 const handleEditListItem = async () => {
-    if(detailKey.value && editListItem.value.index >= 0){
+    if (detailKey.value && editListItem.value.index >= 0) {
         loadingStart()
         lset({
             conn: props.conn,
@@ -559,29 +617,26 @@ const handleEditListItem = async () => {
     }
 }
 
-// 正在编辑的 zset 中的数据
-const editZsetItem = ref<{
-    key: string | null
-    value: string
-}>({
-    key: null,
-    value: ''
-})
-
-// String Value Opera
-const handleStringReset = async () => {
-    if (detailKey.value) {
+// Set Value Opera
+const newSetMember = ref<string>('')
+const handleNewSetMember = async () => {
+    if (detailKey.value && newSetMember.value) {
         loadingStart()
-        resetString({ conn: props.conn, key: detailKey.value, value: detailValue.value, db: props.db }).then(async res => {
-            message.success(res)
+        sadd({
+            conn: props.conn,
+            key: detailKey.value,
+            value: [newSetMember.value],
+            ttl: -2,
+            db: props.db
+        }).then(async res => {
+            message.success(`Success, ${res} items added`)
             await handleReloadKey()
+            newSetMember.value = ''
         }).finally(() => {
             loadingFinish()
         })
     }
 }
-
-// Set Value Opera
 /**
  * 删除 set 类型数据的 某一项
  * @param v 要删除的数据 
@@ -591,6 +646,152 @@ const handleDeleteSetValue = async (v: string) => {
         loadingStart()
         srem({ conn: props.conn, key: detailKey.value, value: [v], db: props.db }).then(async res => {
             message.success(`Success, ${res} items deleted`)
+            await handleReloadKey()
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+
+// Zset Value Opera
+const newZsetMember = ref<string>('')
+const newZsetScore = ref<number>(0)
+const handleNewZsetMember = async () => {
+    // console.log(newZsetMember.value, newZsetScore.value)
+    // return
+    if (detailKey.value && newZsetMember.value) {
+        loadingStart()
+        zadd({
+            conn: props.conn,
+            key: detailKey.value,
+            value: [{
+                value: newZsetMember.value,
+                score: newZsetScore.value,
+            }],
+            ttl: -2,
+            db: props.db
+        }).then(async res => {
+            message.success(`Success, ${res} items added`)
+            await handleReloadKey()
+            newZsetMember.value = ''
+            newZsetScore.value = 0
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+const handleDeleteZsetValue = async (member: string) => {
+    if (detailKey.value && member) {
+        loadingStart()
+        zrem({ conn: props.conn, key: detailKey.value, value: [member], db: props.db }).then(async res => {
+            message.success(`Success, ${res} items deleted`)
+            await handleReloadKey()
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+const editZsetItem = ref<{ // 正在编辑的 zset 中的数据
+    member: string | null
+    score: number
+}>({
+    member: null,
+    score: 0
+})
+const handleEditSetScore = async () => {
+    if (detailKey.value && editZsetItem.value.member) {
+        loadingStart()
+        zadd({
+            conn: props.conn,
+            key: detailKey.value,
+            value: [{
+                value: editZsetItem.value.member,
+                score: editZsetItem.value.score,
+            }],
+            ttl: -2,
+            db: props.db
+        }).then(async res => {
+            message.success(`Success, ${res} items changed`)
+            await handleReloadKey()
+            editZsetItem.value.member = null
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+
+// Hash Value Opera
+const newHashField = ref<string>('')
+const newHashValue = ref<string>('')
+const handleNewHashField = async () => {
+    if (detailKey.value && newHashField.value && newHashValue.value) {
+        loadingStart()
+        hset({
+            conn: props.conn,
+            key: detailKey.value,
+            value: [{
+                field: newHashField.value,
+                value: newHashValue.value
+            }],
+            ttl: -2,
+            db: props.db
+        }).then(async res => {
+            message.success(res)
+            await handleReloadKey()
+            newHashField.value = ''
+            newHashValue.value = ''
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+const handleDeleteHashField = async (field: string) => {
+    if (detailKey.value && field) {
+        loadingStart()
+        hdel({ conn: props.conn, key: detailKey.value, fields: [field], db: props.db }).then(async res => {
+            message.success(`Success, ${res} items deleted`)
+            await handleReloadKey()
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+const editHashItem = ref<{ // 正在编辑的 hash 中的数据
+    field: string | null
+    value: string
+}>({
+    field: null,
+    value: ''
+})
+const handleEditHashValue = async () => {
+    if (detailKey.value && editHashItem.value.field) {
+        loadingStart()
+        hset({
+            conn: props.conn,
+            key: detailKey.value,
+            value: [{
+                field: editHashItem.value.field,
+                value: editHashItem.value.value
+            }],
+            ttl: -2,
+            db: props.db
+        }).then(async res => {
+            message.success(res)
+            await handleReloadKey()
+            editHashItem.value.field = null
+        }).finally(() => {
+            loadingFinish()
+        })
+    }
+}
+
+// JSON Value Opera
+const handleJsonReset = async () => {
+    let v = await editorRef.value?.getValue()
+    if (detailKey.value && v) {
+        loadingStart()
+        json_set({ conn: props.conn, key: detailKey.value, value: v, ttl: -2, db: props.db }).then(async res => {
+            message.success(res)
             await handleReloadKey()
         }).finally(() => {
             loadingFinish()
@@ -746,7 +947,7 @@ const handleDeleteSetValue = async (v: string) => {
                         <n-input v-model:value="fieldValue.hash.key" type="text" placeholder="Key" />
                         <n-space vertical>
                             <n-space v-for="(i, index) in fieldValue.hash.value">
-                                <n-input style="width: 180px" v-model:value="i.key" type="text" placeholder="Key"
+                                <n-input style="width: 180px" v-model:value="i.field" type="text" placeholder="Key"
                                     size="small" />
                                 <n-input v-model:value="i.value" type="text" placeholder="Value" size="small" />
                                 <n-button strong secondary type="info" size="small" @click="handleHashItem(index, 3)">
@@ -775,7 +976,7 @@ const handleDeleteSetValue = async (v: string) => {
                                 </n-button>
                             </n-space>
                             <n-button strong secondary type="info" size="small"
-                                @click="fieldValue.hash.value.push({ key: '', value: '' })">
+                                @click="fieldValue.hash.value.push({ field: '', value: '' })">
                                 Add
                             </n-button>
                         </n-space>
@@ -929,9 +1130,9 @@ const handleDeleteSetValue = async (v: string) => {
                     </n-button>
                 </div>
             </div>
-            <div class="value" style="padding: 4px">
+            <div class="value" style="padding: 4px;">
                 <n-input v-model:value="detailKey" type="textarea" readonly placeholder="Key" :rows="3"></n-input>
-                <div v-if="detailKeyType == 'string'" style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                <div v-if="detailKeyType == 'string'" class="value-opera">
                     <n-tooltip trigger="hover">
                         <template #trigger>
                             <n-button strong secondary size="small" @click="handleStringReset">
@@ -958,59 +1159,54 @@ const handleDeleteSetValue = async (v: string) => {
                         刷新
                     </n-tooltip>
                 </div>
-                <div v-else-if="detailKeyType == 'list'"
-                    style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                <div v-else-if="detailKeyType == 'list'" class="value-opera">
                     <n-input size="small" v-model:value="detailFilter" type="text" placeholder="Filter" />&nbsp;
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-button strong secondary size="small">
+                            <n-button strong secondary size="small" @click="handleLpop">
                                 <template #icon>
                                     <n-icon>
                                         <caret-back />
                                     </n-icon>
                                 </template>
                             </n-button>
-
                         </template>
                         LPOP
                     </n-tooltip>&nbsp;
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-button strong secondary size="small">
+                            <n-button strong secondary size="small" @click="handleRpop">
                                 <template #icon>
                                     <n-icon>
                                         <caret-forward />
                                     </n-icon>
                                 </template>
                             </n-button>
-
                         </template>
                         RPOP
                     </n-tooltip>&nbsp;
-                    <n-input size="small" type="text" placeholder="Push" />&nbsp;
+                    <n-input size="small" v-model:value="newListValue" type="text" placeholder="Push" />&nbsp;
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-button strong secondary size="small">
+                            <n-button strong secondary size="small" @click="handleLpush">
                                 <template #icon>
                                     <n-icon>
                                         <caret-forward />
                                     </n-icon>
                                 </template>
                             </n-button>
-
                         </template>
                         LPUSH
                     </n-tooltip>&nbsp;
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-button strong secondary size="small">
+                            <n-button strong secondary size="small" @click="handleRpush">
                                 <template #icon>
                                     <n-icon>
                                         <caret-back />
                                     </n-icon>
                                 </template>
                             </n-button>
-
                         </template>
                         RPUSH
                     </n-tooltip>&nbsp;
@@ -1027,11 +1223,10 @@ const handleDeleteSetValue = async (v: string) => {
                         刷新
                     </n-tooltip>
                 </div>
-                <div v-else-if="detailKeyType == 'set'"
-                    style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                <div v-else-if="detailKeyType == 'set'" class="value-opera">
                     <n-input size="small" v-model:value="detailFilter" type="text" placeholder="Filter" />&nbsp;
-                    <n-input size="small" type="text" placeholder="New Member" />&nbsp;
-                    <n-button strong secondary size="small" @click="handleReloadKey">
+                    <n-input size="small" v-model:value="newSetMember" type="text" placeholder="New Member" />&nbsp;
+                    <n-button strong secondary size="small" @click="handleNewSetMember">
                         <template #icon>
                             <n-icon>
                                 <add />
@@ -1051,17 +1246,17 @@ const handleDeleteSetValue = async (v: string) => {
                         刷新
                     </n-tooltip>
                 </div>
-                <div v-else-if="detailKeyType == 'zset'"
-                    style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                <div v-else-if="detailKeyType == 'zset'" class="value-opera">
                     <n-input size="small" v-model:value="detailFilter" type="text" placeholder="Filter" />&nbsp;
-                    <n-input size="small" type="text" placeholder="Memeber" />&nbsp;
-                    <n-input size="small" type="text" placeholder="Score" />&nbsp;
+                    <n-input size="small" v-model:value="newZsetMember" type="text" placeholder="Memeber" />&nbsp;
+                    <n-input-number style="min-width: 120px" v-model:value="newZsetScore" placeholder="Score"
+                        size="small" />&nbsp;
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-button strong secondary size="small" @click="handleStringReset">
+                            <n-button strong secondary size="small" @click="handleNewZsetMember">
                                 <template #icon>
                                     <n-icon>
-                                        <checkmark />
+                                        <add />
                                     </n-icon>
                                 </template>
                             </n-button>
@@ -1081,10 +1276,11 @@ const handleDeleteSetValue = async (v: string) => {
                         刷新
                     </n-tooltip>
                 </div>
-                <div v-else-if="detailKeyType == 'hash'"
-                    style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                <div v-else-if="detailKeyType == 'hash'" class="value-opera">
                     <n-input size="small" v-model:value="detailFilter" type="text" placeholder="Filter" />&nbsp;
-                    <n-button strong secondary size="small" @click="handleReloadKey">
+                    <n-input size="small" v-model:value="newHashField" type="text" placeholder="Field" />&nbsp;
+                    <n-input size="small" v-model:value="newHashValue" type="text" placeholder="Value" />&nbsp;
+                    <n-button strong secondary size="small" @click="handleNewHashField">
                         <template #icon>
                             <n-icon>
                                 <add />
@@ -1104,11 +1300,10 @@ const handleDeleteSetValue = async (v: string) => {
                         刷新
                     </n-tooltip>
                 </div>
-                <div v-else-if="detailKeyType == 'ReJSON-RL'"
-                    style="padding: 4px 0; display: flex; justify-content: flex-end;">
+                <div v-else-if="detailKeyType == 'ReJSON-RL'" class="value-opera">
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-button strong secondary size="small" @click="handleStringReset">
+                            <n-button strong secondary size="small" @click="handleJsonReset">
                                 <template #icon>
                                     <n-icon>
                                         <checkmark />
@@ -1151,7 +1346,8 @@ const handleDeleteSetValue = async (v: string) => {
                                         <td class="list-value">
                                             <div v-show="editListItem.index != i.index"
                                                 @click="editListItem.index = i.index; editListItem.value = i.value">{{
-                                                i.value }}
+                                                        i.value
+                                                }}
                                             </div>
                                             <n-input v-show="editListItem.index == i.index"
                                                 v-model:value="editListItem.value" size="small"
@@ -1207,29 +1403,38 @@ const handleDeleteSetValue = async (v: string) => {
                                         v-for="i in zsetToJson.filter((item: any) => !detailFilter || item.member.includes(detailFilter))">
                                         <td class="zset-member">{{ i.member }}</td>
                                         <td class="zset-score" style="width: 120px">
-                                            <n-input v-show="editZsetItem.key == i.member"
-                                                v-model:value="editZsetItem.value" size="small"></n-input>
-                                            <div v-show="editZsetItem.key != i.member"
-                                                @click="editZsetItem.key = i.member; editZsetItem.value = i.score">{{
-                                                i.score
+                                            <n-input-number v-show="editZsetItem.member == i.member"
+                                                style="width: 120px" v-model:value="editZsetItem.score"
+                                                placeholder="Score" size="small" />
+                                            <div v-show="editZsetItem.member != i.member"
+                                                @click="editZsetItem.member = i.member; editZsetItem.score = i.score">{{
+                                                        i.score
                                                 }}
                                             </div>
                                         </td>
                                         <td class="zset-opera">
-                                            <n-button v-show="editZsetItem.key != i.member" strong secondary circle
+                                            <n-button v-show="editZsetItem.member != i.member" strong secondary circle
                                                 type="info" size="small"
-                                                @click="editZsetItem.key = i.member; editZsetItem.value = i.score">
+                                                @click="editZsetItem.member = i.member; editZsetItem.score = i.score">
                                                 <template #icon>
                                                     <n-icon>
                                                         <pencil />
                                                     </n-icon>
                                                 </template>
                                             </n-button>
-                                            <n-button v-show="editZsetItem.key == i.member" strong secondary circle
-                                                type="info" size="small" @click="editZsetItem.key = null">
+                                            <n-button v-show="editZsetItem.member == i.member" strong secondary circle
+                                                type="info" size="small" @click="handleEditSetScore">
                                                 <template #icon>
                                                     <n-icon>
                                                         <checkmark />
+                                                    </n-icon>
+                                                </template>
+                                            </n-button>&nbsp;
+                                            <n-button strong secondary circle type="info" size="small"
+                                                @click="handleDeleteZsetValue(i.member)">
+                                                <template #icon>
+                                                    <n-icon>
+                                                        <trash />
                                                     </n-icon>
                                                 </template>
                                             </n-button>
@@ -1245,7 +1450,40 @@ const handleDeleteSetValue = async (v: string) => {
                                         v-for="i in hashToJson.filter((item: any) => !detailFilter || item.field.includes(detailFilter))">
                                         <td class="hash-key">{{ i.field }}</td>
                                         <td class="hash-value">
-                                            {{ i.value }}
+                                            <n-input v-show="editHashItem.field == i.field"
+                                                v-model:value="editHashItem.value" placeholder="Value" size="small" />
+                                            <div v-show="editHashItem.field != i.field"
+                                                @click="editHashItem.field = i.field; editHashItem.value = i.value">{{
+                                                        i.value
+                                                }}
+                                            </div>
+                                        </td>
+                                        <td class="hash-opera">
+                                            <n-button v-show="editHashItem.field != i.field" strong secondary circle
+                                                type="info" size="small"
+                                                @click="editHashItem.field = i.field; editHashItem.value = i.value">
+                                                <template #icon>
+                                                    <n-icon>
+                                                        <pencil />
+                                                    </n-icon>
+                                                </template>
+                                            </n-button>
+                                            <n-button v-show="editHashItem.field == i.field" strong secondary circle
+                                                type="info" size="small" @click="handleEditHashValue">
+                                                <template #icon>
+                                                    <n-icon>
+                                                        <checkmark />
+                                                    </n-icon>
+                                                </template>
+                                            </n-button>&nbsp;
+                                            <n-button strong secondary circle type="info" size="small"
+                                                @click="handleDeleteHashField(i.field)">
+                                                <template #icon>
+                                                    <n-icon>
+                                                        <trash />
+                                                    </n-icon>
+                                                </template>
+                                            </n-button>
                                         </td>
                                     </tr>
                                 </tbody>
@@ -1316,6 +1554,12 @@ const handleDeleteSetValue = async (v: string) => {
     border-bottom: #333842 1px solid;
 }
 
+.value-opera {
+    padding: 4px 0;
+    display: flex;
+    justify-content: flex-end;
+}
+
 .td-key {
     width: 60px;
 }
@@ -1337,8 +1581,16 @@ const handleDeleteSetValue = async (v: string) => {
     justify-content: space-between;
 }
 
-.set-opera,
+.hash-value {
+    width: 50%;
+}
+
 .zset-opera,
+.hash-opera {
+    width: 78px;
+}
+
+.set-opera,
 .list-opera {
     width: 42px;
 }

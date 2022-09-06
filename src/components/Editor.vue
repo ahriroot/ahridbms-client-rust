@@ -45,6 +45,7 @@ onMounted(() => {
                 theme: 'vs-dark',
                 selectOnLineNumbers: true,
                 language: "redis",
+                automaticLayout: true
             })
             // monacoEditor.value?.trigger('format', 'editor.action.formatDocument')
             setTimeout(() => {
@@ -101,8 +102,12 @@ const getValue = async (): Promise<string | undefined> => {
     return monacoEditor.value?.getValue()
 }
 
+const getSelectedValue = async () => {
+    monacoEditor.value?.trigger('source', 'editor.action.clipboardCopyAction')
+}
+
 defineExpose({
-    setValue, getValue
+    setValue, getValue, getSelectedValue
 })
 </script>
     

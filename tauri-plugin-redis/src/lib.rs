@@ -15,14 +15,20 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         api::get,
         api::del,
         api::expire,
-        api::set_string,
-        api::rpush,
-        api::lset,
-        api::sadd,
-        api::zadd,
-        api::srem,
-        api::hmset,
-        api::reset
+        api::string::set,
+        api::string::reset,
+        api::list::lpush,
+        api::list::rpush,
+        api::list::lpop,
+        api::list::rpop,
+        api::list::lset,
+        api::set::sadd,
+        api::set::srem,
+        api::zset::zadd,
+        api::zset::zrem,
+        api::hash::hset,
+        api::hash::hdel,
+        api::json::json_set,
     ]);
     plugin.build()
 }
