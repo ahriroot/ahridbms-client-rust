@@ -10,6 +10,50 @@ export interface AllKeys {
     [key: string]: Keyvalue
 }
 
+export interface IExecValueNil {
+    Nil: 'Nil'
+}
+
+export interface IExecValueOkay {
+    Okay: 'Okay'
+}
+
+export interface IExecValueData {
+    Data: Uint8Array
+}
+
+export interface IExecValueStatus {
+    Status: string
+}
+
+export interface IExecValueInteger {
+    Integer: number
+}
+
+export interface IExecValueBulk {
+    Bulk: IExecValueData[]
+}
+
+export interface IExecValueError {
+    Error: string
+}
+
+export interface IExecType {
+    nil: "Nil"
+    okay: "Okay"
+    data: "Data"
+    status: "Status"
+    integer: "Integer"
+    bulk: "Bulk"
+    error: "Error"
+}
+
+export interface IExecResult {
+    command: string
+    type_: "Nil" | "Okay" | "Data" | "Status" | "Integer" | "Bulk" | "Error"
+    value: IExecValueNil | IExecValueOkay | IExecValueData | IExecValueStatus | IExecValueInteger | IExecValueBulk | IExecValueError
+}
+
 export interface Response<T> {
     code: number
     msg: string

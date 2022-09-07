@@ -1,3 +1,5 @@
+import { IExecType } from "@/types/redis/Data"
+
 const NewFieldValue = {
     string: {
         key: '',
@@ -44,4 +46,14 @@ const NewFieldValue = {
     },
 }
 
-export { NewFieldValue }
+const ExecType: IExecType = {
+    nil: 'Nil',
+    okay: 'Okay',
+    data: 'Data',
+    status: 'Status',
+    integer: 'Integer',
+    bulk: 'Bulk',
+    error: 'Error'
+}
+
+export { NewFieldValue, ExecType }

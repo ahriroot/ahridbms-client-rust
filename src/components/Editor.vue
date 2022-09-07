@@ -12,6 +12,7 @@ const props = defineProps<{
 }>()
 const emits = defineEmits<{
     (e: 'handle', val: null): void
+    (e: 'change', val: string): void
 }>()
 
 if (props.type == undefined) {
@@ -25,7 +26,6 @@ const editorRef = shallowRef<HTMLElement | null>(null)
 
 onMounted(() => {
     if (props.type == 'redis_query') {
-        console.log('redis_query')
         self.MonacoEnvironment = {
             getWorker: () => new EditorWorker()
         }
@@ -54,7 +54,7 @@ onMounted(() => {
             // 监听值变化
             monacoEditor.value?.onDidChangeModelContent(() => {
                 const currenValue = monacoEditor.value.getValue()
-                emits('handle', currenValue)
+                emits('change', currenValue)
             })
         }
     } else if (props.type == 'json') {

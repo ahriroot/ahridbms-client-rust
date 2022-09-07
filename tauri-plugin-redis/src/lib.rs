@@ -15,6 +15,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         api::get,
         api::del,
         api::expire,
+        api::exec,
         api::string::set,
         api::string::reset,
         api::list::lpush,

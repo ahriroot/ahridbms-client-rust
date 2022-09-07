@@ -35,7 +35,6 @@ const handleShowInfo = async () => {
                 }
             })
         }
-        console.log(infoData.value)
         loading.value = false
     }
 }

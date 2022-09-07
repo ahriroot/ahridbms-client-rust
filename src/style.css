@@ -18,3 +18,11 @@ body {
   -ms-user-select: auto;
   user-select: auto;
 }
+
+.n-collapse-item__header {
+  padding: 0 !important;
+}
+
+.n-collapse-item__content-inner {
+  padding: 0 20px !important;
+}

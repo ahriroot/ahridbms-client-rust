@@ -74,3 +74,21 @@ pub struct Connection {
     pub db_type: String,
     pub info: Info,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum ExecValue {
+    Nil,
+    Okay,
+    Data(Vec<u8>),
+    Status(String),
+    Integer(i64),
+    Bulk(Vec<ExecValue>),
+    Error(String),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExecResult {
+    pub command: String,
+    pub type_: String,
+    pub value: ExecValue,
+}

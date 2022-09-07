@@ -5,7 +5,7 @@ pub mod set;
 pub mod string;
 pub mod zset;
 
-use redis;
+use redis::{self, ConnectionLike, Value};
 use std::collections::{HashMap, HashSet};
 
 use crate::entity::*;
@@ -351,4 +351,89 @@ pub async fn info(conn: Connection, db: String) -> Response<String> {
     let info: String = redis::cmd("INFO").query(&mut con).expect("keyspace");
 
     Response::ok(info)
+}
+
+#[tauri::command]
+pub async fn exec(
+    conn: Connection,
+    command_lines: Vec<String>,
+    db: String,
+) -> Response<Vec<ExecResult>> {
+    let conn_str = format!(
+        "redis://{}:{}@{}:{}/{}",
+        "", conn.info.pass, conn.info.host, conn.info.port, db
+    );
+
+    let client = redis::Client::open(conn_str).expect("client");
+    let mut con: redis::Connection = client.get_connection().expect("con");
+
+    let mut response: Vec<ExecResult> = Vec::new();
+    for mut cmd_line in command_lines {
+        if cmd_line.is_empty() {
+            continue;
+        }
+
+        if !cmd_line.ends_with("\n") {
+            cmd_line.push_str("\n");
+        }
+
+        let cmd_line_bytes = cmd_line.as_bytes();
+        let request = con.req_packed_command(cmd_line_bytes);
+
+        match request {
+            Ok(req) => match req {
+                Value::Nil => response.push(ExecResult {
+                    command: cmd_line,
+                    type_: "Nil".to_string(),
+                    value: ExecValue::Nil,
+                }),
+                Value::Int(value) => response.push(ExecResult {
+                    command: cmd_line,
+                    type_: "Integer".to_string(),
+                    value: ExecValue::Integer(value),
+                }),
+                Value::Data(value) => response.push(ExecResult {
+                    command: cmd_line,
+                    type_: "Data".to_string(),
+                    value: ExecValue::Data(value),
+                }),
+                Value::Status(value) => response.push(ExecResult {
+                    command: cmd_line,
+                    type_: "Status".to_string(),
+                    value: ExecValue::Status(value),
+                }),
+                Value::Okay => response.push(ExecResult {
+                    command: cmd_line,
+                    type_: "Okay".to_string(),
+                    value: ExecValue::Okay,
+                }),
+                Value::Bulk(value) => response.push(ExecResult {
+                    command: cmd_line,
+                    type_: "Bulk".to_string(),
+                    value: ExecValue::Bulk(resolve(value)),
+                }),
+            },
+            Err(err) => response.push(ExecResult {
+                command: cmd_line,
+                type_: "Error".to_string(),
+                value: ExecValue::Error(err.to_string()),
+            }),
+        }
+    }
+    return Response::ok(response);
+}
+
+fn resolve(value: Vec<Value>) -> Vec<ExecValue> {
+    let mut resp: Vec<ExecValue> = Vec::new();
+    for v in value {
+        match v {
+            Value::Nil => resp.push(ExecValue::Nil),
+            Value::Int(value) => resp.push(ExecValue::Integer(value)),
+            Value::Data(value) => resp.push(ExecValue::Data(value)),
+            Value::Status(value) => resp.push(ExecValue::Status(value)),
+            Value::Okay => resp.push(ExecValue::Okay),
+            Value::Bulk(value) => resp.push(ExecValue::Bulk(resolve(value))),
+        }
+    }
+    resp
 }

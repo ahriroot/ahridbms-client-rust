@@ -40,25 +40,27 @@ const store = useIndexStore()
 /** ------------------ 变量 End ------------------ **/
 
 onBeforeMount(async () => {
-    width.value = Number(localStorage.getItem('ahridbms-sidebar-width')) || 500
-    oldWidth.value = width.value
-    let config = localStorage.getItem('config')
-    store.updateConfig(config ? JSON.parse(config) : { deleteNoConfirm: false })
-    connList.value = await getConnections()
-    let connIds = connList.value.map(item => item.id)  // 所有链接 id
-    let tmp = await getTabs()  // 所有标签页
-    let current_tab = localStorage.getItem('current_tab')
-    tabs.value = tmp.filter((item: OpenTabMesagae) => {
-        if (item.id == current_tab) {
-            tab.value = current_tab
+    try {
+        width.value = Number(localStorage.getItem('ahridbms-sidebar-width')) || 500
+        oldWidth.value = width.value
+        let config = localStorage.getItem('config')
+        store.updateConfig(config ? JSON.parse(config) : { deleteNoConfirm: false })
+        connList.value = await getConnections()
+        let connIds = connList.value.map(item => item.id)  // 所有链接 id
+        let tmp = await getTabs()  // 所有标签页
+        let current_tab = localStorage.getItem('current_tab')
+        tabs.value = tmp.filter((item: OpenTabMesagae) => {
+            if (item.id == current_tab) {
+                tab.value = current_tab
+            }
+            return connIds.includes(item.conn.id)
+        })  // 存在连接的标签页
+        saveTabs(tabs.value)
+        if (tabs.value.length > 0 && !tab.value) {
+            // 切换到第一个标签页
+            tab.value = tabs.value[0].id
         }
-        return connIds.includes(item.conn.id)
-    })  // 存在连接的标签页
-    saveTabs(tabs.value)
-    if (tabs.value.length > 0 && !tab.value) {
-        // 切换到第一个标签页
-        tab.value = tabs.value[0].id
-    }
+    } catch { }
 })
 
 const sidebarRef = shallowRef<HTMLElement | null>(null)
@@ -446,5 +448,9 @@ const currentTabConn = computed(() => {
     right: 0;
     bottom: 0;
     border-top: #333842 1px solid;
+}
+
+.n-tab-pane{
+    position: relative;
 }
 </style>

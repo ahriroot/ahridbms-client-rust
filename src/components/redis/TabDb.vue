@@ -12,7 +12,6 @@ import { INewFieldValue, Keyvalue, RedisConnect } from '@/types/redis'
 import { diffDatetime } from '@/utils/datetime'
 import { NewFieldValue } from '@/data/redis'
 import EditorVue from '@/components/Editor.vue'
-import DetailListVue from '@/components/redis/DetailList.vue'
 
 window.$message = useMessage()
 
@@ -361,6 +360,7 @@ const handleSubmitAdd = async () => {
             if (!editorNewRef.value) {
                 await nextTick()
             }
+            // 添加 JSON 数据
             console.log(await editorNewRef.value?.getValue())
             // let json_res = await setJson({ conn: props, key: fieldValue.value.json.key, value: fieldValue.value.json.value, ttl: Number(fieldValue.value.json.ttl) })
             // if (json_res == 'OK') {

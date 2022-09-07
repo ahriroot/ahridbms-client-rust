@@ -1,11 +1,13 @@
-import { invoke, InvokeArgs } from "@tauri-apps/api/tauri"
-import { AllKeys, Response } from '@/types/redis'
+import { InvokeArgs } from "@tauri-apps/api/tauri"
+import { AllKeys } from '@/types/redis'
 import { reset } from "./resis/string"
 import { lpush, rpush, lpop, rpop, lset } from "./resis/list"
 import { sadd, srem } from "./resis/set"
 import { zadd, zrem } from "./resis/zset"
 import { hset, hdel } from "./resis/hash"
 import { json_set } from "./resis/json"
+import request from "./resis/request"
+import { IExecResult } from "@/types/redis/Data"
 
 
 interface KeysArgs extends InvokeArgs {
@@ -41,19 +43,6 @@ interface ExpireArgs extends InvokeArgs {
     db: string
 }
 
-const request = async <T>(command: string, params: any): Promise<T> => {
-    let res = await invoke<Response<T>>(command, params)
-    if (res.code !== 10000) {
-        if (res.code < 50000) {
-            window.$message.warning(res.msg)
-        } else {
-            window.$message.error(res.msg)
-        }
-        return Promise.reject(res.msg)
-    }
-    return res.data
-}
-
 const info = async (params: InvokeArgs): Promise<string> => {
     let res = await request<any>('plugin:redis|info', params)
     return res
@@ -84,6 +73,17 @@ const expire = async (params: ExpireArgs): Promise<any> => {
     return res
 }
 
+interface ExecArgs extends InvokeArgs {
+    conn: any
+    commandLines: string[]
+    db: string
+}
+
+const exec = async (params: ExecArgs): Promise<IExecResult[]> => {
+    let res = await request<IExecResult[]>('plugin:redis|exec', params)
+    return res
+}
+
 export {
     info, keys, set, del, get, expire,
     reset,  // string
@@ -91,6 +91,7 @@ export {
     sadd, srem,  // set
     zadd, zrem,  // zset
     hset, hdel,  // hash
-    json_set  // json
+    json_set,  // json
+    exec
 }
 

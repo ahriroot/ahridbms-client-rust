@@ -22,7 +22,6 @@ const databases = ref<PgDatabase[]>([])
 
 onBeforeMount(async () => {
     const res = await pgGetDatabases({ conn: props.conn })
-    console.log(res)
     if (!res.is_error) {
         res.forEach((db: any) => {
             let database: any = {};
@@ -34,7 +33,6 @@ onBeforeMount(async () => {
             })
             databases.value.push(database as PgDatabase)
         })
-        console.log(databases.value)
 
         data.value = [{
             key: `redis:${props.conn.info.name}`,

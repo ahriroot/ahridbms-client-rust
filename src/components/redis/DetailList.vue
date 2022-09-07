@@ -16,7 +16,6 @@ const editListItem = ref({
     value: ''
 })
 const handleEditListItem = async () => {
-    console.log(editListItem.value)
     editListItem.value.index = -1
 }
 </script>
