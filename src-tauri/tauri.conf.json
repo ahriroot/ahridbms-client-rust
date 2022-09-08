@@ -1,7 +1,7 @@
 {
     "$schema": "../node_modules/@tauri-apps/cli/schema.json",
     "build": {
-        "beforeBuildCommand": "",
+        "beforeBuildCommand": "yarn build",
         "beforeDevCommand": "yarn dev",
         "devPath": "http://localhost:5173",
         "distDir": "../dist"
@@ -62,7 +62,7 @@
             "csp": null
         },
         "updater": {
-            "active": true,
+            "active": false,
             "endpoints": [
                 "https://installer.service.ahriknow.com/latest.json"
             ],

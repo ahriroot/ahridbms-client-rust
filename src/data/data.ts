@@ -11,7 +11,7 @@ const DBType = [
         value: 'redis'
     },
     {
-        label: 'Postgres',
+        label: 'Postgres ( 开发中...)',
         value: 'postgres'
     }
 ]
@@ -54,19 +54,26 @@ const QuerySuggestionsOfRedis = async (kind: any, snippet: any) => ([
         kind: kind.Function,
         insertText: "GET ${0:key}",
         insertTextRules: snippet,
-        detail: "Get the value of a key",
+        detail: "Get string data",
+    },
+    {
+        label: "SET",
+        kind: kind.Function,
+        insertText: "SET ${1:key} ${0:value}",
+        insertTextRules: snippet,
+        detail: "SET string data",
     },
     {
         label: "JSON.GET",
         kind: kind.Function,
-        insertText: "GET ${0:key}",
+        insertText: "JSON.GET ${0:key}",
         insertTextRules: snippet,
         detail: "Get Json data",
     },
     {
         label: "JSON.SET",
         kind: kind.Function,
-        insertText: "GET ${1:key} $ ${0:json_str}",
+        insertText: "JSON.SET ${1:key} $ ${0:json_str}",
         insertTextRules: snippet,
         detail: "SET Json data",
     },

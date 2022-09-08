@@ -18,7 +18,7 @@ const request = async <T>(command: string, params: any): Promise<T | ApiError> =
         }
         return Promise.resolve({ is_error: true, code: res.code, msg: res.msg, from: '' })
     }
-    return res.data
+    return res.data.Success
 }
 
 const pgGetDatabases = async (params: PgGetDatabasesArgs): Promise<any | ApiError> => {

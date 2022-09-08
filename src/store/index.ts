@@ -8,7 +8,7 @@ export default store
 export const useIndexStore = defineStore<
     'index',
     {
-        config: Config | null
+        config: Config
     },
     {},
     {
@@ -18,7 +18,11 @@ export const useIndexStore = defineStore<
     id: 'index',
     state: () => {
         return {
-            config: null
+            config: {
+                deleteNoConfirm: false,
+                showSideBar: true,
+                sideBarWidth: 250
+            }
         }
     },
     actions: {

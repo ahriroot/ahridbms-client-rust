@@ -3,28 +3,32 @@ import { ref, shallowRef, onBeforeMount } from 'vue'
 import { Connection } from '@/types/Connection'
 import { RedisConnect } from '@/types/redis'
 import EditorVue from '@/components/Editor.vue'
-import { NButton, NCollapse, NCollapseItem, NLayout, NIcon, useMessage, LayoutSiderInst } from 'naive-ui'
+import { NButton, NCollapse, NCollapseItem, NLayout, NIcon, useMessage, LayoutSiderInst, NModal, NText, useDialog } from 'naive-ui'
 import { exec } from '@/api/redis'
 import { ExecType } from '@/data/redis/Data'
 import { IExecResult, IExecValueBulk, IExecValueData, IExecValueError, IExecValueInteger, IExecValueStatus } from '@/types/redis/Data'
-import { CaretForward, Copy, Trash } from '@vicons/ionicons5'
+import { CaretForward, Copy, Trash, Code } from '@vicons/ionicons5'
 import useClipboard from "vue-clipboard3"
+import DetailJSONVue from './DetailJSON.vue'
+import { IRedisQuery } from '@/types/data'
+import { useIndexStore } from '@/store'
 
 const props = defineProps<{
     conn: Connection<RedisConnect>
     db: string
 }>()
-const emits = defineEmits<{
-    (e: 'handle', val: null): void
-}>()
 
 const { toClipboard } = useClipboard()
 const message = useMessage()
+const dialog = useDialog()
+const store = useIndexStore()
 
 interface IResultList {
     datetime: number
     command: string,
-    value: string[]
+    value: string[],
+    data?: string | number
+    error?: boolean
 }
 
 const u8array2string = (value: Uint8Array) => {
@@ -35,11 +39,9 @@ const u8array2string = (value: Uint8Array) => {
     return dataString
 }
 
-const defaultQuery = ref(``)
-const resultList = ref<IResultList[]>([])
 const editorRef = shallowRef<any>(null)
-const expanded = ref<number[]>([])
 const resultRef = ref<LayoutSiderInst | null>(null)
+const showDetail = ref(false)
 
 const handle = async () => {
     if (editorRef.value) {
@@ -58,24 +60,27 @@ const handle = async () => {
                 let datetime = new Date().getTime()
                 switch (result.type_) {
                     case ExecType.nil:
-                        resultList.value.unshift({
+                        config.value.resultList.unshift({
                             datetime: datetime,
                             command: result.command,
-                            value: [`"(nil)"`]
+                            value: [`"(nil)"`],
+                            data: `(nil)`
                         })
                         break
                     case ExecType.okay:
-                        resultList.value.unshift({
+                        config.value.resultList.unshift({
                             datetime: datetime,
                             command: result.command,
-                            value: [`"OK"`]
+                            value: [`"OK"`],
+                            data: `OK`
                         })
                         break
                     case ExecType.data:
-                        resultList.value.unshift({
+                        config.value.resultList.unshift({
                             datetime: datetime,
                             command: result.command,
-                            value: [`"${u8array2string((result.value as IExecValueData).Data)}"`]
+                            value: [`"${u8array2string((result.value as IExecValueData).Data)}"`],
+                            data: u8array2string((result.value as IExecValueData).Data)
                         })
                         break
                     case ExecType.status:
@@ -83,10 +88,11 @@ const handle = async () => {
                         break
                     case ExecType.integer:
                         let integer = result.value as IExecValueInteger
-                        resultList.value.unshift({
+                        config.value.resultList.unshift({
                             datetime: datetime,
                             command: result.command,
-                            value: [`(integer) ${integer.Integer}`]
+                            value: [`(integer) ${integer.Integer}`],
+                            data: integer.Integer
                         })
                         break
                     case ExecType.bulk:
@@ -94,27 +100,52 @@ const handle = async () => {
                         let tmp: IResultList = {
                             datetime: datetime,
                             command: result.command,
-                            value: []
+                            value: [],
+                            data: ''
                         }
                         bulk.Bulk.forEach((v, index) => {
                             tmp.value.push(`${index + 1}) "${u8array2string(v.Data)}"`)
                         })
-                        resultList.value.unshift(tmp)
+                        config.value.resultList.unshift(tmp)
                         break
                     case ExecType.error:
-                        console.log((result.value as IExecValueError).Error)
+                        config.value.resultList.unshift({
+                            datetime: datetime,
+                            command: result.command,
+                            value: [`"${(result.value as IExecValueError).Error}"`],
+                            data: '',
+                            error: true
+                        })
                         break
                     default:
                         break
                 }
                 resultRef.value?.scrollTo({ top: 0, behavior: 'smooth' })
 
-                expanded.value.push(datetime)
-                localStorage.setItem(`redis:expanded:${props.conn.id}`, JSON.stringify(expanded.value))
-                localStorage.setItem(`redis:result:${props.conn.id}`, JSON.stringify(resultList.value))
+                config.value.expanded.push(datetime)
+                localStorage.setItem(`redis:query:${props.conn.id}`, JSON.stringify(config.value))
             })
         }).catch((err: any) => {
             console.log(err)
+        })
+    }
+}
+
+const handleDeleteAll = async () => {
+    if (store.config?.deleteNoConfirm) {
+        config.value.resultList = []
+        config.value.expanded = []
+        localStorage.setItem(`redis:query:${props.conn.id}`, JSON.stringify(config.value))
+    } else {
+        dialog.warning({
+            title: '删除：',
+            content: `确认删除所有操作日志 ?`,
+            positiveText: '删除',
+            onPositiveClick: async () => {
+                config.value.resultList = []
+                config.value.expanded = []
+                localStorage.setItem(`redis:query:${props.conn.id}`, JSON.stringify(config.value))
+            }
         })
     }
 }
@@ -144,46 +175,67 @@ const handleReExec = (command: string) => {
 }
 
 const handleDelete = (datetime: number) => {
-    resultList.value = resultList.value.filter(v => v.datetime != datetime)
-    expanded.value = expanded.value.filter(v => v != datetime)
-    localStorage.setItem(`redis:expanded:${props.conn.id}`, JSON.stringify(expanded.value))
-    localStorage.setItem(`redis:result:${props.conn.id}`, JSON.stringify(resultList.value))
+    if (store.config?.deleteNoConfirm) {
+        config.value.resultList = config.value.resultList.filter(v => v.datetime != datetime)
+        config.value.expanded = config.value.expanded.filter(v => v != datetime)
+        localStorage.setItem(`redis:query:${props.conn.id}`, JSON.stringify(config.value))
+    } else {
+        dialog.warning({
+            title: '删除：',
+            content: `确认删除本条操作日志 ?`,
+            positiveText: '删除',
+            onPositiveClick: async () => {
+                config.value.resultList = config.value.resultList.filter(v => v.datetime != datetime)
+                config.value.expanded = config.value.expanded.filter(v => v != datetime)
+                localStorage.setItem(`redis:query:${props.conn.id}`, JSON.stringify(config.value))
+            }
+        })
+    }
 }
 
 const handleExpanded = (index: number[]) => {
-    expanded.value = index
-    localStorage.setItem(`redis:expanded:${props.conn.id}`, JSON.stringify(expanded.value))
+    config.value.expanded = index
+    localStorage.setItem(`redis:query:${props.conn.id}`, JSON.stringify(config.value))
 }
 
 const handleChange = (val: string) => {
-    localStorage.setItem(`redis:query:${props.conn.id}`, val)
+    config.value.query = val
+    localStorage.setItem(`redis:query:${props.conn.id}`, JSON.stringify(config.value))
 }
 
+const config = ref<IRedisQuery>({
+    expanded: [],
+    resultList: [],
+    query: ''
+})
 onBeforeMount(() => {
-    if (localStorage.getItem(`redis:query:${props.conn.id}`)) {
-        let query = localStorage.getItem(`redis:query:${props.conn.id}`)
-        if (query) {
-            defaultQuery.value = query || ''
-        }
+    let cfg = localStorage.getItem(`redis:query:${props.conn.id}`)
+    if (cfg) {
+        config.value = JSON.parse(cfg)
     }
-    let resultStr = localStorage.getItem(`redis:result:${props.conn.id}`)
-    resultList.value = resultStr ? JSON.parse(resultStr) : []
-    let expandedStr = localStorage.getItem(`redis:expanded:${props.conn.id}`)
-    let resultIds = resultList.value.map(v => v.datetime)
-    let expandedArr: number[] = []
-    if (expandedStr) {
-        expandedArr = JSON.parse(expandedStr)
-        expandedArr = expandedArr.filter(v => resultIds.includes(v))
-    }
-    expanded.value = expandedArr
+    config.value.expanded = config.value.expanded.filter(v => config.value.resultList.map(v => v.datetime).includes(v))
+    localStorage.setItem(`redis:query:${props.conn.id}`, JSON.stringify(config.value))
 })
 
+const key = ref('')
+const value = ref('')
+const command = ref('')
+const handleCode = async (val: any) => {
+    command.value = val.command
+    key.value = val.command.split(' ')[1]
+    value.value = val.data
+    showDetail.value = true
+}
 </script>
     
 <template>
+    <n-modal v-model:show="showDetail" preset="card" style="width: 600px;" :title="command" size="small"
+        :bordered="false">
+        <DetailJSONVue :k="key" :value="value" />
+    </n-modal>
     <div class="query">
         <div class="command">
-            <EditorVue ref="editorRef" @change="handleChange" :value="defaultQuery" :type="'redis_query'" />
+            <EditorVue ref="editorRef" @change="handleChange" :value="config.query" :type="'redis_query'" />
         </div>
         <div class="result">
             <div
@@ -194,21 +246,45 @@ onBeforeMount(() => {
                             <caret-forward />
                         </n-icon>
                     </template>
+                </n-button>&nbsp;
+                <n-button strong secondary size="small" @click="handleDeleteAll">
+                    <template #icon>
+                        <n-icon>
+                            <trash />
+                        </n-icon>
+                    </template>
                 </n-button>
             </div>
             <n-layout position="absolute" ref="resultRef" style="top: 36px; bottom: 40px; background: #282c34;"
                 content-style="padding: 12px;" :native-scrollbar="false">
-                <n-collapse display-directive="show" :expanded-names="expanded" @update:expanded-names="handleExpanded">
-                    <n-collapse-item v-for="i in resultList" :name="i.datetime">
+                <n-collapse display-directive="show" :expanded-names="config.expanded"
+                    @update:expanded-names="handleExpanded">
+                    <n-collapse-item v-for="i in config.resultList" :name="i.datetime">
                         <div class="item">
-                            <span style="white-space: pre-line;" v-for="j in i.value">
+                            <n-text v-if="i.error" style="white-space: pre-line;" type="error" v-for="j in i.value">
+                                {{ j }}
+                            </n-text>
+                            <span v-else style="white-space: pre-line;" v-for="j in i.value">
                                 {{ j }}
                             </span>
                         </div>
                         <template #header>
-                            {{ i.command }}
+                            <n-text v-if="i.error" type="error">
+                                {{ i.command }}
+                            </n-text>
+                            <span v-else>
+                                {{ i.command }}
+                            </span>
                         </template>
                         <template #header-extra>
+                            <n-button strong secondary size="small" @click.stop="handleCode(i)"
+                                v-if="i.command.startsWith('JSON.GET')">
+                                <template #icon>
+                                    <n-icon>
+                                        <Code />
+                                    </n-icon>
+                                </template>
+                            </n-button>&nbsp;
                             <n-button strong secondary size="small" @click.stop="handleDelete(i.datetime)">
                                 <template #icon>
                                     <n-icon>

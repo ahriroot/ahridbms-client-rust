@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { h, ref, shallowRef, onBeforeMount, onMounted, computed } from 'vue'
+import { h, ref, shallowRef, onBeforeMount, onMounted } from 'vue'
 import {
     darkTheme, NConfigProvider, NGlobalStyle, NIcon, NLayout,
     NButton, NModal, NSelect, SelectRenderLabel, NInput, NCard, NSpace,
-    NTabs, NTabPane, NLoadingBarProvider, NMessageProvider
+    NTabs, NTabPane, NLoadingBarProvider, NMessageProvider, NDialogProvider,
+    NCheckbox
 } from 'naive-ui'
 import { invoke } from '@tauri-apps/api/tauri'
-import { ArrowForward, ServerSharp, Add } from '@vicons/ionicons5'
+import { ArrowForward, ServerSharp, Add, Settings } from '@vicons/ionicons5'
 import { nanoid } from 'nanoid'  // 唯一 id 生成器
 
 import { DBType, ConnectionComponents, RedisConnectInit, TabComponents, PostgresConnectInit, InfoComponents } from '@/data/data'
@@ -17,7 +18,6 @@ import { OpenTabMesagae } from '@/types/Message'
 import { RedisConnect } from '@/types/redis'
 import { PostgresConnect } from '@/types/postgres'
 import { useIndexStore } from '@/store'
-import RedisInfoVue from '@/components/redis/Info.vue'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏
@@ -34,17 +34,22 @@ const tabComponents = shallowRef<ITabComponents>(TabComponents)
 
 // info 组件
 const infoComponents = shallowRef<IInfoComponents>(InfoComponents)
-const showInfo = ref<boolean>(false)
 
 const store = useIndexStore()
 /** ------------------ 变量 End ------------------ **/
 
 onBeforeMount(async () => {
     try {
-        width.value = Number(localStorage.getItem('ahridbms-sidebar-width')) || 500
-        oldWidth.value = width.value
         let config = localStorage.getItem('config')
-        store.updateConfig(config ? JSON.parse(config) : { deleteNoConfirm: false })
+        store.updateConfig(config ? JSON.parse(config) : {
+            deleteNoConfirm: false,
+            showSideBar: true,
+            sideBarWidth: 250
+        })
+
+        width.value = store.config.sideBarWidth
+        oldWidth.value = width.value
+
         connList.value = await getConnections()
         let connIds = connList.value.map(item => item.id)  // 所有链接 id
         let tmp = await getTabs()  // 所有标签页
@@ -66,7 +71,7 @@ onBeforeMount(async () => {
 const sidebarRef = shallowRef<HTMLElement | null>(null)
 const contentRef = shallowRef<HTMLElement | null>(null)
 const resizeable = ref<boolean>(false)
-const width = ref(250)
+const width = ref(store.config.sideBarWidth)
 const oldWidth = ref(250)
 const cursor = ref('default')
 const currentMoveX = ref(0)
@@ -115,12 +120,15 @@ onMounted(async () => {
                     width.value = 1000
                 } else {
                     width.value = tmp
-                    localStorage.setItem('ahridbms-sidebar-width', width.value.toString())
                 }
             }
         })
         document.body.addEventListener('mouseup', (ev) => {
             resizeable.value = false
+            store.updateConfig({
+                ...store.config,
+                sideBarWidth: width.value
+            })
         })
     }
 
@@ -215,9 +223,30 @@ const handleClose = (val: string) => {
     saveTabs(tabs.value)
 }
 
-const currentTabConn = computed(() => {
-    return tabs.value.find(item => item.id === tab.value)?.conn
-})
+const handleShowSide = async () => {
+    showSide.value = !showSide.value
+    store.updateConfig({
+        ...store.config,
+        showSideBar: showSide.value
+    })
+}
+
+const showSetting = ref(false)
+const handleCheckedChange = async (val: boolean) => {
+    store.updateConfig({
+        ...store.config,
+        deleteNoConfirm: val
+    })
+}
+
+const loadingClear = ref(false)
+const handleClearAllData = async () => {
+    loadingClear.value = true
+    localStorage.clear()
+    setTimeout(() => {
+        loadingClear.value = false
+    }, 1000)
+}
 </script>
 
 <template>
@@ -225,95 +254,116 @@ const currentTabConn = computed(() => {
         <n-global-style />
         <n-loading-bar-provider>
             <n-message-provider>
+                <n-dialog-provider>
+                    <n-modal v-model:show="showSetting" preset="card" style="width: 600px;" title="设置" size="small">
+                        <n-checkbox :checked="store.config?.deleteNoConfirm" @update:checked="handleCheckedChange">
+                            执行删除操作不需要确认
+                        </n-checkbox>
+                        <br>
+                        <br>
+                        <n-button :loading="loadingClear" size="small" @click="handleClearAllData">Clear All Data
+                        </n-button>
+                    </n-modal>
 
-                <n-modal v-model:show="showConn" preset="card" style="width: 600px;" title="连接" size="small">
-                    <n-space vertical>
-                        <n-select :options="dbTypeList" :render-label="renderLabel" v-model:value="dbConn" />
-                        <n-card v-if="dbConn == 'redis'">
-                            <n-space vertical>
-                                <n-input v-model:value="dbRedis.name" type="text" placeholder="Name" />
-                                <n-space>
-                                    <n-input v-model:value="dbRedis.host" type="text" placeholder="Host" />
-                                    <n-input v-model:value="dbRedis.port" type="text" placeholder="Port" />
+                    <n-modal v-model:show="showConn" preset="card" style="width: 600px;" title="连接" size="small">
+                        <n-space vertical>
+                            <n-select :options="dbTypeList" :render-label="renderLabel" v-model:value="dbConn" />
+                            <n-card v-if="dbConn == 'redis'">
+                                <n-space vertical>
+                                    <n-input v-model:value="dbRedis.name" type="text" placeholder="Name" />
+                                    <n-space>
+                                        <n-input v-model:value="dbRedis.host" type="text" placeholder="Host" />
+                                        <n-input v-model:value="dbRedis.port" type="text" placeholder="Port" />
+                                    </n-space>
+                                    <n-space>
+                                        <n-input v-model:value="dbRedis.user" type="text" placeholder="User" />
+                                        <n-input v-model:value="dbRedis.pass" type="text" placeholder="Pass" />
+                                    </n-space>
+                                    <n-input v-model:value="dbRedis.index" type="text" placeholder="DB Index" />
                                 </n-space>
-                                <n-space>
-                                    <n-input v-model:value="dbRedis.user" type="text" placeholder="User" />
-                                    <n-input v-model:value="dbRedis.pass" type="text" placeholder="Pass" />
+                            </n-card>
+                            <n-card v-else-if="dbConn == 'postgres'">
+                                <n-space vertical>
+                                    <n-input v-model:value="dbPostgres.name" type="text" placeholder="Name" />
+                                    <n-space>
+                                        <n-input v-model:value="dbPostgres.host" type="text" placeholder="Host" />
+                                        <n-input v-model:value="dbPostgres.port" type="text" placeholder="Port" />
+                                    </n-space>
+                                    <n-space>
+                                        <n-input v-model:value="dbPostgres.user" type="text" placeholder="User" />
+                                        <n-input v-model:value="dbPostgres.pass" type="text" placeholder="Pass" />
+                                    </n-space>
+                                    <n-input v-model:value="dbPostgres.db" type="text" placeholder="DB Name" />
                                 </n-space>
-                                <n-input v-model:value="dbRedis.index" type="text" placeholder="DB Index" />
+                            </n-card>
+                            <n-card v-else>
+                            </n-card>
+                            <n-space>
+                                <n-button @click="handleSubmitConn" style="margin-top: 12px;">Submit</n-button>
+                                <n-button @click="handleCancelConn" style="margin-top: 12px;">Cancel</n-button>
                             </n-space>
-                        </n-card>
-                        <n-card v-else-if="dbConn == 'postgres'">
-                            <n-space vertical>
-                                <n-input v-model:value="dbPostgres.name" type="text" placeholder="Name" />
-                                <n-space>
-                                    <n-input v-model:value="dbPostgres.host" type="text" placeholder="Host" />
-                                    <n-input v-model:value="dbPostgres.port" type="text" placeholder="Port" />
-                                </n-space>
-                                <n-space>
-                                    <n-input v-model:value="dbPostgres.user" type="text" placeholder="User" />
-                                    <n-input v-model:value="dbPostgres.pass" type="text" placeholder="Pass" />
-                                </n-space>
-                                <n-input v-model:value="dbPostgres.db" type="text" placeholder="DB Name" />
-                            </n-space>
-                        </n-card>
-                        <n-card v-else>
-                        </n-card>
-                        <n-space>
-                            <n-button @click="handleSubmitConn" style="margin-top: 12px;">Submit</n-button>
-                            <n-button @click="handleCancelConn" style="margin-top: 12px;">Cancel</n-button>
                         </n-space>
-                    </n-space>
-                </n-modal>
+                    </n-modal>
 
-                <div id="main" class="nocopy">
-                    <aside class="side nocopy" :class="showSide ? '' : 'show'"></aside>
-                    <main class="main" :class="showSide ? '' : 'show'"
-                        :style="`cursor: ${resizeable ? 'ew-resize' : cursor}`">
-                        <div class="connection nocopy" ref="sidebarRef" :style="`width: ${width}px`">
-                            <div class="header">
-                                <n-button strong secondary size="small" @click.stop="showConn = true">
+                    <div id="main" class="nocopy">
+                        <aside class="side nocopy" :class="store.config?.showSideBar ? '' : 'show'">
+                            <div class="sidebar">
+                                <n-button circle quaternary size="small" @click.stop="showSetting = true">
                                     <template #icon>
                                         <n-icon>
-                                            <add />
+                                            <Settings />
                                         </n-icon>
                                     </template>
                                 </n-button>
                             </div>
-                            <div class="conn">
-                                <n-layout position="absolute" style="background: #21252b; color: #fff"
-                                    :native-scrollbar="false" content-style="padding: 10px;">
-                                    <component v-for="i in connList" :key="i.id" :is="connComponents[i.db_type]"
-                                        :conn="i" @handleOpenTab="handleOpenTab"
-                                        @handleDeleteConnection="handleDeleteConnection" />
-                                </n-layout>
-                            </div>
-                            <div class="btn-side">
-                                <n-icon size="20" @click="showSide = !showSide">
-                                    <arrow-forward class="icon" :class="showSide ? 'show' : ''" />
-                                </n-icon>
-                            </div>
-                        </div>
-                        <div class="content" ref="contentRef" :style="`left: ${width}px`">
-                            <header class="header">
-                                <div v-for="i in connList" v-show="i.id == tabs.find(t => t.id == tab)?.conn.id">
-                                    <component :key="i.id" :is="infoComponents[i.db_type]" :conn="i" />
+                        </aside>
+                        <main class="main" :class="store.config?.showSideBar ? '' : 'show'"
+                            :style="`cursor: ${resizeable ? 'ew-resize' : cursor}`">
+                            <div class="connection nocopy" ref="sidebarRef" :style="`width: ${width}px`">
+                                <div class="header">
+                                    <n-button strong secondary size="small" @click.stop="showConn = true">
+                                        <template #icon>
+                                            <n-icon>
+                                                <add />
+                                            </n-icon>
+                                        </template>
+                                    </n-button>
                                 </div>
-                            </header>
-                            <section class="workspace">
-                                <n-tabs v-model:value="tab" @update:value="handleTabChanged" type="card" closable
-                                    tab-style="min-width: 80px;" @close="handleClose" size="small">
-                                    <n-tab-pane display-directive="if" v-for="i in tabs" :key="i.id"
-                                        :tab="`${i.tab_type}@${i.conn.info.name}`" :name="i.id">
-                                        <component :key="i.id"
-                                            :is="tabComponents[`${i.conn.db_type}:${i.tab_type == 'query' ? 'query' : 'db'}`]"
-                                            :conn="i.conn" :db="i.tab_type" />
-                                    </n-tab-pane>
-                                </n-tabs>
-                            </section>
-                        </div>
-                    </main>
-                </div>
+                                <div class="conn">
+                                    <n-layout position="absolute" style="background: #21252b; color: #fff"
+                                        :native-scrollbar="false" content-style="padding: 10px;">
+                                        <component v-for="i in connList" :key="i.id" :is="connComponents[i.db_type]"
+                                            :conn="i" @handleOpenTab="handleOpenTab"
+                                            @handleDeleteConnection="handleDeleteConnection" />
+                                    </n-layout>
+                                </div>
+                                <div class="btn-side">
+                                    <n-icon size="20" @click="handleShowSide">
+                                        <arrow-forward class="icon" :class="store.config?.showSideBar ? 'show' : ''" />
+                                    </n-icon>
+                                </div>
+                            </div>
+                            <div class="content" ref="contentRef" :style="`left: ${width}px`">
+                                <header class="header">
+                                    <div v-for="i in connList" v-show="i.id == tabs.find(t => t.id == tab)?.conn.id">
+                                        <component :key="i.id" :is="infoComponents[i.db_type]" :conn="i" />
+                                    </div>
+                                </header>
+                                <section class="workspace">
+                                    <n-tabs v-model:value="tab" @update:value="handleTabChanged" type="card" closable
+                                        tab-style="min-width: 80px;" @close="handleClose" size="small">
+                                        <n-tab-pane display-directive="if" v-for="i in tabs" :key="i.id"
+                                            :tab="`${i.tab_type}@${i.conn.info.name}`" :name="i.id">
+                                            <component :key="i.id"
+                                                :is="tabComponents[`${i.conn.db_type}:${i.tab_type == 'query' ? 'query' : 'db'}`]"
+                                                :conn="i.conn" :db="i.tab_type" />
+                                        </n-tab-pane>
+                                    </n-tabs>
+                                </section>
+                            </div>
+                        </main>
+                    </div>
+                </n-dialog-provider>
             </n-message-provider>
         </n-loading-bar-provider>
     </n-config-provider>
@@ -355,6 +405,16 @@ const currentTabConn = computed(() => {
     top: 0;
     left: 0;
     bottom: 0;
+}
+
+#main .side .sidebar {
+    padding: 10px 0;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
 }
 
 #main .side.show {
@@ -450,7 +510,7 @@ const currentTabConn = computed(() => {
     border-top: #333842 1px solid;
 }
 
-.n-tab-pane{
+.n-tab-pane {
     position: relative;
 }
 </style>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { h, shallowRef, ref, onBeforeMount, onMounted, computed, nextTick, watch } from 'vue'
 import {
-    NTable, NLayout, NTag, NButton, NIcon, NModal, SelectRenderLabel, useLoadingBar,
+    NTable, NLayout, NTag, NButton, NIcon, NModal, SelectRenderLabel, useLoadingBar, useDialog,
     NSpace, NCard, NSelect, NInput, useMessage, NSpin, NDropdown, NInputNumber, NTooltip
 } from 'naive-ui'
 import { Add, Reload, Trash, Key, Copy, ArrowUp, ArrowDown, Pencil, Checkmark, CaretBack, CaretForward, TimeOutline } from '@vicons/ionicons5'
@@ -12,6 +12,7 @@ import { INewFieldValue, Keyvalue, RedisConnect } from '@/types/redis'
 import { diffDatetime } from '@/utils/datetime'
 import { NewFieldValue } from '@/data/redis'
 import EditorVue from '@/components/Editor.vue'
+import { useIndexStore } from '@/store'
 
 window.$message = useMessage()
 
@@ -22,12 +23,13 @@ const props = defineProps<{
 
 const { toClipboard } = useClipboard()
 const message = useMessage()
+const dialog = useDialog()
+const store = useIndexStore()
 const loadingBar = useLoadingBar()
 
 const result = ref<Keyvalue[]>([])  // 所有 keys
 const showAdd = ref<boolean>(false)  // 显示新建 key 模态框
 
-const showLoadingTable = ref<boolean>(false)  // table loading 动画
 const loadingCount = ref<number>(0)  // loading 动画计数
 
 const timer = ref<any>(null)  // 计时器
@@ -38,8 +40,8 @@ const editorNewRef = shallowRef<any>(undefined)  // 新建 json 数据编辑器
 
 const sidebarRef = shallowRef<HTMLElement | null>(null)  // 左边 html 元素
 const resizeable = ref<boolean>(false)  // 正在调整大小
-const width = ref(500)  // 左边实时宽度
-const oldWidth = ref(500)  // 左边开始宽度
+const width = ref(600)  // 左边实时宽度
+const oldWidth = ref(600)  // 左边开始宽度
 const cursor = ref('default')  // 默认鼠标显示
 const currentMoveX = ref(0)  // 鼠标移动距离
 const editorRef = shallowRef<any>(undefined)  // 显示 json 数据编辑器
@@ -60,18 +62,20 @@ onMounted(() => {
             }
             if (resizeable.value) {
                 const tmp = oldWidth.value + ev.clientX - currentMoveX.value
-                if (tmp < 300) {
-                    width.value = 300
+                if (tmp < 400) {
+                    width.value = 400
                 } else if (tmp > 1000) {
                     width.value = 1000
                 } else {
                     width.value = tmp
-                    localStorage.setItem('redis-sidebar-width', width.value.toString())
                 }
             }
         })
         document.body.addEventListener('mouseup', (_) => {
-            resizeable.value = false
+            if (resizeable.value) {
+                resizeable.value = false
+                localStorage.setItem('redis-sidebar-width', width.value.toString())
+            }
         })
     }
 })
@@ -242,9 +246,7 @@ const renderLabel: SelectRenderLabel = (option) => {
 
 
 const handleReload = async () => {
-    showLoadingTable.value = true
     await init()
-    showLoadingTable.value = false
 }
 const handleReloadKey = async () => {
     if (!detailKey.value) {
@@ -450,13 +452,30 @@ const handleDelete = async (val: Keyvalue | null) => {
         key = detailKey.value || ''
         detailKey.value = null
     }
-    loadingStart()
-    del({ conn: props.conn, key: key, db: props.db }).then(async res => {
-        message.success(`(integer) ${res}`)
-        await handleReload()
-    }).finally(() => {
-        loadingFinish()
-    })
+    if (store.config?.deleteNoConfirm) {
+        loadingStart()
+        del({ conn: props.conn, key: key, db: props.db }).then(async res => {
+            message.success(`(integer) ${res}`)
+            await handleReload()
+        }).finally(() => {
+            loadingFinish()
+        })
+    } else {
+        dialog.warning({
+            title: '删除：',
+            content: `确认删除 Key: ${key} ?`,
+            positiveText: '删除',
+            onPositiveClick: async () => {
+                loadingStart()
+                del({ conn: props.conn, key: key, db: props.db }).then(async res => {
+                    message.success(`(integer) ${res}`)
+                    await handleReload()
+                }).finally(() => {
+                    loadingFinish()
+                })
+            }
+        })
+    }
 }
 
 /**
@@ -544,7 +563,7 @@ const handleDetail = async (val: Keyvalue) => {
 }
 
 onBeforeMount(async () => {
-    width.value = Number(localStorage.getItem('redis-sidebar-width')) || 500
+    width.value = Number(localStorage.getItem('redis-sidebar-width')) || 600
     oldWidth.value = width.value
     await init()
     if (timer.value) {
@@ -700,13 +719,30 @@ const handleNewSetMember = async () => {
  */
 const handleDeleteSetValue = async (v: string) => {
     if (detailKey.value) {
-        loadingStart()
-        srem({ conn: props.conn, key: detailKey.value, value: [v], db: props.db }).then(async res => {
-            message.success(`(integer) ${res}`)
-            await handleReloadKey()
-        }).finally(() => {
-            loadingFinish()
-        })
+        if (store.config?.deleteNoConfirm) {
+            loadingStart()
+            srem({ conn: props.conn, key: detailKey.value, value: [v], db: props.db }).then(async res => {
+                message.success(`(integer) ${res}`)
+                await handleReloadKey()
+            }).finally(() => {
+                loadingFinish()
+            })
+        } else {
+            dialog.warning({
+                title: '删除：',
+                content: `确认删除 Set: ${detailKey.value} (Member: ${v}) ?`,
+                positiveText: '删除',
+                onPositiveClick: async () => {
+                    loadingStart()
+                    srem({ conn: props.conn, key: detailKey.value as string, value: [v], db: props.db }).then(async res => {
+                        message.success(`(integer) ${res}`)
+                        await handleReloadKey()
+                    }).finally(() => {
+                        loadingFinish()
+                    })
+                }
+            })
+        }
     }
 }
 
@@ -739,13 +775,30 @@ const handleNewZsetMember = async () => {
 }
 const handleDeleteZsetValue = async (member: string) => {
     if (detailKey.value && member) {
-        loadingStart()
-        zrem({ conn: props.conn, key: detailKey.value, value: [member], db: props.db }).then(async res => {
-            message.success(`(integer) ${res}`)
-            await handleReloadKey()
-        }).finally(() => {
-            loadingFinish()
-        })
+        if (store.config?.deleteNoConfirm) {
+            loadingStart()
+            zrem({ conn: props.conn, key: detailKey.value, value: [member], db: props.db }).then(async res => {
+                message.success(`(integer) ${res}`)
+                await handleReloadKey()
+            }).finally(() => {
+                loadingFinish()
+            })
+        } else {
+            dialog.warning({
+                title: '删除：',
+                content: `确认删除 Zset: ${detailKey.value} (Member: ${member}) ?`,
+                positiveText: '删除',
+                onPositiveClick: async () => {
+                    loadingStart()
+                    zrem({ conn: props.conn, key: detailKey.value as string, value: [member], db: props.db }).then(async res => {
+                        message.success(`(integer) ${res}`)
+                        await handleReloadKey()
+                    }).finally(() => {
+                        loadingFinish()
+                    })
+                }
+            })
+        }
     }
 }
 const editZsetItem = ref<{ // 正在编辑的 zset 中的数据
@@ -804,13 +857,30 @@ const handleNewHashField = async () => {
 }
 const handleDeleteHashField = async (field: string) => {
     if (detailKey.value && field) {
-        loadingStart()
-        hdel({ conn: props.conn, key: detailKey.value, fields: [field], db: props.db }).then(async res => {
-            message.success(`(integer) ${res}`)
-            await handleReloadKey()
-        }).finally(() => {
-            loadingFinish()
-        })
+        if (store.config?.deleteNoConfirm) {
+            loadingStart()
+            hdel({ conn: props.conn, key: detailKey.value, fields: [field], db: props.db }).then(async res => {
+                message.success(`(integer) ${res}`)
+                await handleReloadKey()
+            }).finally(() => {
+                loadingFinish()
+            })
+        } else {
+            dialog.warning({
+                title: '删除：',
+                content: `确认删除 Hash: ${detailKey.value} (Field: ${field}) ?`,
+                positiveText: '删除',
+                onPositiveClick: async () => {
+                    loadingStart()
+                    hdel({ conn: props.conn, key: detailKey.value as string, fields: [field], db: props.db }).then(async res => {
+                        message.success(`(integer) ${res}`)
+                        await handleReloadKey()
+                    }).finally(() => {
+                        loadingFinish()
+                    })
+                }
+            })
+        }
     }
 }
 const editHashItem = ref<{ // 正在编辑的 hash 中的数据
@@ -854,6 +924,27 @@ const handleJsonReset = async () => {
             loadingFinish()
         })
     }
+}
+
+const pattern = ref('')
+const handlePattern = async () => {
+    let p = pattern.value
+    if (p == '') {
+        p = '*'
+    }
+    loadingStart()
+    keys({ conn: props.conn, arg: p, db: props.db }).then(async (res) => {
+        result.value = []
+        res.forEach(item => {
+            for (const key in item) {
+                result.value.push(item[key])
+            }
+        })
+        before.value = new Date()
+        lastReload.value = await diffDatetime(before.value)
+    }).finally(() => {
+        loadingFinish()
+    })
 }
 </script>
 
@@ -1075,51 +1166,66 @@ const handleJsonReset = async () => {
                     </n-button>
                 </div>
             </div>
-            <n-layout position="absolute" style="top: 36px;  color: #fff; height: 100%;" :native-scrollbar="false">
-                <n-spin :show="showLoadingTable">
-                    <n-table :bordered="true" :single-line="false" size="small">
-                        <tbody>
-                            <tr v-for="i in result" style="cursor: pointer;" @click="handleDetail(i)">
-                                <td class="td-key">
-                                    <n-tag :bordered="false" :type="tagList[i.key_type].tag" size="small">
-                                        {{ tagList[i.key_type].text }}
-                                    </n-tag>
-                                </td>
-                                <td style="max-width: 200px; overflow: hidden;">{{ i.key }}</td>
-                                <td class="td-size">{{ i.size }} B</td>
-                                <td class="td-ttl">{{ i.ttl }} {{ i.ttl > 0 ? 's' : '' }}</td>
-                                <td class="td-opera">
-                                    <div class="btns">
-                                        <n-button strong secondary circle type="info" size="small"
-                                            @click.stop="handleCopy(i.key)">
-                                            <template #icon>
-                                                <n-icon>
-                                                    <key />
-                                                </n-icon>
-                                            </template>
-                                        </n-button>
-                                        <n-button strong secondary circle type="info" size="small"
-                                            @click.stop="handleCopy(i.value)">
-                                            <template #icon>
-                                                <n-icon>
-                                                    <copy />
-                                                </n-icon>
-                                            </template>
-                                        </n-button>
-                                        <n-button strong secondary circle type="error" size="small"
-                                            @click.stop="handleDelete(i)">
-                                            <template #icon>
-                                                <n-icon>
-                                                    <trash />
-                                                </n-icon>
-                                            </template>
-                                        </n-button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </n-table>
-                </n-spin>
+            <n-table :bordered="true" :single-line="false" size="small" style="position: absolute; top: 36px">
+                <thead>
+                    <tr>
+                        <th class="td-type">Type</th>
+                        <th>
+                            <div style="display: flex; align-items: center;">
+                                <span>Key:&nbsp;</span>
+                                <n-input size="small" @keyup.enter.native="handlePattern" v-model:value="pattern"
+                                    type="text" placeholder="Key or Pattern & Enter" />
+                            </div>
+                        </th>
+                        <th class="td-size">Size</th>
+                        <th class="td-ttl">TTL</th>
+                        <th class="td-opera"></th>
+                    </tr>
+                </thead>
+            </n-table>
+            <n-layout position="absolute" style="top: 77px; bottom: 36px; color: #fff;" :native-scrollbar="false">
+                <n-table :bordered="true" :single-line="false" size="small">
+                    <tbody>
+                        <tr v-for="i in result" style="cursor: pointer;" @click="handleDetail(i)">
+                            <td class="td-type">
+                                <n-tag :bordered="false" :type="tagList[i.key_type].tag" size="small">
+                                    {{ tagList[i.key_type].text }}
+                                </n-tag>
+                            </td>
+                            <td style="max-width: 200px; overflow: hidden;">{{ i.key }}</td>
+                            <td class="td-size">{{ i.size }} B</td>
+                            <td class="td-ttl">{{ i.ttl }} {{ i.ttl > 0 ? 's' : '' }}</td>
+                            <td class="td-opera">
+                                <div class="btns">
+                                    <n-button strong secondary circle type="info" size="small"
+                                        @click.stop="handleCopy(i.key)">
+                                        <template #icon>
+                                            <n-icon>
+                                                <key />
+                                            </n-icon>
+                                        </template>
+                                    </n-button>
+                                    <n-button strong secondary circle type="info" size="small"
+                                        @click.stop="handleCopy(i.value)">
+                                        <template #icon>
+                                            <n-icon>
+                                                <copy />
+                                            </n-icon>
+                                        </template>
+                                    </n-button>
+                                    <n-button strong secondary circle type="error" size="small"
+                                        @click.stop="handleDelete(i)">
+                                        <template #icon>
+                                            <n-icon>
+                                                <trash />
+                                            </n-icon>
+                                        </template>
+                                    </n-button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </n-table>
             </n-layout>
         </div>
         <div class="content" :style="`left: ${width}px`" v-if="detailKey == null"></div>
@@ -1133,13 +1239,18 @@ const handleJsonReset = async () => {
                         </label>
                     </n-space>
                     &nbsp;
-                    <n-button strong secondary circle type="info" size="small" @click="handleRefresh">
-                        <template #icon>
-                            <n-icon>
-                                <time-outline />
-                            </n-icon>
+                    <n-tooltip trigger="hover">
+                        <template #trigger>
+                            <n-button strong secondary circle type="info" size="small" @click="handleRefresh">
+                                <template #icon>
+                                    <n-icon>
+                                        <time-outline />
+                                    </n-icon>
+                                </template>
+                            </n-button>
                         </template>
-                    </n-button>
+                        设置过期时间
+                    </n-tooltip>
                     &nbsp;
                     <n-tooltip trigger="hover">
                         <template #trigger>
@@ -1617,8 +1728,9 @@ const handleJsonReset = async () => {
     justify-content: flex-end;
 }
 
-.td-key {
-    width: 60px;
+.td-type {
+    width: 80px;
+    text-align: center;
 }
 
 .td-size {

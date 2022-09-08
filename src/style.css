@@ -26,3 +26,7 @@ body {
 .n-collapse-item__content-inner {
   padding: 0 20px !important;
 }
+
+.n-collapse-item {
+  margin: 4px !important;
+}
