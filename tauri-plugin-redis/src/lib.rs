@@ -1,5 +1,6 @@
 pub mod api;
 pub mod entity;
+pub mod utils;
 
 use tauri::{
     plugin::{Builder, TauriPlugin},

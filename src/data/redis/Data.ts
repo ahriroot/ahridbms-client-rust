@@ -44,6 +44,11 @@ const NewFieldValue = {
         ],
         ttl: '-1'
     },
+    json: {
+        key: '',
+        value: '',
+        ttl: '-1'
+    }
 }
 
 const ExecType: IExecType = {

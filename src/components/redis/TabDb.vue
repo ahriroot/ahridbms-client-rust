@@ -247,10 +247,10 @@ const handleReload = async () => {
     showLoadingTable.value = false
 }
 const handleReloadKey = async () => {
-    loadingStart()
     if (!detailKey.value) {
         return
     }
+    loadingStart()
     get({ conn: props.conn, key: detailKey.value, db: props.db }).then((res: any) => {
         let tmp_key = 'String'
         for (const key in res) {
@@ -310,8 +310,18 @@ const loadingFinish = () => {
 const handleSubmitAdd = async () => {
     switch (fieldType.value) {
         case 'string':
+            if (!fieldValue.value.string.key) {
+                message.error('请输入 key')
+                return
+            }
             loadingStart()
             set({ conn: props.conn, key: fieldValue.value.string.key, value: fieldValue.value.string.value, ttl: Number(fieldValue.value.string.ttl), db: props.db }).then(async res => {
+                showAdd.value = false
+                fieldValue.value.string = {
+                    key: '',
+                    value: '',
+                    ttl: '-1'
+                }
                 message.success(res)
                 await handleReload()
             }).finally(() => {
@@ -319,37 +329,77 @@ const handleSubmitAdd = async () => {
             })
             break
         case 'list':
+            if (!fieldValue.value.list.key) {
+                message.error('请输入 key')
+                return
+            }
             loadingStart()
             let list_values = fieldValue.value.list.value.filter(item => item.value).map(item => item.value)
             rpush({ conn: props.conn, key: fieldValue.value.list.key, value: list_values, ttl: Number(fieldValue.value.list.ttl), db: props.db }).then(async res => {
-                message.success(`Success, ${res} items added`)
+                showAdd.value = false
+                fieldValue.value.list = {
+                    key: '',
+                    value: [{ value: '' }],
+                    ttl: '-1'
+                }
+                message.success(`(integer) ${res}`)
                 await handleReload()
             }).finally(() => {
                 loadingFinish()
             })
             break
         case 'set':
+            if (!fieldValue.value.set.key) {
+                message.error('请输入 key')
+                return
+            }
             loadingStart()
             let set_values = fieldValue.value.set.value.filter(item => item.value).map(item => item.value)
             sadd({ conn: props.conn, key: fieldValue.value.set.key, value: set_values, ttl: Number(fieldValue.value.set.ttl), db: props.db }).then(async res => {
-                message.success(`Success, ${res} items added`)
+                showAdd.value = false
+                fieldValue.value.set = {
+                    key: '',
+                    value: [{ value: '' }],
+                    ttl: '-1'
+                }
+                message.success(`(integer) ${res}`)
                 await handleReload()
             }).finally(() => {
                 loadingFinish()
             })
             break
         case 'zset':
+            if (!fieldValue.value.zset.key) {
+                message.error('请输入 key')
+                return
+            }
             loadingStart()
             zadd({ conn: props.conn, key: fieldValue.value.zset.key, value: fieldValue.value.zset.value, ttl: Number(fieldValue.value.zset.ttl), db: props.db }).then(async res => {
-                message.success(`Success, ${res} items added`)
+                showAdd.value = false
+                fieldValue.value.zset = {
+                    key: '',
+                    value: [{ value: '', score: 0 }],
+                    ttl: '-1'
+                }
+                message.success(`(integer) ${res}`)
                 await handleReload()
             }).finally(() => {
                 loadingFinish()
             })
             break
         case 'hash':
+            if (!fieldValue.value.hash.key) {
+                message.error('请输入 key')
+                return
+            }
             loadingStart()
             hset({ conn: props.conn, key: fieldValue.value.hash.key, value: fieldValue.value.hash.value, ttl: Number(fieldValue.value.hash.ttl), db: props.db }).then(async res => {
+                showAdd.value = false
+                fieldValue.value.hash = {
+                    key: '',
+                    value: [{ field: '', value: '' }],
+                    ttl: '-1'
+                }
                 message.success(res)
                 await handleReload()
             }).finally(() => {
@@ -357,22 +407,29 @@ const handleSubmitAdd = async () => {
             })
             break
         case 'ReJSON-RL':
+            if (!fieldValue.value.json.key) {
+                message.error('请输入 key')
+                return
+            }
             if (!editorNewRef.value) {
                 await nextTick()
             }
-            // 添加 JSON 数据
-            console.log(await editorNewRef.value?.getValue())
-            // let json_res = await setJson({ conn: props, key: fieldValue.value.json.key, value: fieldValue.value.json.value, ttl: Number(fieldValue.value.json.ttl) })
-            // if (json_res == 'OK') {
-            //     message.success('Success')
-            //     await handleReload()
-            // } else {
-            //     console.log(json_res)
-            //     message.error('Error')
-            // }
+            let v = await editorNewRef.value?.getValue()
+            loadingStart()
+            json_set({ conn: props.conn, key: fieldValue.value.json.key, value: v, ttl: Number(fieldValue.value.json.ttl), db: props.db }).then(async res => {
+                showAdd.value = false
+                fieldValue.value.json = {
+                    key: '',
+                    value: '',
+                    ttl: '-1'
+                }
+                message.success(res)
+                await handleReload()
+            }).finally(() => {
+                loadingFinish()
+            })
             break
     }
-    showAdd.value = false
 }
 
 const handleCancelAdd = async () => {
@@ -395,7 +452,7 @@ const handleDelete = async (val: Keyvalue | null) => {
     }
     loadingStart()
     del({ conn: props.conn, key: key, db: props.db }).then(async res => {
-        message.success(res)
+        message.success(`(integer) ${res}`)
         await handleReload()
     }).finally(() => {
         loadingFinish()
@@ -574,7 +631,7 @@ const handleLpush = async () => {
     if (newListValue.value && detailKey.value) {
         loadingStart()
         lpush({ conn: props.conn, key: detailKey.value, value: [newListValue.value], ttl: -2, db: props.db }).then(async res => {
-            message.success(`Success, ${res} items added`)
+            message.success(`(integer) ${res}`)
             await handleReloadKey()
             newListValue.value = ''
         }).finally(() => {
@@ -586,7 +643,7 @@ const handleRpush = async () => {
     if (newListValue.value && detailKey.value) {
         loadingStart()
         rpush({ conn: props.conn, key: detailKey.value, value: [newListValue.value], ttl: -2, db: props.db }).then(async res => {
-            message.success(`Success, ${res} items added`)
+            message.success(`(integer) ${res}`)
             await handleReloadKey()
             newListValue.value = ''
         }).finally(() => {
@@ -629,7 +686,7 @@ const handleNewSetMember = async () => {
             ttl: -2,
             db: props.db
         }).then(async res => {
-            message.success(`Success, ${res} items added`)
+            message.success(`(integer) ${res}`)
             await handleReloadKey()
             newSetMember.value = ''
         }).finally(() => {
@@ -645,7 +702,7 @@ const handleDeleteSetValue = async (v: string) => {
     if (detailKey.value) {
         loadingStart()
         srem({ conn: props.conn, key: detailKey.value, value: [v], db: props.db }).then(async res => {
-            message.success(`Success, ${res} items deleted`)
+            message.success(`(integer) ${res}`)
             await handleReloadKey()
         }).finally(() => {
             loadingFinish()
@@ -671,7 +728,7 @@ const handleNewZsetMember = async () => {
             ttl: -2,
             db: props.db
         }).then(async res => {
-            message.success(`Success, ${res} items added`)
+            message.success(`(integer) ${res}`)
             await handleReloadKey()
             newZsetMember.value = ''
             newZsetScore.value = 0
@@ -684,7 +741,7 @@ const handleDeleteZsetValue = async (member: string) => {
     if (detailKey.value && member) {
         loadingStart()
         zrem({ conn: props.conn, key: detailKey.value, value: [member], db: props.db }).then(async res => {
-            message.success(`Success, ${res} items deleted`)
+            message.success(`(integer) ${res}`)
             await handleReloadKey()
         }).finally(() => {
             loadingFinish()
@@ -711,7 +768,7 @@ const handleEditSetScore = async () => {
             ttl: -2,
             db: props.db
         }).then(async res => {
-            message.success(`Success, ${res} items changed`)
+            message.success(`(integer) ${res}`)
             await handleReloadKey()
             editZsetItem.value.member = null
         }).finally(() => {
@@ -749,7 +806,7 @@ const handleDeleteHashField = async (field: string) => {
     if (detailKey.value && field) {
         loadingStart()
         hdel({ conn: props.conn, key: detailKey.value, fields: [field], db: props.db }).then(async res => {
-            message.success(`Success, ${res} items deleted`)
+            message.success(`(integer) ${res}`)
             await handleReloadKey()
         }).finally(() => {
             loadingFinish()
@@ -808,10 +865,9 @@ const handleJsonReset = async () => {
                 :native-scrollbar="false">
                 <n-card v-show="fieldType == 'ReJSON-RL'">
                     <n-space vertical>
-                        <n-input v-model:value="fieldValue.string.key" type="text" placeholder="Key" />
-                        <n-input v-model:value="fieldValue.string.value" type="textarea" placeholder="Value" />
+                        <n-input v-model:value="fieldValue.json.key" type="text" placeholder="Key" />
                         <EditorVue ref="editorNewRef" value="" type="json" />
-                        <n-input v-model:value="fieldValue.string.ttl" type="text" placeholder="TTL" />
+                        <n-input v-model:value="fieldValue.json.ttl" type="text" placeholder="TTL" />
                     </n-space>
                 </n-card>
                 <n-card v-if="fieldType == 'string'">
@@ -1020,7 +1076,7 @@ const handleJsonReset = async () => {
                 </div>
             </div>
             <n-layout position="absolute" style="top: 36px;  color: #fff; height: 100%;" :native-scrollbar="false">
-                <n-spin :show="showLoadingTable" class="copy">
+                <n-spin :show="showLoadingTable">
                     <n-table :bordered="true" :single-line="false" size="small">
                         <tbody>
                             <tr v-for="i in result" style="cursor: pointer;" @click="handleDetail(i)">
@@ -1346,7 +1402,7 @@ const handleJsonReset = async () => {
                                         <td class="list-value">
                                             <div v-show="editListItem.index != i.index"
                                                 @click="editListItem.index = i.index; editListItem.value = i.value">{{
-                                                        i.value
+                                                i.value
                                                 }}
                                             </div>
                                             <n-input v-show="editListItem.index == i.index"
@@ -1408,7 +1464,7 @@ const handleJsonReset = async () => {
                                                 placeholder="Score" size="small" />
                                             <div v-show="editZsetItem.member != i.member"
                                                 @click="editZsetItem.member = i.member; editZsetItem.score = i.score">{{
-                                                        i.score
+                                                i.score
                                                 }}
                                             </div>
                                         </td>
@@ -1451,10 +1507,11 @@ const handleJsonReset = async () => {
                                         <td class="hash-key">{{ i.field }}</td>
                                         <td class="hash-value">
                                             <n-input v-show="editHashItem.field == i.field"
-                                                v-model:value="editHashItem.value" placeholder="Value" size="small" />
+                                                v-model:value="editHashItem.value" placeholder="Value" size="small"
+                                                @keyup.enter.native="handleEditHashValue" />
                                             <div v-show="editHashItem.field != i.field"
                                                 @click="editHashItem.field = i.field; editHashItem.value = i.value">{{
-                                                        i.value
+                                                i.value
                                                 }}
                                             </div>
                                         </td>

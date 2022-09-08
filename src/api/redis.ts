@@ -58,8 +58,8 @@ const set = async (params: SetStringArgs): Promise<string> => {
     return res
 }
 
-const del = async (params: DelArgs): Promise<string> => {
-    let res = await request<string>('plugin:redis|del', params)
+const del = async (params: DelArgs): Promise<number> => {
+    let res = await request<number>('plugin:redis|del', params)
     return res
 }
 

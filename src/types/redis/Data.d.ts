@@ -54,10 +54,22 @@ export interface IExecResult {
     value: IExecValueNil | IExecValueOkay | IExecValueData | IExecValueStatus | IExecValueInteger | IExecValueBulk | IExecValueError
 }
 
+export interface Success<T> {
+    Success: T
+}
+
+export interface Error<T> {
+    Success: T
+}
+
+export interface Error5<T> {
+    Success: T
+}
+
 export interface Response<T> {
     code: number
     msg: string
-    data: T
+    data: Success<T> | Success<T> | Success<T>
 }
 
 export interface INewFieldValue {
@@ -94,6 +106,11 @@ export interface INewFieldValue {
             field: string
             value: string
         }[]
+        ttl: string
+    },
+    json: {
+        key: string
+        value: string
         ttl: string
     }
 }

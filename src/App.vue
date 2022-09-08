@@ -303,7 +303,7 @@ const currentTabConn = computed(() => {
                             <section class="workspace">
                                 <n-tabs v-model:value="tab" @update:value="handleTabChanged" type="card" closable
                                     tab-style="min-width: 80px;" @close="handleClose" size="small">
-                                    <n-tab-pane display-directive="show" v-for="i in tabs" :key="i.id"
+                                    <n-tab-pane display-directive="if" v-for="i in tabs" :key="i.id"
                                         :tab="`${i.tab_type}@${i.conn.info.name}`" :name="i.id">
                                         <component :key="i.id"
                                             :is="tabComponents[`${i.conn.db_type}:${i.tab_type == 'query' ? 'query' : 'db'}`]"

@@ -1,6 +1,28 @@
 use redis;
 
-use crate::entity::*;
+use crate::{entity::*, utils::get_connection};
+
+pub async fn handle_set(
+    conn: Connection,
+    key: String,
+    value: String,
+    ttl: i64,
+    db: String,
+) -> redis::RedisResult<String> {
+    let mut con = get_connection(conn, db).await?;
+
+    if ttl > 0 {
+        let key_space_info: String = redis::cmd("SETEX")
+            .arg(&key)
+            .arg(ttl)
+            .arg(&value)
+            .query(&mut con)?;
+        return Ok(key_space_info);
+    } else {
+        let key_space_info: String = redis::cmd("SET").arg(&key).arg(&value).query(&mut con)?;
+        return Ok(key_space_info);
+    }
+}
 
 #[tauri::command]
 pub async fn set(
@@ -10,58 +32,40 @@ pub async fn set(
     ttl: i64,
     db: String,
 ) -> Response<String> {
-    let conn_str = format!(
-        "redis://{}:{}@{}:{}/{}",
-        "", conn.info.pass, conn.info.host, conn.info.port, db
-    );
+    let result = handle_set(conn, key, value, ttl, db).await;
+    match result {
+        Ok(res) => Response::ok(Res::Success(res)),
+        Err(e) => Response::error(e.to_string()),
+    }
+}
 
-    let client = redis::Client::open(conn_str).expect("client");
-    let mut con: redis::Connection = client.get_connection().expect("con");
+pub async fn handle_reset(
+    conn: Connection,
+    key: String,
+    value: String,
+    ttl: i64,
+    db: String,
+) -> redis::RedisResult<String> {
+    let mut con = get_connection(conn, db).await?;
 
     if ttl > 0 {
         let key_space_info: String = redis::cmd("SETEX")
             .arg(&key)
             .arg(ttl)
             .arg(&value)
-            .query(&mut con)
-            .expect("set");
-        return Response::ok(key_space_info);
+            .query(&mut con)?;
+        return Ok(key_space_info);
     } else {
-        let key_space_info: String = redis::cmd("SET")
-            .arg(&key)
-            .arg(&value)
-            .query(&mut con)
-            .expect("set");
-        return Response::ok(key_space_info);
+        let key_space_info: String = redis::cmd("SET").arg(&key).arg(&value).query(&mut con)?;
+        return Ok(key_space_info);
     }
 }
 
 #[tauri::command]
 pub async fn reset(conn: Connection, key: String, value: String, db: String) -> Response<String> {
-    let conn_str = format!(
-        "redis://{}:{}@{}:{}/{}",
-        "", conn.info.pass, conn.info.host, conn.info.port, db
-    );
-
-    let client = redis::Client::open(conn_str).expect("client");
-    let mut con: redis::Connection = client.get_connection().expect("con");
-
-    let ttl: i64 = redis::cmd("TTL").arg(&key).query(&mut con).expect("ttl");
-
-    if ttl > 0 {
-        let key_space_info: String = redis::cmd("SETEX")
-            .arg(&key)
-            .arg(ttl)
-            .arg(&value)
-            .query(&mut con)
-            .expect("reset");
-        return Response::ok(key_space_info);
-    } else {
-        let key_space_info: String = redis::cmd("SET")
-            .arg(&key)
-            .arg(&value)
-            .query(&mut con)
-            .expect("reset");
-        return Response::ok(key_space_info);
+    let result = handle_reset(conn, key, value, 0, db).await;
+    match result {
+        Ok(res) => Response::ok(Res::Success(res)),
+        Err(e) => Response::error(e.to_string()),
     }
 }
