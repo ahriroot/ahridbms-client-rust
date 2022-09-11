@@ -18,6 +18,9 @@ import { OpenTabMesagae } from '@/types/Message'
 import { RedisConnect } from '@/types/redis'
 import { PostgresConnect } from '@/types/postgres'
 import { useIndexStore } from '@/store'
+import { checkUpdate, installUpdate } from '@tauri-apps/api/updater'
+import { relaunch } from '@tauri-apps/api/process'
+import tauriConfig from '../src-tauri/tauri.conf.json'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏
@@ -247,6 +250,33 @@ const handleClearAllData = async () => {
         loadingClear.value = false
     }, 1000)
 }
+
+// Update
+const showUpdateInfo = ref(false)
+const updateStatus = ref<any>(null)
+const updateLoading = ref(false)
+const handleUpdate = async () => {
+    try {
+        const { shouldUpdate, manifest } = await checkUpdate()
+        if (shouldUpdate) {
+            updateStatus.value = manifest
+            showUpdateInfo.value = true
+        } else {
+            alert('当前已是最新版本')
+        }
+    } catch (error) {
+        console.log(error)
+    }
+}
+const handleStartUpdate = async () => {
+    updateLoading.value = true
+    await installUpdate()
+    await relaunch()
+    updateLoading.value = false
+}
+const handleCancelUpdate = () => {
+    showUpdateInfo.value = false
+}
 </script>
 
 <template>
@@ -255,6 +285,18 @@ const handleClearAllData = async () => {
         <n-loading-bar-provider>
             <n-message-provider>
                 <n-dialog-provider>
+                    <n-modal v-model:show="showUpdateInfo" preset="card" style="width: 600px;" title="设置" size="small">
+                        <h1>Version: {{updateStatus.version}}</h1>
+                        <br>
+                        <p>Info: {{updateStatus.body}}</p>
+                        <br>
+                        <p>Publish Date: {{updateStatus.date}}</p>
+                        <br>
+                        <n-button size="small" @click="handleStartUpdate" :loading="updateLoading">Install</n-button>
+                        &nbsp;
+                        <n-button size="small" @click="handleCancelUpdate">Cancel</n-button>
+                    </n-modal>
+
                     <n-modal v-model:show="showSetting" preset="card" style="width: 600px;" title="设置" size="small">
                         <n-checkbox :checked="store.config?.deleteNoConfirm" @update:checked="handleCheckedChange">
                             执行删除操作不需要确认
@@ -263,6 +305,13 @@ const handleClearAllData = async () => {
                         <br>
                         <n-button :loading="loadingClear" size="small" @click="handleClearAllData">Clear All Data
                         </n-button>
+                        <br>
+                        <br>
+                        <n-button :loading="updateLoading" size="small" @click="handleUpdate">Check for Update
+                        </n-button>
+                        <br>
+                        <br>
+                        <div>Version: {{tauriConfig.package.version}}</div>
                     </n-modal>
 
                     <n-modal v-model:show="showConn" preset="card" style="width: 600px;" title="连接" size="small">

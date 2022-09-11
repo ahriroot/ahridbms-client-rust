@@ -9,7 +9,8 @@
     "b": "tauri build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "p": "tauri plugin init --name"
+    "p": "tauri plugin init --name",
+    "key": "tauri signer generate -w cert/ahridbms.key"
   },
   "dependencies": {
     "@tauri-apps/api": "^1.0.2",

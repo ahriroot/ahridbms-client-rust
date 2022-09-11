@@ -1,0 +1,23 @@
+{
+    "version": "v0.1.1",
+    "notes": "New version 0.1.1",
+    "pub_date": "2022-06-22T19:25:57Z",
+    "platforms": {
+        "darwin-x86_64": {
+            "signature": "",
+            "url": "https://installer.service.ahriknow.com/ahridbms/rust/releases/v0.1.1/silicon/app.app.tar.gz"
+        },
+        "darwin-aarch64": {
+            "signature": "",
+            "url": "https://installer.service.ahriknow.com/ahridbms/rust/releases/v0.1.1/silicon/app.app.tar.gz"
+        },
+        "linux-x86_64": {
+            "signature": "",
+            "url": "https://installer.service.ahriknow.com/ahridbms/rust/releases/v0.1.1/silicon/app.app.tar.gz"
+        },
+        "windows-x86_64": {
+            "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTVlliN1g0Z0d5dW5Pa0hiN0hKeVFUc0tZYk80a0c2RGM0cWdaNC83TzRFcWlTb21RamQzZ1dNdzFaaVJkNmxObDhzN3Jjei91di9ENGFKOVJVZ3lXRlZVSFNiR2U3ZndvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNjYyOTA4MTU5CWZpbGU6YWhyaWRibXNfMC4xLjFfeDY0X3poLUNOLm1zaS56aXAKZEZxR2Z3WU1UL0dqRVQxS2NCcHExQmNpalpPRTJ5aGVkZGQwSzNBaVhHUnZyejkyaEtWNDdsLzc5Ly8vZHUvVU94U2tkWnpOdDVud3JkUmU5dFpPQkE9PQo=",
+            "url": "https://installer.service.ahriknow.com/ahridbms/rust/releases/v0.1.1/ahridbms_0.1.1_x64_zh-CN.msi.zip"
+        }
+    }
+}

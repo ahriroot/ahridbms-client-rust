@@ -21,7 +21,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = tauri::Builder::default();
 
     // 循环 drives
-    let drives = vec!["test", "redis"];
+    let drives = vec!["redis"];
     for drive in drives {
         match drive {
             "test" => {
