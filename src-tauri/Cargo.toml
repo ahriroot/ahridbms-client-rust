@@ -19,14 +19,12 @@ serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 tauri = { version = "1.0.5", features = ["updater"] }
 tokio = { version = "1.20.1", features = ["full"] }
-postgres = "0.19.3"
-tokio-postgres = "0.7.7"
 
-[dependencies.tauri-plugin-test]
-path = "../tauri-plugin-test"
+[dependencies.plugin-test]
+path = "../plugin-test"
 
-[dependencies.tauri-plugin-redis]
-path = "../tauri-plugin-redis"
+[dependencies.plugin-redis]
+path = "../plugin-redis"
 
 [features]
 # by default Tauri runs in production mode

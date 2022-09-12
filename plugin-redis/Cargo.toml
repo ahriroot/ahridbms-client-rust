@@ -1,5 +1,5 @@
 [package]
-name = "tauri-plugin-redis"
+name = "plugin-redis"
 version = "0.0.0"
 authors = [ "ahriknow" ]
 description = "plugin of ahridbms for redis"

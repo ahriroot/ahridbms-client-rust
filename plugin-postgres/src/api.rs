@@ -1,7 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio_postgres::{types::Type, NoTls};
 
-use crate::dbms_postgres::entity::*;
+use crate::entity::*;
 
 #[tauri::command]
 pub async fn pg_execsql_select(conn: Connection, sql: &str) -> Response<Vec<Vec<Field>>> {

@@ -1,5 +1,5 @@
 [package]
-name = "tauri-plugin-test"
+name = "plugin-test"
 version = "0.0.0"
 authors = [ "ahriknow" ]
 description = "plugin of ahridbms for test"

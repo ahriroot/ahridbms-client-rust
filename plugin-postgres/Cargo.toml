@@ -1,0 +1,12 @@
+[package]
+name = "plugin-postgres"
+version = "0.0.0"
+authors = [ "ahriknow" ]
+description = "plugin of ahridbms for postgres"
+edition = "2021"
+rust-version = "1.57"
+
+[dependencies]
+tauri = { version = "1.0.5" }
+postgres = "0.19.3"
+tokio-postgres = "0.7.7"

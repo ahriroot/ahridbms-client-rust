@@ -359,7 +359,7 @@ const handleCancelUpdate = () => {
                             <div class="sidebar">
                                 <n-button circle quaternary size="small" @click.stop="showSetting = true">
                                     <template #icon>
-                                        <n-icon>
+                                        <n-icon class="btn-icon-setting">
                                             <Settings />
                                         </n-icon>
                                     </template>
@@ -437,6 +437,14 @@ const handleCancelUpdate = () => {
 </style>
 
 <style scoped>
+.btn-icon-setting {
+    transition: 0.3s;
+}
+
+.btn-icon-setting:hover {
+    transform: rotate(90deg);
+}
+
 #main {
     position: fixed;
     top: 0;
