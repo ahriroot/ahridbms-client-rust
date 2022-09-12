@@ -1,4 +1,4 @@
-# AhriDBMS Database management system
+# AhriDBMS Cross-platform Database Management System
 
 [English](.) | [中文简体](./README.md)
 
