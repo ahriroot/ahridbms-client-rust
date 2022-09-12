@@ -1,1 +1,1 @@
-# Tauri Plugin postgres
+# Plugin postgres

@@ -1,1 +1,1 @@
-# Tauri Plugin redis
+# Plugin redis

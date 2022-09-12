@@ -326,7 +326,7 @@ const handleCancelUpdate = () => {
                                     </n-space>
                                     <n-space>
                                         <n-input v-model:value="dbRedis.user" type="text" placeholder="User" />
-                                        <n-input v-model:value="dbRedis.pass" type="text" placeholder="Pass" />
+                                        <n-input v-model:value="dbRedis.pass" type="password" placeholder="Pass" />
                                     </n-space>
                                     <n-input v-model:value="dbRedis.index" type="text" placeholder="DB Index" />
                                 </n-space>
@@ -340,7 +340,7 @@ const handleCancelUpdate = () => {
                                     </n-space>
                                     <n-space>
                                         <n-input v-model:value="dbPostgres.user" type="text" placeholder="User" />
-                                        <n-input v-model:value="dbPostgres.pass" type="text" placeholder="Pass" />
+                                        <n-input v-model:value="dbPostgres.pass" type="password" placeholder="Pass" />
                                     </n-space>
                                     <n-input v-model:value="dbPostgres.db" type="text" placeholder="DB Name" />
                                 </n-space>

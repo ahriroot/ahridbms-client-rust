@@ -1,1 +1,1 @@
-# Tauri Plugin test
+# Plugin test
