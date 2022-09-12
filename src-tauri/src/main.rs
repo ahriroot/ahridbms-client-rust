@@ -3,7 +3,6 @@
     windows_subsystem = "windows"
 )]
 
-use ahridbms;
 use tauri::Manager;
 
 #[tauri::command]
