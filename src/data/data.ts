@@ -11,7 +11,7 @@ const DBType = [
         value: 'redis'
     },
     {
-        label: 'Postgres ( 开发中...)',
+        label: 'Postgres',
         value: 'postgres'
     }
 ]

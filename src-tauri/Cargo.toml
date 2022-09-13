@@ -26,6 +26,9 @@ path = "../plugin-test"
 [dependencies.plugin-redis]
 path = "../plugin-redis"
 
+[dependencies.plugin-postgres]
+path = "../plugin-postgres"
+
 [features]
 # by default Tauri runs in production mode
 # when `tauri dev` runs it is executed with `cargo run --no-default-features` if `devPath` is an URL

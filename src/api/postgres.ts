@@ -5,9 +5,15 @@ import { PostgresConnect } from "@/types/postgres"
 import ApiError from "@/types/error"
 
 
-interface PgGetDatabasesArgs extends InvokeArgs {
+interface GetDatabasesArgs extends InvokeArgs {
     conn: Connection<PostgresConnect>
 }
+
+interface GetTablesArgs extends InvokeArgs {
+    conn: Connection<PostgresConnect>
+    database: string
+}
+
 const request = async <T>(command: string, params: any): Promise<T | ApiError> => {
     let res = await invoke<Response<T>>(command, params)
     if (res.code !== 10000) {
@@ -21,10 +27,20 @@ const request = async <T>(command: string, params: any): Promise<T | ApiError> =
     return res.data.Success
 }
 
-const pgGetDatabases = async (params: PgGetDatabasesArgs): Promise<any | ApiError> => {
-    let res = await request<Response<any>>('pg_get_databases', params)
+const getDatabases = async (params: GetDatabasesArgs): Promise<any | ApiError> => {
+    let res = await request<Response<any>>('plugin:postgres|get_databases', params)
     return res
 }
 
-export { pgGetDatabases }
+const getTables = async (params: GetTablesArgs): Promise<any | ApiError> => {
+    let res = await request<Response<any>>('plugin:postgres|get_tables', params)
+    return res
+}
+
+const getColumns = async (params: GetTablesArgs): Promise<any | ApiError> => {
+    let res = await request<Response<any>>('plugin:postgres|get_columns', params)
+    return res
+}
+
+export { getDatabases, getTables, getColumns }
 

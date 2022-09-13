@@ -2,31 +2,39 @@ use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, net::IpAddr};
 
 #[derive(Debug, Serialize, Deserialize)]
+pub enum Res<T> {
+    Null,
+    Success(T),
+    Error(String),
+    Error5(String),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Response<T> {
     pub code: i32,
     pub msg: String,
-    pub data: Option<T>,
+    pub data: Res<T>,
 }
 
 impl<T> Response<T> {
-    pub fn new(code: i32, msg: String, data: Option<T>) -> Self {
+    pub fn new(code: i32, msg: String, data: Res<T>) -> Self {
         Self { code, msg, data }
     }
 
-    pub fn ok(data: Option<T>) -> Self {
+    pub fn ok(data: Res<T>) -> Self {
         Self::new(10000, "OK".to_string(), data)
     }
 
-    pub fn error(code: i32, msg: String) -> Self {
-        Self::new(code, msg, None)
+    pub fn error(msg: String) -> Self {
+        if msg.is_empty() {
+            Self::new(40000, "Request Error.".to_string(), Res::Null)
+        } else {
+            Self::new(40000, msg, Res::Null)
+        }
     }
 
-    pub fn err4() -> Self {
-        Self::new(40000, "Request Error.".to_string(), None)
-    }
-
-    pub fn err5() -> Self {
-        Self::new(50000, "Api Error.".to_string(), None)
+    pub fn error5() -> Self {
+        Self::new(50000, "Api Error.".to_string(), Res::Null)
     }
 }
 
@@ -38,6 +46,7 @@ pub struct KV<T> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum Field {
+    Null(KV<bool>),
     Bool(KV<bool>),
     Char(KV<i8>),
     SmallInt(KV<i16>),
