@@ -27,6 +27,13 @@ export const useIndexStore = defineStore<
     },
     actions: {
         async updateConfig(config: Config) {
+            if (config.sideBarWidth) {
+                if (config.sideBarWidth < 150) {
+                    config.sideBarWidth = 150
+                } else if (config.sideBarWidth > 1000) {
+                    config.sideBarWidth = 1000
+                }
+            }
             localStorage.setItem('config', JSON.stringify(config))
             this.config = config
         }
