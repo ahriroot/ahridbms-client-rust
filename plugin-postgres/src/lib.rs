@@ -13,6 +13,8 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         api::get_databases,
         api::get_tables,
         api::get_columns,
+        api::get_primary_keys,
+        api::select,
     ]);
     plugin.build()
 }

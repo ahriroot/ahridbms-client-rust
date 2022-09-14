@@ -32,6 +32,7 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
         for column in columns {
             let name = column.name();
             let typ = column.type_();
+            println!("{}: {:?}", name, typ);
 
             match *typ {
                 Type::BOOL => {
@@ -44,6 +45,13 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                 Type::CHAR => {
                     let data: Option<i8> = row.get(name);
                     result_row.push(Field::Char(KV {
+                        key: name.to_string(),
+                        value: data,
+                    }));
+                }
+                Type::VARCHAR => {
+                    let data: Option<String> = row.get(name);
+                    result_row.push(Field::VarChar(KV {
                         key: name.to_string(),
                         value: data,
                     }));
@@ -199,7 +207,62 @@ pub async fn get_columns(
         ORDER BY a.attnum;",
         table
     );
-    
+
+    let res = execsql_select(conn, sql).await;
+
+    match res {
+        Ok(v) => Response::ok(Res::Success(v)),
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn get_primary_keys(
+    mut conn: Connection,
+    database: String,
+    table: String,
+) -> Response<Vec<Vec<Field>>> {
+    conn.info.db = database;
+    let sql = &format!(
+        "SELECT A
+            .ordinal_position,
+            A.COLUMN_NAME,
+        CASE
+                A.is_nullable 
+                WHEN 'NO' THEN
+                0 ELSE 1 
+            END AS is_nullable,
+            A.data_type,
+            COALESCE ( A.character_maximum_length, A.numeric_precision, - 1 ) AS LENGTH,
+            A.numeric_scale,
+        CASE
+                
+                WHEN LENGTH ( B.attname ) > 0 THEN
+                1 ELSE 0 
+            END AS is_pk 
+        FROM
+            information_schema.
+            COLUMNS A LEFT JOIN (
+            SELECT
+                pg_attribute.attname 
+            FROM
+                pg_index,
+                pg_class,
+                pg_attribute 
+            WHERE
+                pg_class.oid = '{}' :: regclass 
+                AND pg_index.indrelid = pg_class.oid 
+                AND pg_attribute.attrelid = pg_class.oid 
+                AND pg_attribute.attnum = ANY ( pg_index.indkey ) 
+            ) B ON A.COLUMN_NAME = b.attname 
+        WHERE
+            A.table_schema = 'public' 
+            AND A.TABLE_NAME = '{}' 
+        ORDER BY
+            ordinal_position ASC;",
+        table, table
+    );
+
     let res = execsql_select(conn, sql).await;
 
     match res {
@@ -210,13 +273,15 @@ pub async fn get_columns(
 
 #[tauri::command]
 pub async fn select(
-    conn: Connection,
+    mut conn: Connection,
     skip: i64,
     limit: i64,
     page: i64,
     size: i64,
+    database: String,
     table: String,
 ) -> Response<Vec<Vec<Field>>> {
+    conn.info.db = database;
     let mut skip_count = skip;
     let mut limit_count = limit;
     if page > 0 && size > 0 {
@@ -234,6 +299,29 @@ pub async fn select(
         table, limit_count, skip_count
     );
     let res = execsql_select(conn, sql).await;
+    match res {
+        Ok(v) => Response::ok(Res::Success(v)),
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn update(
+    mut conn: Connection,
+    database: String,
+    table: String,
+) -> Response<Vec<Vec<Field>>> {
+    conn.info.db = database;
+    let sql = &format!(
+        "SELECT a.attnum, a.attname AS field, t.typname AS type, a.attlen AS length, a.atttypmod AS lengthvar, a.attnotnull AS notnull
+        FROM pg_class c, pg_attribute a, pg_type t
+        WHERE c.relname = '{}' AND a.attnum > 0 AND a.attrelid = c.oid AND a.atttypid = t.oid
+        ORDER BY a.attnum;",
+        table
+    );
+
+    let res = execsql_select(conn, sql).await;
+
     match res {
         Ok(v) => Response::ok(Res::Success(v)),
         Err(e) => Response::error(e.to_string()),

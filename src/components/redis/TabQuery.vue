@@ -15,7 +15,7 @@ import { useIndexStore } from '@/store'
 
 const props = defineProps<{
     conn: Connection<RedisConnect>
-    db: string
+    data: string
 }>()
 
 const { toClipboard } = useClipboard()

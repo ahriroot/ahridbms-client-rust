@@ -13,7 +13,7 @@ const props = defineProps<{
     conn: Connection<RedisConnect>
 }>()
 const emits = defineEmits<{
-    (e: 'handleOpenTab', val: OpenTabMesagae): void
+    (e: 'handleOpenTab', val: OpenTabMesagae<any>): void
     (e: 'handleDeleteConnection', id: string): void
 }>()
 
@@ -31,7 +31,12 @@ const nodeProps = ({ option }: { option: any }) => {
     return {
         onClick() {
             if (option.children == undefined || option.children == null) {
-                emits('handleOpenTab', { id: nanoid(), conn: props.conn, tab_type: option.label })
+                emits('handleOpenTab', {
+                    id: nanoid(), conn: props.conn, tab_type: 'db', data: {
+                        title: `${option.label}@${props.conn.info.name}`,
+                        table: option.label
+                    }
+                })
             }
         },
         onContextmenu(e: MouseEvent): void {
@@ -50,7 +55,7 @@ const nodeProps = ({ option }: { option: any }) => {
                     key: 'query',
                     props: {
                         onClick: () => {
-                            emits('handleOpenTab', { id: nanoid(), conn: props.conn, tab_type: 'query' })
+                            emits('handleOpenTab', { id: nanoid(), conn: props.conn, tab_type: 'query', data: 'query' })
                             showContextmenu.value = false
                         }
                     }
@@ -101,14 +106,14 @@ const handleShowInfo = async () => {
     if (props.conn) {
         loading.value = true
         let res = await info({ conn: props.conn, db: '0' })
-        if(res){
+        if (res) {
             let current_module = ''
             res.split('\n').forEach((line: string) => {
-                if(line){
-                    if(line.startsWith('#')){
+                if (line) {
+                    if (line.startsWith('#')) {
                         current_module = line.split(' ')[1]
                         infoData.value[current_module] = {}
-                    }else{
+                    } else {
                         let [key, value] = line.split(':')
                         infoData.value[current_module][key] = value
                     }
@@ -141,4 +146,5 @@ const handleShowInfo = async () => {
 </template>
 
 <style scoped>
+
 </style>

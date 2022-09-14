@@ -57,7 +57,7 @@ onBeforeMount(async () => {
         let connIds = connList.value.map(item => item.id)  // 所有链接 id
         let tmp = await getTabs()  // 所有标签页
         let current_tab = localStorage.getItem('current_tab')
-        tabs.value = tmp.filter((item: OpenTabMesagae) => {
+        tabs.value = tmp.filter((item: OpenTabMesagae<any>) => {
             if (item.id == current_tab) {
                 tab.value = current_tab
             }
@@ -166,21 +166,24 @@ const handleCancelConn = () => {
 
 // ----------------------------------
 const tab = ref<string>('')
-const tabs = ref<OpenTabMesagae[]>([])
+const tabs = ref<OpenTabMesagae<any>[]>([])
 
 // 打开标签页
-const handleOpenTab = (message: OpenTabMesagae) => {
+const handleOpenTab = (message: OpenTabMesagae<any>) => {
     if (message) {
-        if (message.conn.db_type === 'redis') {
-            if (message.tab_type === 'query') {
+        switch (message.conn.db_type) {
+            case 'redis':
                 tabs.value.push(message)
                 tab.value = message.id
                 saveTabs(tabs.value)
-            } else {
+                break
+            case 'postgres':
                 tabs.value.push(message)
                 tab.value = message.id
                 saveTabs(tabs.value)
-            }
+                break
+            default:
+                break
         }
     }
 
@@ -386,10 +389,10 @@ const handleCancelUpdate = () => {
                                     <n-tabs v-model:value="tab" @update:value="handleTabChanged" type="card" closable
                                         tab-style="min-width: 80px;" @close="handleClose" size="small">
                                         <n-tab-pane display-directive="if" v-for="i in tabs" :key="i.id"
-                                            :tab="`${i.tab_type}@${i.conn.info.name}`" :name="i.id">
+                                            :tab="i.data.title" :name="i.id">
                                             <component :key="i.id"
-                                                :is="tabComponents[`${i.conn.db_type}:${i.tab_type == 'query' ? 'query' : 'db'}`]"
-                                                :conn="i.conn" :db="i.tab_type" />
+                                                :is="tabComponents[`${i.conn.db_type}:${i.tab_type}`]" :conn="i.conn"
+                                                :data="i.data" />
                                         </n-tab-pane>
                                     </n-tabs>
                                 </section>

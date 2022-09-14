@@ -14,6 +14,22 @@ interface GetTablesArgs extends InvokeArgs {
     database: string
 }
 
+interface GetColumnsArgs extends InvokeArgs {
+    conn: Connection<PostgresConnect>
+    database: string
+    table: string
+}
+
+interface SelectArgs extends InvokeArgs {
+    conn: Connection<PostgresConnect>
+    skip: number
+    limit: number
+    page: number
+    size: number
+    database: string
+    table: string
+}
+
 const request = async <T>(command: string, params: any): Promise<T | ApiError> => {
     let res = await invoke<Response<T>>(command, params)
     if (res.code !== 10000) {
@@ -37,10 +53,15 @@ const getTables = async (params: GetTablesArgs): Promise<any | ApiError> => {
     return res
 }
 
-const getColumns = async (params: GetTablesArgs): Promise<any | ApiError> => {
+const getColumns = async (params: GetColumnsArgs): Promise<any | ApiError> => {
     let res = await request<Response<any>>('plugin:postgres|get_columns', params)
     return res
 }
 
-export { getDatabases, getTables, getColumns }
+const select = async (params: SelectArgs): Promise<any | ApiError> => {
+    let res = await request<Response<any>>('plugin:postgres|select', params)
+    return res
+}
+
+export { getDatabases, getTables, getColumns, select }
 

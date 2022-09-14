@@ -2,7 +2,7 @@
 import { h, shallowRef, ref, onBeforeMount, onMounted, computed, nextTick, watch } from 'vue'
 import {
     NTable, NLayout, NTag, NButton, NIcon, NModal, SelectRenderLabel, useLoadingBar, useDialog,
-    NSpace, NCard, NSelect, NInput, useMessage, NSpin, NDropdown, NInputNumber, NTooltip
+    NSpace, NCard, NSelect, NInput, useMessage, NDropdown, NInputNumber, NTooltip
 } from 'naive-ui'
 import { Add, Reload, Trash, Key, Copy, ArrowUp, ArrowDown, Pencil, Checkmark, CaretBack, CaretForward, TimeOutline } from '@vicons/ionicons5'
 import useClipboard from "vue-clipboard3"
@@ -18,7 +18,7 @@ window.$message = useMessage()
 
 const props = defineProps<{
     conn: Connection<RedisConnect>
-    db: string
+    data: string
 }>()
 
 const { toClipboard } = useClipboard()
@@ -82,7 +82,7 @@ onMounted(() => {
 
 const init = async () => {
     loadingStart()
-    keys({ conn: props.conn, arg: '*', db: props.db }).then(async (res) => {
+    keys({ conn: props.conn, arg: '*', db: props.data }).then(async (res) => {
         result.value = []
         res.forEach(item => {
             for (const key in item) {
@@ -253,7 +253,7 @@ const handleReloadKey = async () => {
         return
     }
     loadingStart()
-    get({ conn: props.conn, key: detailKey.value, db: props.db }).then((res: any) => {
+    get({ conn: props.conn, key: detailKey.value, db: props.data }).then((res: any) => {
         let tmp_key = 'String'
         for (const key in res) {
             tmp_key = key
@@ -283,7 +283,7 @@ const handleRefresh = async () => {
     if (!detailKey.value) {
         return
     }
-    expire({ conn: props.conn, key: detailKey.value, ttl: Number(detailTTL.value), db: props.db }).then(async (res: string) => {
+    expire({ conn: props.conn, key: detailKey.value, ttl: Number(detailTTL.value), db: props.data }).then(async (res: string) => {
         message.success(res)
         await handleReload()
     }).finally(() => {
@@ -317,7 +317,7 @@ const handleSubmitAdd = async () => {
                 return
             }
             loadingStart()
-            set({ conn: props.conn, key: fieldValue.value.string.key, value: fieldValue.value.string.value, ttl: Number(fieldValue.value.string.ttl), db: props.db }).then(async res => {
+            set({ conn: props.conn, key: fieldValue.value.string.key, value: fieldValue.value.string.value, ttl: Number(fieldValue.value.string.ttl), db: props.data }).then(async res => {
                 showAdd.value = false
                 fieldValue.value.string = {
                     key: '',
@@ -337,7 +337,7 @@ const handleSubmitAdd = async () => {
             }
             loadingStart()
             let list_values = fieldValue.value.list.value.filter(item => item.value).map(item => item.value)
-            rpush({ conn: props.conn, key: fieldValue.value.list.key, value: list_values, ttl: Number(fieldValue.value.list.ttl), db: props.db }).then(async res => {
+            rpush({ conn: props.conn, key: fieldValue.value.list.key, value: list_values, ttl: Number(fieldValue.value.list.ttl), db: props.data }).then(async res => {
                 showAdd.value = false
                 fieldValue.value.list = {
                     key: '',
@@ -357,7 +357,7 @@ const handleSubmitAdd = async () => {
             }
             loadingStart()
             let set_values = fieldValue.value.set.value.filter(item => item.value).map(item => item.value)
-            sadd({ conn: props.conn, key: fieldValue.value.set.key, value: set_values, ttl: Number(fieldValue.value.set.ttl), db: props.db }).then(async res => {
+            sadd({ conn: props.conn, key: fieldValue.value.set.key, value: set_values, ttl: Number(fieldValue.value.set.ttl), db: props.data }).then(async res => {
                 showAdd.value = false
                 fieldValue.value.set = {
                     key: '',
@@ -376,7 +376,7 @@ const handleSubmitAdd = async () => {
                 return
             }
             loadingStart()
-            zadd({ conn: props.conn, key: fieldValue.value.zset.key, value: fieldValue.value.zset.value, ttl: Number(fieldValue.value.zset.ttl), db: props.db }).then(async res => {
+            zadd({ conn: props.conn, key: fieldValue.value.zset.key, value: fieldValue.value.zset.value, ttl: Number(fieldValue.value.zset.ttl), db: props.data }).then(async res => {
                 showAdd.value = false
                 fieldValue.value.zset = {
                     key: '',
@@ -395,7 +395,7 @@ const handleSubmitAdd = async () => {
                 return
             }
             loadingStart()
-            hset({ conn: props.conn, key: fieldValue.value.hash.key, value: fieldValue.value.hash.value, ttl: Number(fieldValue.value.hash.ttl), db: props.db }).then(async res => {
+            hset({ conn: props.conn, key: fieldValue.value.hash.key, value: fieldValue.value.hash.value, ttl: Number(fieldValue.value.hash.ttl), db: props.data }).then(async res => {
                 showAdd.value = false
                 fieldValue.value.hash = {
                     key: '',
@@ -418,7 +418,7 @@ const handleSubmitAdd = async () => {
             }
             let v = await editorNewRef.value?.getValue()
             loadingStart()
-            json_set({ conn: props.conn, key: fieldValue.value.json.key, value: v, ttl: Number(fieldValue.value.json.ttl), db: props.db }).then(async res => {
+            json_set({ conn: props.conn, key: fieldValue.value.json.key, value: v, ttl: Number(fieldValue.value.json.ttl), db: props.data }).then(async res => {
                 showAdd.value = false
                 fieldValue.value.json = {
                     key: '',
@@ -454,7 +454,7 @@ const handleDelete = async (val: Keyvalue | null) => {
     }
     if (store.config?.deleteNoConfirm) {
         loadingStart()
-        del({ conn: props.conn, key: key, db: props.db }).then(async res => {
+        del({ conn: props.conn, key: key, db: props.data }).then(async res => {
             message.success(`(integer) ${res}`)
             await handleReload()
         }).finally(() => {
@@ -467,7 +467,7 @@ const handleDelete = async (val: Keyvalue | null) => {
             positiveText: '删除',
             onPositiveClick: async () => {
                 loadingStart()
-                del({ conn: props.conn, key: key, db: props.db }).then(async res => {
+                del({ conn: props.conn, key: key, db: props.data }).then(async res => {
                     message.success(`(integer) ${res}`)
                     await handleReload()
                 }).finally(() => {
@@ -615,7 +615,7 @@ watch(() => detailFilter.value, async () => {
 const handleStringReset = async () => {
     if (detailKey.value) {
         loadingStart()
-        reset({ conn: props.conn, key: detailKey.value, value: detailValue.value, db: props.db }).then(async res => {
+        reset({ conn: props.conn, key: detailKey.value, value: detailValue.value, db: props.data }).then(async res => {
             message.success(res)
             await handleReloadKey()
         }).finally(() => {
@@ -627,7 +627,7 @@ const handleStringReset = async () => {
 // List Value Opera
 const handleLpop = async () => {
     if (detailKey.value) {
-        lpop({ conn: props.conn, key: detailKey.value, db: props.db }).then(async res => {
+        lpop({ conn: props.conn, key: detailKey.value, db: props.data }).then(async res => {
             message.success(res)
             await handleReloadKey()
         }).finally(() => {
@@ -637,7 +637,7 @@ const handleLpop = async () => {
 }
 const handleRpop = async () => {
     if (detailKey.value) {
-        rpop({ conn: props.conn, key: detailKey.value, db: props.db }).then(async res => {
+        rpop({ conn: props.conn, key: detailKey.value, db: props.data }).then(async res => {
             message.success(res)
             await handleReloadKey()
         }).finally(() => {
@@ -649,7 +649,7 @@ const newListValue = ref<string>('')
 const handleLpush = async () => {
     if (newListValue.value && detailKey.value) {
         loadingStart()
-        lpush({ conn: props.conn, key: detailKey.value, value: [newListValue.value], ttl: -2, db: props.db }).then(async res => {
+        lpush({ conn: props.conn, key: detailKey.value, value: [newListValue.value], ttl: -2, db: props.data }).then(async res => {
             message.success(`(integer) ${res}`)
             await handleReloadKey()
             newListValue.value = ''
@@ -661,7 +661,7 @@ const handleLpush = async () => {
 const handleRpush = async () => {
     if (newListValue.value && detailKey.value) {
         loadingStart()
-        rpush({ conn: props.conn, key: detailKey.value, value: [newListValue.value], ttl: -2, db: props.db }).then(async res => {
+        rpush({ conn: props.conn, key: detailKey.value, value: [newListValue.value], ttl: -2, db: props.data }).then(async res => {
             message.success(`(integer) ${res}`)
             await handleReloadKey()
             newListValue.value = ''
@@ -682,7 +682,7 @@ const handleEditListItem = async () => {
             key: detailKey.value,
             index: editListItem.value.index,
             value: editListItem.value.value,
-            db: props.db
+            db: props.data
         }).then(async res => {
             message.success(res)
             await handleReloadKey()
@@ -703,7 +703,7 @@ const handleNewSetMember = async () => {
             key: detailKey.value,
             value: [newSetMember.value],
             ttl: -2,
-            db: props.db
+            db: props.data
         }).then(async res => {
             message.success(`(integer) ${res}`)
             await handleReloadKey()
@@ -721,7 +721,7 @@ const handleDeleteSetValue = async (v: string) => {
     if (detailKey.value) {
         if (store.config?.deleteNoConfirm) {
             loadingStart()
-            srem({ conn: props.conn, key: detailKey.value, value: [v], db: props.db }).then(async res => {
+            srem({ conn: props.conn, key: detailKey.value, value: [v], db: props.data }).then(async res => {
                 message.success(`(integer) ${res}`)
                 await handleReloadKey()
             }).finally(() => {
@@ -734,7 +734,7 @@ const handleDeleteSetValue = async (v: string) => {
                 positiveText: '删除',
                 onPositiveClick: async () => {
                     loadingStart()
-                    srem({ conn: props.conn, key: detailKey.value as string, value: [v], db: props.db }).then(async res => {
+                    srem({ conn: props.conn, key: detailKey.value as string, value: [v], db: props.data }).then(async res => {
                         message.success(`(integer) ${res}`)
                         await handleReloadKey()
                     }).finally(() => {
@@ -762,7 +762,7 @@ const handleNewZsetMember = async () => {
                 score: newZsetScore.value,
             }],
             ttl: -2,
-            db: props.db
+            db: props.data
         }).then(async res => {
             message.success(`(integer) ${res}`)
             await handleReloadKey()
@@ -777,7 +777,7 @@ const handleDeleteZsetValue = async (member: string) => {
     if (detailKey.value && member) {
         if (store.config?.deleteNoConfirm) {
             loadingStart()
-            zrem({ conn: props.conn, key: detailKey.value, value: [member], db: props.db }).then(async res => {
+            zrem({ conn: props.conn, key: detailKey.value, value: [member], db: props.data }).then(async res => {
                 message.success(`(integer) ${res}`)
                 await handleReloadKey()
             }).finally(() => {
@@ -790,7 +790,7 @@ const handleDeleteZsetValue = async (member: string) => {
                 positiveText: '删除',
                 onPositiveClick: async () => {
                     loadingStart()
-                    zrem({ conn: props.conn, key: detailKey.value as string, value: [member], db: props.db }).then(async res => {
+                    zrem({ conn: props.conn, key: detailKey.value as string, value: [member], db: props.data }).then(async res => {
                         message.success(`(integer) ${res}`)
                         await handleReloadKey()
                     }).finally(() => {
@@ -819,7 +819,7 @@ const handleEditSetScore = async () => {
                 score: editZsetItem.value.score,
             }],
             ttl: -2,
-            db: props.db
+            db: props.data
         }).then(async res => {
             message.success(`(integer) ${res}`)
             await handleReloadKey()
@@ -844,7 +844,7 @@ const handleNewHashField = async () => {
                 value: newHashValue.value
             }],
             ttl: -2,
-            db: props.db
+            db: props.data
         }).then(async res => {
             message.success(res)
             await handleReloadKey()
@@ -859,7 +859,7 @@ const handleDeleteHashField = async (field: string) => {
     if (detailKey.value && field) {
         if (store.config?.deleteNoConfirm) {
             loadingStart()
-            hdel({ conn: props.conn, key: detailKey.value, fields: [field], db: props.db }).then(async res => {
+            hdel({ conn: props.conn, key: detailKey.value, fields: [field], db: props.data }).then(async res => {
                 message.success(`(integer) ${res}`)
                 await handleReloadKey()
             }).finally(() => {
@@ -872,7 +872,7 @@ const handleDeleteHashField = async (field: string) => {
                 positiveText: '删除',
                 onPositiveClick: async () => {
                     loadingStart()
-                    hdel({ conn: props.conn, key: detailKey.value as string, fields: [field], db: props.db }).then(async res => {
+                    hdel({ conn: props.conn, key: detailKey.value as string, fields: [field], db: props.data }).then(async res => {
                         message.success(`(integer) ${res}`)
                         await handleReloadKey()
                     }).finally(() => {
@@ -901,7 +901,7 @@ const handleEditHashValue = async () => {
                 value: editHashItem.value.value
             }],
             ttl: -2,
-            db: props.db
+            db: props.data
         }).then(async res => {
             message.success(res)
             await handleReloadKey()
@@ -917,7 +917,7 @@ const handleJsonReset = async () => {
     let v = await editorRef.value?.getValue()
     if (detailKey.value && v) {
         loadingStart()
-        json_set({ conn: props.conn, key: detailKey.value, value: v, ttl: -2, db: props.db }).then(async res => {
+        json_set({ conn: props.conn, key: detailKey.value, value: v, ttl: -2, db: props.data }).then(async res => {
             message.success(res)
             await handleReloadKey()
         }).finally(() => {
@@ -933,7 +933,7 @@ const handlePattern = async () => {
         p = '*'
     }
     loadingStart()
-    keys({ conn: props.conn, arg: p, db: props.db }).then(async (res) => {
+    keys({ conn: props.conn, arg: p, db: props.data }).then(async (res) => {
         result.value = []
         res.forEach(item => {
             for (const key in item) {

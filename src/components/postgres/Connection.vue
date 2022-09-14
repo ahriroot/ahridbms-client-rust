@@ -17,7 +17,7 @@ const props = defineProps<{
     conn: Connection<PostgresConnect>
 }>()
 const emits = defineEmits<{
-    (e: 'handleOpenTab', val: OpenTabMesagae): void
+    (e: 'handleOpenTab', val: OpenTabMesagae<any>): void
     (e: 'handleDeleteConnection', id: string): void
 }>()
 
@@ -140,6 +140,21 @@ const nodeProps = ({ option }: { option: any }) => {
                     break
                 case 'table':
                     optionsContextmenu.value = [{
+                        label: 'Open',
+                        key: 'open',
+                        props: {
+                            onClick: async () => {
+                                emits('handleOpenTab', {
+                                    id: nanoid(), conn: props.conn, tab_type: 'table', data: {
+                                        title: `${option.table}@${option.database}`,
+                                        database: option.database,
+                                        table: option.table
+                                    }
+                                })
+                                showContextmenu.value = false
+                            }
+                        }
+                    }, {
                         label: 'Reload',
                         key: 'reload',
                         props: {

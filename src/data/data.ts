@@ -1,6 +1,7 @@
-import RedisConnect from '@/components/redis/Connection.vue'
 import PostgresConnect from '@/components/postgres/Connection.vue'
+import PostgresTableVue from '@/components/postgres/Table.vue'
 
+import RedisConnect from '@/components/redis/Connection.vue'
 import RedisTabVue from '@/components/redis/TabDb.vue'
 import RedisQueryVue from '@/components/redis/TabQuery.vue'
 import RedisInfoVue from '@/components/redis/Info.vue'
@@ -24,6 +25,7 @@ const ConnectionComponents = {
 const TabComponents = {
     'redis:db': RedisTabVue,
     'redis:query': RedisQueryVue,
+    'postgres:table': PostgresTableVue,
 }
 
 const InfoComponents = {
