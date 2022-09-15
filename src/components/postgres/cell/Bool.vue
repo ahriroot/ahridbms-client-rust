@@ -2,16 +2,26 @@
 import { ref } from 'vue'
 import { NInputGroup, NCheckbox } from 'naive-ui'
 
-const props = defineProps<{
+
+interface Field {
+    key: string
     value: boolean
+    type: string
+}
+
+const props = defineProps<{
+    field: Field
     isEdit?: boolean
-    onUpdateValue: (val: boolean) => void
+    handleUpdateValue: (val: Field) => void
 }>()
 
 const inputRef = ref<HTMLInputElement | null>(null)
-const inputValue = ref(props.value)
+const inputValue = ref(props.field.value)
 const handleChange = () => {
-    props.onUpdateValue(inputValue.value)
+    props.handleUpdateValue({
+        ...props.field,
+        value: inputValue.value
+    })
 }
 </script>
         
@@ -19,7 +29,7 @@ const handleChange = () => {
     <div>
         <n-input-group>
             <n-checkbox size="small" ref="inputRef" style="width: 100%" v-model:checked="inputValue"
-                @update:value="inputValue = $event" @blur="handleChange">{{inputValue}}
+                @update:checked="handleChange">{{inputValue}}
             </n-checkbox>
         </n-input-group>
     </div>

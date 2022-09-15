@@ -30,6 +30,12 @@ interface SelectArgs extends InvokeArgs {
     table: string
 }
 
+interface UpdateArgs extends InvokeArgs {
+    conn: Connection<PostgresConnect>
+    database: string
+    sql: string
+}
+
 const request = async <T>(command: string, params: any): Promise<T | ApiError> => {
     let res = await invoke<Response<T>>(command, params)
     if (res.code !== 10000) {
@@ -63,5 +69,10 @@ const select = async (params: SelectArgs): Promise<any | ApiError> => {
     return res
 }
 
-export { getDatabases, getTables, getColumns, select }
+const update = async (params: UpdateArgs): Promise<any | ApiError> => {
+    let res = await request<Response<any>>('plugin:postgres|update', params)
+    return res
+}
+
+export { getDatabases, getTables, getColumns, select, update }
 

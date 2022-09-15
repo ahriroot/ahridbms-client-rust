@@ -15,6 +15,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         api::get_columns,
         api::get_primary_keys,
         api::select,
+        api::update,
     ]);
     plugin.build()
 }

@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import { ref, nextTick } from 'vue'
-import { NInputGroup, NInput, NInputNumber, NButton } from 'naive-ui'
+import { NInputGroup, NInputNumber, NButton } from 'naive-ui'
+
+
+interface Field {
+    key: string
+    value: number
+    type: string
+}
 
 const props = defineProps<{
-    value: number
+    field: Field
     isEdit: boolean
-    onUpdateValue: (val: number) => void
+    handleUpdateValue: (val: Field) => void
 }>()
 
 const isEdit = ref(props.isEdit)
 const inputRef = ref<HTMLInputElement | null>(null)
-const inputValue = ref(props.value)
+const inputValue = ref(props.field.value)
 const handleOnClick = () => {
     isEdit.value = true
     nextTick(() => {
@@ -18,7 +25,10 @@ const handleOnClick = () => {
     })
 }
 const handleChange = () => {
-    props.onUpdateValue(inputValue.value)
+    props.handleUpdateValue({
+        ...props.field,
+        value: inputValue.value
+    })
     isEdit.value = false
 }
 </script>
@@ -28,12 +38,12 @@ const handleChange = () => {
         <template v-if="isEdit">
             <n-input-group>
                 <n-input-number size="small" ref="inputRef" style="width: 100%" v-model:value="inputValue"
-                    @blur="handleChange" />
+                    @keyup.enter="handleChange" />
                 <n-button @click="isEdit = false" size="small">取消</n-button>
             </n-input-group>
         </template>
         <template v-else>
-            {{ props.value }}
+            {{ props.field.value }}
         </template>
     </div>
 </template>

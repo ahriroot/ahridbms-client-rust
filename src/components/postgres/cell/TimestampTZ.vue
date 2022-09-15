@@ -2,15 +2,22 @@
 import { ref, nextTick, computed } from 'vue'
 import { NDatePicker } from 'naive-ui'
 
-const props = defineProps<{
+
+interface Field {
+    key: string
     value: number
+    type: string
+}
+
+const props = defineProps<{
+    field: Field
     isEdit: boolean
-    onUpdateValue: (val: number) => void
+    handleUpdateValue: (val: Field) => void
 }>()
 
 const isEdit = ref(props.isEdit)
 const inputRef = ref<any>(null)
-const inputValue = ref(props.value)
+const inputValue = ref(props.field.value)
 const handleOnClick = () => {
     isEdit.value = true
     nextTick(() => {
@@ -20,7 +27,10 @@ const handleOnClick = () => {
 const handleChange = (val: any) => {
     console.log(val)
     inputValue.value = val / 1000
-    props.onUpdateValue(inputValue.value)
+    props.handleUpdateValue({
+        ...props.field,
+        value: inputValue.value
+    })
     isEdit.value = false
 }
 const format = computed(() => {

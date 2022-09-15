@@ -4,7 +4,6 @@ use tokio_postgres::{types::Type, NoTls};
 
 use crate::entity::*;
 
-#[tauri::command]
 pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field>>, Error> {
     let conn_str = &format!(
         "postgres://{}{}{}@{}{}{}{}{}",
@@ -32,7 +31,6 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
         for column in columns {
             let name = column.name();
             let typ = column.type_();
-            println!("{}: {:?}", name, typ);
 
             match *typ {
                 Type::BOOL => {
@@ -305,22 +303,39 @@ pub async fn select(
     }
 }
 
+pub async fn execsql_update(conn: Connection, sql: &str) -> Result<u64, Error> {
+    let conn_str = &format!(
+        "postgres://{}{}{}@{}{}{}{}{}",
+        conn.info.user,
+        if !conn.info.pass.is_empty() { ":" } else { "" },
+        conn.info.pass,
+        conn.info.host,
+        if !conn.info.port.is_empty() { ":" } else { "" },
+        conn.info.port,
+        if !conn.info.db.is_empty() { "/" } else { "" },
+        conn.info.db
+    );
+
+    let (client, connection) = tokio_postgres::connect(conn_str, NoTls).await?;
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("connection error: {}", e);
+        }
+    });
+
+    let count = client.execute(sql, &[]).await?;
+    Ok(count)
+}
+
 #[tauri::command]
 pub async fn update(
     mut conn: Connection,
     database: String,
-    table: String,
-) -> Response<Vec<Vec<Field>>> {
+    sql: String,
+) -> Response<u64> {
     conn.info.db = database;
-    let sql = &format!(
-        "SELECT a.attnum, a.attname AS field, t.typname AS type, a.attlen AS length, a.atttypmod AS lengthvar, a.attnotnull AS notnull
-        FROM pg_class c, pg_attribute a, pg_type t
-        WHERE c.relname = '{}' AND a.attnum > 0 AND a.attrelid = c.oid AND a.atttypid = t.oid
-        ORDER BY a.attnum;",
-        table
-    );
 
-    let res = execsql_select(conn, sql).await;
+    let res = execsql_update(conn, &sql).await;
 
     match res {
         Ok(v) => Response::ok(Res::Success(v)),
