@@ -20,6 +20,7 @@ const props = withDefaults(defineProps<{
 
 const isEdit = ref(props.isEdit)
 const inputRef = ref<HTMLInputElement | null>(null)
+const originValue = ref(props.field.value)
 const inputValue = ref(props.field.value)
 const handleOnClick = () => {
     isEdit.value = true
@@ -32,7 +33,6 @@ const handleChange = () => {
         ...props.field,
         value: inputValue.value
     })
-    isEdit.value = false
 }
 const handleSetNull = () => {
     inputValue.value = null
@@ -42,11 +42,12 @@ const handleSetNull = () => {
 </script>
         
 <template>
-    <div @click="handleOnClick" :class="inputValue === props.field.value? 'same' : 'diff'">
+    <div @click="handleOnClick" :class="inputValue === originValue ? 'same' : 'diff'">
         <template v-if="isEdit || props.newData">
             <n-input-group>
                 <n-input-number size="small" ref="inputRef" style="width: 100%" v-model:value="inputValue"
-                    @keyup.enter="handleChange" @update:value="handleChange" :precision="0" placeholder="null" />
+                    @keyup.enter="handleChange(); isEdit = false" @update:value="handleChange" :precision="0"
+                    placeholder="null" />
                 <n-button secondary size="small" @click.stop="handleSetNull">Null</n-button>
             </n-input-group>
         </template>

@@ -222,43 +222,20 @@ pub async fn get_primary_keys(
 ) -> Response<Vec<Vec<Field>>> {
     conn.info.db = database;
     let sql = &format!(
-        "SELECT A
-            .ordinal_position,
-            A.COLUMN_NAME,
-        CASE
-                A.is_nullable 
-                WHEN 'NO' THEN
-                0 ELSE 1 
-            END AS is_nullable,
-            A.data_type,
-            COALESCE ( A.character_maximum_length, A.numeric_precision, - 1 ) AS LENGTH,
-            A.numeric_scale,
-        CASE
-                
-                WHEN LENGTH ( B.attname ) > 0 THEN
-                1 ELSE 0 
-            END AS is_pk 
+        "SELECT
+            pg_constraint.conname AS pk_name,
+            pg_attribute.attname AS colname,
+            pg_type.typname AS typename 
         FROM
-            information_schema.
-            COLUMNS A LEFT JOIN (
-            SELECT
-                pg_attribute.attname 
-            FROM
-                pg_index,
-                pg_class,
-                pg_attribute 
-            WHERE
-                pg_class.oid = '{}' :: regclass 
-                AND pg_index.indrelid = pg_class.oid 
-                AND pg_attribute.attrelid = pg_class.oid 
-                AND pg_attribute.attnum = ANY ( pg_index.indkey ) 
-            ) B ON A.COLUMN_NAME = b.attname 
+            pg_constraint
+            INNER JOIN pg_class ON pg_constraint.conrelid = pg_class.oid
+            INNER JOIN pg_attribute ON pg_attribute.attrelid = pg_class.oid 
+            AND pg_attribute.attnum = ANY (pg_constraint.conkey)
+            INNER JOIN pg_type ON pg_type.oid = pg_attribute.atttypid 
         WHERE
-            A.table_schema = 'public' 
-            AND A.TABLE_NAME = '{}' 
-        ORDER BY
-            ordinal_position ASC;",
-        table, table
+            pg_class.relname = '{}' 
+            AND pg_constraint.contype = 'p';",
+        table
     );
 
     let res = execsql_select(conn, sql).await;
@@ -328,14 +305,58 @@ pub async fn execsql_update(conn: Connection, sql: &str) -> Result<u64, Error> {
 }
 
 #[tauri::command]
-pub async fn update(
-    mut conn: Connection,
-    database: String,
-    sql: String,
-) -> Response<u64> {
+pub async fn update(mut conn: Connection, database: String, sql: String) -> Response<u64> {
     conn.info.db = database;
 
     let res = execsql_update(conn, &sql).await;
+
+    match res {
+        Ok(v) => Response::ok(Res::Success(v)),
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+async fn handle_execute_with_transaction(
+    conn: Connection,
+    sqls: Vec<String>,
+) -> Result<u64, Error> {
+    let conn_str = &format!(
+        "postgres://{}{}{}@{}{}{}{}{}",
+        conn.info.user,
+        if !conn.info.pass.is_empty() { ":" } else { "" },
+        conn.info.pass,
+        conn.info.host,
+        if !conn.info.port.is_empty() { ":" } else { "" },
+        conn.info.port,
+        if !conn.info.db.is_empty() { "/" } else { "" },
+        conn.info.db
+    );
+
+    let (mut client, connection) = tokio_postgres::connect(conn_str, NoTls).await?;
+    tokio::spawn(async move {
+        if let Err(e) = connection.await {
+            eprintln!("connection error: {}", e);
+        }
+    });
+
+    let tx = client.transaction().await?;
+    let mut count = 0;
+    for sql in sqls {
+        count += tx.execute(&sql, &[]).await?;
+    }
+    tx.commit().await?;
+    Ok(count)
+}
+
+#[tauri::command]
+pub async fn execute_with_transaction(
+    mut conn: Connection,
+    database: String,
+    sqls: Vec<String>,
+) -> Response<u64> {
+    conn.info.db = database;
+
+    let res = handle_execute_with_transaction(conn, sqls).await;
 
     match res {
         Ok(v) => Response::ok(Res::Success(v)),

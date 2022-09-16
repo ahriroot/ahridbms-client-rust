@@ -16,6 +16,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         api::get_primary_keys,
         api::select,
         api::update,
+        api::execute_with_transaction,
     ]);
     plugin.build()
 }

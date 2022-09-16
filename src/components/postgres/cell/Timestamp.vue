@@ -49,7 +49,7 @@ const format = computed(() => {
         const hour = date.getUTCHours()
         const minute = date.getUTCMinutes()
         const second = date.getUTCSeconds()
-        return `${year}-${month}-${day} ${hour}:${minute}:${second}+00`
+        return `${year}-${month}-${day} ${hour}:${minute}:${second}`
     }
     return ''
 })
@@ -61,12 +61,11 @@ const handleSetNull = () => {
 </script>
 
 <template>
-    <div @click="handleOnClick" :class="inputValue === props.field.value? 'same' : 'diff'" style="min-width: 230px">
+    <div @click="handleOnClick" :class="inputValue === props.field.value? 'same' : 'diff'">
         <template v-if="isEdit || props.newData">
             <n-input-group>
-                <n-date-picker size="small" ref="inputRef" style="width: 100%"
-                    :default-value="inputValue ? inputValue * 1000 : 0" @confirm="handleChange" type="datetime"
-                    clearable placeholder="null" />
+                <n-date-picker size="small" ref="inputRef" style="width: 100%" :default-value="inputValue"
+                    @confirm="handleChange" type="datetime" placeholder="null" />
                 <n-button secondary size="small" @click.stop="handleSetNull">Null</n-button>
             </n-input-group>
         </template>
