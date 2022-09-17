@@ -247,6 +247,29 @@ pub async fn get_primary_keys(
 }
 
 #[tauri::command]
+pub async fn get_table_struct(
+    mut conn: Connection,
+    database: String,
+    table: String,
+) -> Response<Vec<Vec<Field>>> {
+    conn.info.db = database;
+    let sql = &format!(
+        "SELECT a.attnum, a.attname, t.typname, a.attlen, a.attnotnull
+        FROM pg_class c, pg_attribute a, pg_type t
+        WHERE c.relname = '{}' AND a.attnum > 0 AND a.attrelid = c.oid AND a.atttypid = t.oid
+        ORDER BY a.attnum;",
+        table
+    );
+
+    let res = execsql_select(conn, sql).await;
+
+    match res {
+        Ok(v) => Response::ok(Res::Success(v)),
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+#[tauri::command]
 pub async fn select(
     mut conn: Connection,
     skip: i64,

@@ -25,6 +25,12 @@ interface GetPrimaryKeysArgs extends InvokeArgs {
     table: string
 }
 
+interface GetTableStructArgs extends InvokeArgs {
+    conn: Connection<PostgresConnect>
+    database: string
+    table: string
+}
+
 interface SelectArgs extends InvokeArgs {
     conn: Connection<PostgresConnect>
     skip: number
@@ -61,23 +67,38 @@ const request = async <T>(command: string, params: any): Promise<T> => {
 }
 
 const getDatabases = async (params: GetDatabasesArgs): Promise<any> => {
-    let res = await request<Response<any>>('plugin:postgres|get_databases', params)
+    let res = await request<any>('plugin:postgres|get_databases', params)
     return res
 }
 
 const getTables = async (params: GetTablesArgs): Promise<any> => {
-    let res = await request<Response<any>>('plugin:postgres|get_tables', params)
+    let res = await request<any>('plugin:postgres|get_tables', params)
     return res
 }
 
 const getColumns = async (params: GetColumnsArgs): Promise<any> => {
-    let res = await request<Response<any>>('plugin:postgres|get_columns', params)
+    let res = await request<any>('plugin:postgres|get_columns', params)
     return res
 }
 
 const getPrimaryKeys = async (params: GetPrimaryKeysArgs): Promise<any> => {
-    let res = await request<Response<any>>('plugin:postgres|get_primary_keys', params)
+    let res = await request<any>('plugin:postgres|get_primary_keys', params)
     return res
+}
+
+const getTableStruct = async (params: GetTableStructArgs): Promise<any[]> => {
+    let res = await request<any[]>('plugin:postgres|get_table_struct', params)
+    let result: any[] = []
+    res.forEach((rowData: any[]) => {
+        let row: any = {}
+        rowData.forEach((column: any) => {
+            for (let k in column) {
+                row[column[k].key] = column[k].value
+            }
+        })
+        result.push(row)
+    })
+    return result
 }
 
 const select = async (params: SelectArgs): Promise<any[]> => {
@@ -101,14 +122,14 @@ const select = async (params: SelectArgs): Promise<any[]> => {
 }
 
 const update = async (params: UpdateArgs): Promise<any> => {
-    let res = await request<Response<any>>('plugin:postgres|update', params)
+    let res = await request<any>('plugin:postgres|update', params)
     return res
 }
 
 const executeWithTransaction = async (params: ExecuteWithTransactionArgs): Promise<any> => {
-    let res = await request<Response<any>>('plugin:postgres|execute_with_transaction', params)
+    let res = await request<any>('plugin:postgres|execute_with_transaction', params)
     return res
 }
 
-export { getDatabases, getTables, getColumns, getPrimaryKeys, select, update, executeWithTransaction }
+export { getDatabases, getTables, getColumns, getPrimaryKeys, getTableStruct, select, update, executeWithTransaction }
 
