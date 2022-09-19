@@ -18,6 +18,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         api::select,
         api::update,
         api::execute_with_transaction,
+        api::execute_select_sql,
     ]);
     plugin.build()
 }

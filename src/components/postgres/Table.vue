@@ -14,6 +14,8 @@ import VarCharVue from '@/components/postgres/cells/VarChar.vue'
 import BoolVue from '@/components/postgres/cells/Bool.vue'
 import TimestampVue from '@/components/postgres/cells/Timestamp.vue'
 import { useIndexStore } from '@/store'
+import { useI18n } from 'vue-i18n'
+
 
 const typeRender = shallowRef<{ [key: string]: any }>({
     int8: {
@@ -59,6 +61,7 @@ const emits = defineEmits<{
 }>()
 
 const { toClipboard } = useClipboard()
+const { t } = useI18n()
 const store = useIndexStore()
 const loadingBar = useLoadingBar()
 const dialog = useDialog()
@@ -117,7 +120,6 @@ const sorts = ref<{
     field: string
     order: string
 }[]>([])
-const sorter = ref<any>([])
 const handleUpdateSorter = async (sorter: any) => {
     sorter.value = sorter
     sorts.value = []
@@ -218,7 +220,7 @@ onBeforeMount(async () => {
     columns.value.push({
         title: '',
         key: 'opera',
-        width: 60,
+        width: 34,
         render: (row: any, index: number) => {
             if (isNaN(row[0].old)) {
                 return h(
@@ -359,9 +361,9 @@ const handleDelete = async (row: any) => {
     } else {
         let w = where(row)
         dialog.warning({
-            title: '删除：',
-            content: `确认删除 WHERE ${w} ?`,
-            positiveText: '删除',
+            title: t('delete'),
+            content: `${t('delete')} [WHERE ${w}] ?`,
+            positiveText: t('delete'),
             onPositiveClick: async () => {
                 let w = where(row)
                 let sql = `DELETE FROM "public".${props.data.table} WHERE ${w}`

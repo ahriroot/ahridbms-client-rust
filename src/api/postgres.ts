@@ -57,6 +57,12 @@ interface ExecuteWithTransactionArgs extends InvokeArgs {
     sqls: string[]
 }
 
+interface ExecuteSelectSqlArgs extends InvokeArgs {
+    conn: Connection<PostgresConnect>
+    database: string
+    sql: string
+}
+
 const request = async <T>(command: string, params: any): Promise<T> => {
     let res = await invoke<Response<T>>(command, params)
     if (res.code !== 10000) {
@@ -147,5 +153,20 @@ const executeWithTransaction = async (params: ExecuteWithTransactionArgs): Promi
     return res
 }
 
-export { getDatabases, getTables, getColumns, getPrimaryKeys, getTableStruct, select, update, executeWithTransaction }
+const executeSelectSql = async (params: ExecuteSelectSqlArgs): Promise<any> => {
+    let res = await request<any>('plugin:postgres|execute_select_sql', params)
+    let result: any[] = []
+    res.forEach((rowData: any[]) => {
+        let row: any = {}
+        rowData.forEach((column: any) => {
+            for (let k in column) {
+                row[column[k].key] = column[k].value
+            }
+        })
+        result.push(row)
+    })
+    return result
+}
+
+export { getDatabases, getTables, getColumns, getPrimaryKeys, getTableStruct, select, update, executeWithTransaction, executeSelectSql }
 

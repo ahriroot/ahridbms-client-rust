@@ -12,6 +12,7 @@ import useClipboard from "vue-clipboard3"
 import DetailJSONVue from './DetailJSON.vue'
 import { IRedisQuery } from '@/types/data'
 import { useIndexStore } from '@/store'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
     conn: Connection<RedisConnect>
@@ -19,6 +20,7 @@ const props = defineProps<{
 }>()
 
 const { toClipboard } = useClipboard()
+const { t } = useI18n()
 const message = useMessage()
 const dialog = useDialog()
 const store = useIndexStore()
@@ -138,9 +140,9 @@ const handleDeleteAll = async () => {
         localStorage.setItem(`redis:query:${props.conn.id}`, JSON.stringify(config.value))
     } else {
         dialog.warning({
-            title: '删除：',
-            content: `确认删除所有操作日志 ?`,
-            positiveText: '删除',
+            title: t('delete'),
+            content: t('confirmToDeleteAllOperationLog'),
+            positiveText: t('delete'),
             onPositiveClick: async () => {
                 config.value.resultList = []
                 config.value.expanded = []
@@ -181,9 +183,9 @@ const handleDelete = (datetime: number) => {
         localStorage.setItem(`redis:query:${props.conn.id}`, JSON.stringify(config.value))
     } else {
         dialog.warning({
-            title: '删除：',
-            content: `确认删除本条操作日志 ?`,
-            positiveText: '删除',
+            title: t('delete'),
+            content: t('confirmToDeleteAllOperationLog'),
+            positiveText: t('delete'),
             onPositiveClick: async () => {
                 config.value.resultList = config.value.resultList.filter(v => v.datetime != datetime)
                 config.value.expanded = config.value.expanded.filter(v => v != datetime)

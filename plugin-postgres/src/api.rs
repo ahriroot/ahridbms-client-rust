@@ -4,7 +4,7 @@ use tokio_postgres::{types::Type, NoTls};
 
 use crate::entity::*;
 
-pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field>>, Error> {
+pub async fn get_connection(conn: Connection) -> Result<tokio_postgres::Client, Error> {
     let conn_str = &format!(
         "postgres://{}{}{}@{}{}{}{}{}",
         conn.info.user,
@@ -16,13 +16,18 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
         if !conn.info.db.is_empty() { "/" } else { "" },
         conn.info.db
     );
-
     let (client, connection) = tokio_postgres::connect(conn_str, NoTls).await?;
     tokio::spawn(async move {
         if let Err(e) = connection.await {
             eprintln!("connection error: {}", e);
         }
     });
+
+    Ok(client)
+}
+
+pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field>>, Error> {
+    let client = get_connection(conn).await?;
     let rows = client.query(sql, &[]).await?;
     let mut result_data: Vec<Vec<Field>> = Vec::new();
     for row in rows.iter() {
@@ -405,6 +410,20 @@ pub async fn execute_with_transaction(
 
     let res = handle_execute_with_transaction(conn, sqls).await;
 
+    match res {
+        Ok(v) => Response::ok(Res::Success(v)),
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn execute_select_sql(
+    mut conn: Connection,
+    database: String,
+    sql: String,
+) -> Response<Vec<Vec<Field>>> {
+    conn.info.db = database;
+    let res = execsql_select(conn.clone(), &sql).await;
     match res {
         Ok(v) => Response::ok(Res::Success(v)),
         Err(e) => Response::error(e.to_string()),

@@ -13,6 +13,7 @@ import { diffDatetime } from '@/utils/datetime'
 import { NewFieldValue } from '@/data/redis'
 import EditorVue from '@/components/Editor.vue'
 import { useIndexStore } from '@/store'
+import { useI18n } from 'vue-i18n'
 
 window.$message = useMessage()
 
@@ -22,6 +23,7 @@ const props = defineProps<{
 }>()
 
 const { toClipboard } = useClipboard()
+const { t } = useI18n()
 const message = useMessage()
 const dialog = useDialog()
 const store = useIndexStore()
@@ -462,9 +464,9 @@ const handleDelete = async (val: Keyvalue | null) => {
         })
     } else {
         dialog.warning({
-            title: '删除：',
-            content: `确认删除 Key: ${key} ?`,
-            positiveText: '删除',
+            title: t('delete'),
+            content: `${t('delete')} Key: ${key} ?`,
+            positiveText: t('delete'),
             onPositiveClick: async () => {
                 loadingStart()
                 del({ conn: props.conn, key: key, db: props.data }).then(async res => {
@@ -729,9 +731,9 @@ const handleDeleteSetValue = async (v: string) => {
             })
         } else {
             dialog.warning({
-                title: '删除：',
-                content: `确认删除 Set: ${detailKey.value} (Member: ${v}) ?`,
-                positiveText: '删除',
+                title: t('delete'),
+                content: `${t('delete')} Set: ${detailKey.value} (Member: ${v}) ?`,
+                positiveText: t('delete'),
                 onPositiveClick: async () => {
                     loadingStart()
                     srem({ conn: props.conn, key: detailKey.value as string, value: [v], db: props.data }).then(async res => {
@@ -785,9 +787,9 @@ const handleDeleteZsetValue = async (member: string) => {
             })
         } else {
             dialog.warning({
-                title: '删除：',
-                content: `确认删除 Zset: ${detailKey.value} (Member: ${member}) ?`,
-                positiveText: '删除',
+                title: t('delete'),
+                content: `${t('delete')} Zset: ${detailKey.value} (Member: ${member}) ?`,
+                positiveText: t('delete'),
                 onPositiveClick: async () => {
                     loadingStart()
                     zrem({ conn: props.conn, key: detailKey.value as string, value: [member], db: props.data }).then(async res => {
@@ -867,9 +869,9 @@ const handleDeleteHashField = async (field: string) => {
             })
         } else {
             dialog.warning({
-                title: '删除：',
-                content: `确认删除 Hash: ${detailKey.value} (Field: ${field}) ?`,
-                positiveText: '删除',
+                title: t('delete'),
+                content: `${t('delete')} Hash: ${detailKey.value} (Field: ${field}) ?`,
+                positiveText: t('delete'),
                 onPositiveClick: async () => {
                     loadingStart()
                     hdel({ conn: props.conn, key: detailKey.value as string, fields: [field], db: props.data }).then(async res => {

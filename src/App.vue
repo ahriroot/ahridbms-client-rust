@@ -4,7 +4,7 @@ import {
     darkTheme, NConfigProvider, NGlobalStyle, NIcon, NLayout,
     NButton, NModal, NSelect, SelectRenderLabel, NInput, NCard, NSpace,
     NTabs, NTabPane, NLoadingBarProvider, NMessageProvider, NDialogProvider,
-    NCheckbox
+    NCheckbox, zhCN, enUS
 } from 'naive-ui'
 import { invoke } from '@tauri-apps/api/tauri'
 import { ArrowForward, ServerSharp, Add, Settings } from '@vicons/ionicons5'
@@ -21,6 +21,7 @@ import { useIndexStore } from '@/store'
 import { checkUpdate, installUpdate } from '@tauri-apps/api/updater'
 import { relaunch } from '@tauri-apps/api/process'
 import tauriConfig from '../src-tauri/tauri.conf.json'
+import { useI18n } from 'vue-i18n'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏
@@ -39,6 +40,7 @@ const tabComponents = shallowRef<ITabComponents>(TabComponents)
 const infoComponents = shallowRef<IInfoComponents>(InfoComponents)
 
 const store = useIndexStore()
+const { t, locale } = useI18n()
 /** ------------------ 变量 End ------------------ **/
 
 onBeforeMount(async () => {
@@ -51,9 +53,11 @@ onBeforeMount(async () => {
                 deleteNoConfirm: false,
                 showSideBar: true,
                 sideBarWidth: 250,
-                pageSize: 20
+                pageSize: 20,
+                lang: 'zh-CN'
             }, false)
         }
+        locale.value = store.config.lang
 
         width.value = store.config.sideBarWidth
         oldWidth.value = width.value
@@ -269,15 +273,30 @@ const handleStartUpdate = async () => {
 const handleCancelUpdate = () => {
     showUpdateInfo.value = false
 }
+
+const langs = ref([
+    { label: '简体中文', value: 'zh-CN' },
+    { label: 'English', value: 'en-US' }
+])
+const languages = ref<{ [x: string]: any }>({
+    'zh-CN': zhCN,
+    'en-US': enUS
+})
+const handleUpdateLang = async (_: string) => {
+    store.updateConfig({
+        ...store.config,
+        lang: locale.value
+    })
+}
 </script>
 
 <template>
-    <n-config-provider :theme="darkTheme">
+    <n-config-provider :theme="darkTheme" :locale="languages[locale]">
         <n-global-style />
         <n-loading-bar-provider>
             <n-message-provider>
                 <n-dialog-provider>
-                    <n-modal v-model:show="showUpdateInfo" preset="card" style="width: 600px;" title="设置" size="small">
+                    <n-modal v-model:show="showUpdateInfo" preset="card" style="width: 600px;" :title="t('info')" size="small">
                         <h1>Version: {{updateStatus.version}}</h1>
                         <br>
                         <p>Info: {{updateStatus.body}}</p>
@@ -289,36 +308,48 @@ const handleCancelUpdate = () => {
                         <n-button size="small" @click="handleCancelUpdate">Cancel</n-button>
                     </n-modal>
 
-                    <n-modal v-model:show="showSetting" preset="card" style="width: 600px;" title="设置" size="small">
+                    <n-modal v-model:show="showSetting" preset="card" style="width: 600px;" :title="t('setting')"
+                        size="small">
+                        <n-select size="small" v-model:value="locale" :options="langs"
+                            @update:value="handleUpdateLang" />
+                        <br>
                         <n-checkbox :checked="store.config?.deleteNoConfirm" @update:checked="handleCheckedChange">
-                            执行删除操作不需要确认
+                            {{ t('noConfirmationIsRequiredForDeletion') }}
                         </n-checkbox>
                         <br>
                         <br>
-                        <n-button :loading="loadingClear" size="small" @click="handleClearAllData">Clear All Data
+                        <n-button :loading="loadingClear" size="small" @click="handleClearAllData">
+                            {{ t('clearAllData') }}
                         </n-button>
                         <br>
                         <br>
-                        <n-button :loading="updateLoading" size="small" @click="handleUpdate">Check for Update
+                        <n-button :loading="updateLoading" size="small" @click="handleUpdate">
+                            {{ t('checkForUpdates') }}
                         </n-button>
                         <br>
                         <br>
                         <div>Version: {{tauriConfig.package.version}}</div>
                     </n-modal>
 
-                    <n-modal v-model:show="showConn" preset="card" style="width: 600px;" title="连接" size="small">
+                    <n-modal v-model:show="showConn" preset="card" style="width: 600px;" :title="t('connections')"
+                        size="small">
                         <n-space vertical>
                             <n-select :options="dbTypeList" :render-label="renderLabel" v-model:value="dbConn" />
                             <n-card v-if="dbConn == 'redis'">
                                 <n-space vertical>
-                                    <n-input v-model:value="dbRedis.name" type="text" placeholder="Name" />
+                                    <n-input v-model:value="dbRedis.name" type="text"
+                                        :placeholder="t('connection.name')" />
                                     <n-space>
-                                        <n-input v-model:value="dbRedis.host" type="text" placeholder="Host" />
-                                        <n-input v-model:value="dbRedis.port" type="text" placeholder="Port" />
+                                        <n-input v-model:value="dbRedis.host" type="text"
+                                            :placeholder="t('connection.host')" />
+                                        <n-input v-model:value="dbRedis.port" type="text"
+                                            :placeholder="t('connection.port')" />
                                     </n-space>
                                     <n-space>
-                                        <n-input v-model:value="dbRedis.user" type="text" placeholder="User" />
-                                        <n-input v-model:value="dbRedis.pass" type="password" placeholder="Pass" />
+                                        <n-input v-model:value="dbRedis.user" type="text"
+                                            :placeholder="t('connection.user')" />
+                                        <n-input v-model:value="dbRedis.pass" type="password"
+                                            :placeholder="t('connection.pass')" />
                                     </n-space>
                                     <n-input v-model:value="dbRedis.index" type="text" placeholder="DB Index" />
                                 </n-space>
@@ -340,8 +371,12 @@ const handleCancelUpdate = () => {
                             <n-card v-else>
                             </n-card>
                             <n-space>
-                                <n-button @click="handleSubmitConn" style="margin-top: 12px;">Submit</n-button>
-                                <n-button @click="handleCancelConn" style="margin-top: 12px;">Cancel</n-button>
+                                <n-button @click="handleSubmitConn" style="margin-top: 12px;">
+                                    {{ t('confirm') }}
+                                </n-button>
+                                <n-button @click="handleCancelConn" style="margin-top: 12px;">
+                                    {{ t('cancel') }}
+                                </n-button>
                             </n-space>
                         </n-space>
                     </n-modal>

@@ -2044,6 +2044,7 @@ dependencies = [
 name = "plugin-postgres"
 version = "0.0.0"
 dependencies = [
+ "openssl",
  "postgres",
  "serde",
  "serde_json",

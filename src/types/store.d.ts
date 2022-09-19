@@ -3,4 +3,5 @@ export interface Config {
     showSideBar: boolean
     sideBarWidth: number
     pageSize: number
+    lang: string
 }

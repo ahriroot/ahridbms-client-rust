@@ -22,7 +22,8 @@ export const useIndexStore = defineStore<
                 deleteNoConfirm: false,
                 showSideBar: true,
                 sideBarWidth: 250,
-                pageSize: 20
+                pageSize: 20,
+                lang: 'zh-CN'
             }
         }
     },
@@ -37,6 +38,9 @@ export const useIndexStore = defineStore<
             }
             if (!config.pageSize) {
                 config.pageSize = 20
+            }
+            if (!config.lang) {
+                config.lang = 'zh-CN'
             }
             if (save) {
                 localStorage.setItem('config', JSON.stringify(config))
