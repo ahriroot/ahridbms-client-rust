@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { NDatePicker } from 'naive-ui'
 
 const props = withDefaults(defineProps<{
@@ -14,6 +14,7 @@ const emits = defineEmits<{
 }>()
 
 const value = ref(props.value)
+const v = ref(value.value)
 const handleChange = async (val: number | null) => {
     if (val === null) {
         emits('update:value', null)
@@ -28,12 +29,17 @@ const handleClear = async (_: undefined) => {
     emits('update:value', null)
     props.onUpdateValue(null)
 }
+
+watch(() => props.value, (val) => {
+    value.value = val
+    v.value = val
+})
 </script>
     
 <template>
-    <n-date-picker size="small" ref="inputRef" :default-value="props.value === null ? null : props.value * 1000"
-        @confirm="handleChange" @clear="handleClear" @update:value="handleChange" type="datetime" clearable
-        placeholder="NULL" />
+    <n-date-picker size="small" ref="inputRef" v-model:value="v"
+         @confirm="handleChange" @clear="handleClear"
+        @update:value="handleChange" type="datetime" clearable placeholder="NULL" />
 </template>
     
 <style scoped>

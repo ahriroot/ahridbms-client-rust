@@ -44,11 +44,16 @@ const store = useIndexStore()
 onBeforeMount(async () => {
     try {
         let config = localStorage.getItem('config')
-        store.updateConfig(config ? JSON.parse(config) : {
-            deleteNoConfirm: false,
-            showSideBar: true,
-            sideBarWidth: 250
-        })
+        if (config) {
+            store.updateConfig(JSON.parse(config))
+        } else {
+            store.updateConfig({
+                deleteNoConfirm: false,
+                showSideBar: true,
+                sideBarWidth: 250,
+                pageSize: 20
+            }, false)
+        }
 
         width.value = store.config.sideBarWidth
         oldWidth.value = width.value

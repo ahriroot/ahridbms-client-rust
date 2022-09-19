@@ -11,11 +11,11 @@ const getConnections = async (): Promise<Connection<RedisConnect>[]> => {
     return connections ? JSON.parse(connections) : []
 }
 
-const saveTabs = async (connections: OpenTabMesagae[]) => {
+const saveTabs = async (connections: OpenTabMesagae<any>[]) => {
     localStorage.setItem('tabs', JSON.stringify(connections))
 }
 
-const getTabs = async (): Promise<OpenTabMesagae[]> => {
+const getTabs = async (): Promise<OpenTabMesagae<any>[]> => {
     const tabs = localStorage.getItem('tabs')
     return tabs ? JSON.parse(tabs) : []
 }

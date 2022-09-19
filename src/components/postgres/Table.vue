@@ -2,17 +2,18 @@
 import { executeWithTransaction, getPrimaryKeys, getTableStruct, select, update } from '@/api/postgres'
 import { Connection } from '@/types/Connection'
 import { PostgresConnect } from '@/types/postgres'
-import { h, ref, shallowRef, onBeforeMount } from 'vue'
+import { h, ref, shallowRef, onBeforeMount, reactive } from 'vue'
 import {
-    useLoadingBar, NDataTable, NButton, NIcon, NPopover, NPagination, NLayout, useMessage
+    useLoadingBar, NDataTable, NButton, NIcon, useDialog, useMessage
 } from 'naive-ui'
-import { Trash, Add } from '@vicons/ionicons5'
+import { Trash, Add, Checkmark } from '@vicons/ionicons5'
 import useClipboard from "vue-clipboard3"
 
 import BigIntVue from '@/components/postgres/cells/BigInt.vue'
 import VarCharVue from '@/components/postgres/cells/VarChar.vue'
 import BoolVue from '@/components/postgres/cells/Bool.vue'
 import TimestampVue from '@/components/postgres/cells/Timestamp.vue'
+import { useIndexStore } from '@/store'
 
 const typeRender = shallowRef<{ [key: string]: any }>({
     int8: {
@@ -24,7 +25,7 @@ const typeRender = shallowRef<{ [key: string]: any }>({
         component: BigIntVue
     },
     int2: {
-        width: 160,
+        width: 120,
         component: BigIntVue
     },
     varchar: {
@@ -36,7 +37,7 @@ const typeRender = shallowRef<{ [key: string]: any }>({
         component: VarCharVue
     },
     bool: {
-        width: 70,
+        width: 90,
         component: BoolVue
     },
     timestamp: {
@@ -58,11 +59,34 @@ const emits = defineEmits<{
 }>()
 
 const { toClipboard } = useClipboard()
+const store = useIndexStore()
 const loadingBar = useLoadingBar()
+const dialog = useDialog()
 const loadingCount = ref(0)
 const message = useMessage()
-const page = ref(1)
-const size = ref(10)
+const count = ref(0)
+
+const pagination = reactive({
+    page: 1,
+    pageSize: 5,
+    showSizePicker: true,
+    itemCount: 0,
+    showQuickJumper: true,
+    pageSizes: [5, 10, 20, 50, 100, 500, 1000],
+    onChange: async (page: number) => {
+        pagination.page = page
+        await handleLoadData()
+    },
+    onUpdatePageSize: async (pageSize: number) => {
+        store.updateConfig({
+            ...store.config,
+            pageSize
+        })
+        pagination.pageSize = pageSize
+        pagination.page = 1
+        await handleLoadData()
+    }
+})
 
 const loadingStart = () => {
     loadingCount.value++
@@ -89,6 +113,25 @@ const format = (time: number) => {
     return `${year}-${month}-${day} ${hour}:${minute}:${second}`
 }
 
+const sorts = ref<{
+    field: string
+    order: string
+}[]>([])
+const sorter = ref<any>([])
+const handleUpdateSorter = async (sorter: any) => {
+    sorter.value = sorter
+    sorts.value = []
+    sorter.forEach((item: any) => {
+        if (item.order === "ascend" || item.order === "descend") {
+            sorts.value.push({
+                field: item.columnKey,
+                order: item.order === "ascend" ? "ASC" : "DESC"
+            })
+        }
+    })
+    await handleLoadData()
+}
+
 const data = ref<any[]>([])
 const handleLoadData = async () => {
     loadingStart()
@@ -96,12 +139,15 @@ const handleLoadData = async () => {
         conn: props.conn,
         skip: 0,
         limit: 0,
-        page: page.value,
-        size: size.value,
+        page: pagination.page,
+        size: pagination.pageSize,
+        sorts: sorts.value,
         database: props.data.database,
         table: props.data.table
     })
-    data.value = res
+    data.value = res.data
+    pagination.itemCount = res.count
+    count.value = res.count
     loadingFinish()
 }
 
@@ -110,6 +156,7 @@ const struct = ref<any[]>([])
 const newData = ref<any[]>([])
 const pks = ref<string[]>([])
 onBeforeMount(async () => {
+    pagination.pageSize = store.config.pageSize
     getPrimaryKeys({
         conn: props.conn,
         database: props.data.database,
@@ -147,6 +194,9 @@ onBeforeMount(async () => {
             title: column.attname,
             key: column.attname,
             width: typeRender.value[t].width,
+            sorter: {
+                multiple: 3
+            },
             render(row: any, index: number) {
                 let r = row.find((item: any) => item.field == column.attname)
                 return h('div',
@@ -175,6 +225,7 @@ onBeforeMount(async () => {
                     NButton,
                     {
                         size: 'small',
+                        onClick: async () => await handleInsert(row)
                     },
                     {
                         default: () => h(
@@ -213,23 +264,27 @@ const where = (values: any[]) => {
     pks.value.forEach((pk, index) => {
         let tmp = values.find((item: any) => item.field == pk)
         let type = tmp.type;
-        if ([
-            'VarChar',
-            'CharN',
-            'Text',
-            'Citext',
-            'Name',
-            'Unknown',
-            'Json',
-            'Xml',
-            'Aclitem',
-            'Ignore'
-        ].includes(type)) {
-            wheres.push(`${pk} = '${tmp.old}'`)
-        } else if (type == 'TimestampTZ' || type == 'Timestamp') {
-            wheres.push(`${pk} = '${format(tmp.old)}'`)
+        if (tmp.old === null) {
+            wheres.push(`${pk} IS NULL`)
         } else {
-            wheres.push(`${pk} = ${tmp.old}`)
+            if ([
+                'VarChar',
+                'CharN',
+                'Text',
+                'Citext',
+                'Name',
+                'Unknown',
+                'Json',
+                'Xml',
+                'Aclitem',
+                'Ignore'
+            ].includes(type)) {
+                wheres.push(`${pk} = '${tmp.old}'`)
+            } else if (type == 'TimestampTZ' || type == 'Timestamp') {
+                wheres.push(`${pk} = '${format(tmp.old)}'`)
+            } else {
+                wheres.push(`${pk} = ${tmp.old}`)
+            }
         }
     })
     return wheres.join(' AND ')
@@ -243,23 +298,27 @@ const handleUpdate = async () => {
         row.forEach((column: any) => {
             if (column.value !== column.old) {
                 let type = column.type;
-                if ([
-                    'VarChar',
-                    'CharN',
-                    'Text',
-                    'Citext',
-                    'Name',
-                    'Unknown',
-                    'Json',
-                    'Xml',
-                    'Aclitem',
-                    'Ignore'
-                ].includes(type)) {
-                    changeData.push(`${column.field} = '${column.value}'`)
-                } else if (type == 'TimestampTZ' || type == 'Timestamp') {
-                    changeData.push(`${column.field} = '${format(column.value)}'`)
+                if (column.value === null) {
+                    changeData.push(`${column.field} = NULL`)
                 } else {
-                    changeData.push(`${column.field} = ${column.value}`)
+                    if ([
+                        'VarChar',
+                        'CharN',
+                        'Text',
+                        'Citext',
+                        'Name',
+                        'Unknown',
+                        'Json',
+                        'Xml',
+                        'Aclitem',
+                        'Ignore'
+                    ].includes(type)) {
+                        changeData.push(`${column.field} = '${column.value}'`)
+                    } else if (type == 'TimestampTZ' || type == 'Timestamp') {
+                        changeData.push(`${column.field} = '${format(column.value)}'`)
+                    } else {
+                        changeData.push(`${column.field} = ${column.value}`)
+                    }
                 }
             }
         })
@@ -283,9 +342,77 @@ const handleUpdate = async () => {
 }
 
 const handleDelete = async (row: any) => {
-    console.log(row)
-    let w = where(row)
-    let sql = `DELETE FROM "public".${props.data.table} WHERE ${w}`
+    if (store.config?.deleteNoConfirm) {
+        let w = where(row)
+        let sql = `DELETE FROM "public".${props.data.table} WHERE ${w}`
+        loadingStart()
+        let res = await update({
+            conn: props.conn,
+            database: props.data.database,
+            sql: sql
+        })
+        loadingFinish()
+        if (!res.is_error) {
+            message.success(`Affected Rows: ${res}`)
+            await handleLoadData()
+        }
+    } else {
+        let w = where(row)
+        dialog.warning({
+            title: '删除：',
+            content: `确认删除 WHERE ${w} ?`,
+            positiveText: '删除',
+            onPositiveClick: async () => {
+                let w = where(row)
+                let sql = `DELETE FROM "public".${props.data.table} WHERE ${w}`
+                loadingStart()
+                let res = await update({
+                    conn: props.conn,
+                    database: props.data.database,
+                    sql: sql
+                })
+                loadingFinish()
+                if (!res.is_error) {
+                    message.success(`Affected Rows: ${res}`)
+                    await handleLoadData()
+                }
+            }
+        })
+    }
+
+
+}
+
+const handleInsert = async (row: any) => {
+    let fields: any[] = []
+    let values: any[] = []
+    row.forEach((column: any) => {
+        if (column.value !== column.old) {
+            if (column.value !== null) {
+                let type = column.type;
+                fields.push(column.field)
+                if ([
+                    'VarChar',
+                    'CharN',
+                    'Text',
+                    'Citext',
+                    'Name',
+                    'Unknown',
+                    'Json',
+                    'Xml',
+                    'Aclitem',
+                    'Ignore'
+                ].includes(type)) {
+                    values.push(`'${column.value}'`)
+                } else if (type == 'TimestampTZ' || type == 'Timestamp') {
+                    values.push(`'${format(column.value)}'`)
+                } else {
+                    values.push(`${column.value}`)
+                }
+            }
+        }
+    })
+    let sql = `INSERT INTO "public"."${props.data.table}" (${fields.join(', ')}) VALUES (${values.join(', ')})`
     loadingStart()
     let res = await update({
         conn: props.conn,
@@ -295,6 +422,7 @@ const handleDelete = async (row: any) => {
     loadingFinish()
     if (!res.is_error) {
         message.success(`Affected Rows: ${res}`)
+        showNewRow.value = false
         await handleLoadData()
     }
 }
@@ -303,7 +431,6 @@ const showNewRow = ref(false)
 const handleCreate = async () => {
     showNewRow.value = !showNewRow.value
     if (showNewRow.value) {
-
         data.value.push([
             {
                 "type": "BigInt",
@@ -350,24 +477,44 @@ const handleCreate = async () => {
     
 <template>
     <div style="height: 100%; position: relative;">
-        <n-button size="small" type="primary" @click="handleUpdate">
-            Update
-        </n-button>
-        <n-button size="small" type="primary" @click="handleCreate">
-            Create
-        </n-button>
-        <!-- <div style="display: flex">
-            <div v-for="i in newData">
-                <component :is="typeRender[i.type].component" :value="i.value"
-                    :onUpdateValue="(val:any) => i.value = val" bg="#303033" />
+        <div class="opera-content">
+            <div class="left">Count: {{ count }}</div>
+            <div class="right">
+                <n-button strong secondary size="small" @click="handleUpdate">
+                    <template #icon>
+                        <n-icon>
+                            <checkmark />
+                        </n-icon>
+                    </template>
+                </n-button>&nbsp;
+                <n-button strong secondary size="small" @click="handleCreate">
+                    <template #icon>
+                        <n-icon>
+                            <Add />
+                        </n-icon>
+                    </template>
+                </n-button>
             </div>
-        </div> -->
+        </div>
         <n-data-table size="small" :single-line="false" :columns="columns" :data="data" flex-height
-            style="position: absolute; top: 70px; bottom: 50px;" />
+            style="position: absolute; top: 32px; bottom: 40px;" :loading="loadingCount > 0" :pagination="pagination"
+            :remote="true" :scroll-x="900" @update:sorter="handleUpdateSorter" />
     </div>
 </template>
     
 <style scoped>
+.opera-content {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 5px;
+}
+
+.opera-content .left,
+.opera-content .right {
+    display: flex;
+    align-items: center;
+}
+
 .n-data-table :deep(td) {
     margin: 0;
     padding: 0;

@@ -276,9 +276,10 @@ pub async fn select(
     limit: i64,
     page: i64,
     size: i64,
+    sorts: Vec<Sort>,
     database: String,
     table: String,
-) -> Response<Vec<Vec<Field>>> {
+) -> Response<SelectResult> {
     conn.info.db = database;
     let mut skip_count = skip;
     let mut limit_count = limit;
@@ -292,14 +293,37 @@ pub async fn select(
     if limit_count < 0 {
         limit_count = 1;
     }
-    let sql = &format!(
+    let mut sql = format!(
         "SELECT * FROM public.\"{}\" LIMIT {} OFFSET {};",
         table, limit_count, skip_count
     );
-    let res = execsql_select(conn, sql).await;
-    match res {
-        Ok(v) => Response::ok(Res::Success(v)),
-        Err(e) => Response::error(e.to_string()),
+    if sorts.len() > 0 {
+        let sort_array: Vec<String> = sorts
+            .iter()
+            .map(|s| format!("{} {}", s.field, s.order))
+            .collect();
+        let sort = sort_array.join(", ");
+        sql = format!(
+            "SELECT * FROM public.\"{}\" ORDER BY {} LIMIT {} OFFSET {};",
+            table, sort, limit_count, skip_count
+        );
+    }
+    let res = execsql_select(conn.clone(), &sql).await;
+    let count = execsql_select(conn, &format!("SELECT COUNT(*) FROM public.\"{}\";", table)).await;
+    match (res, count) {
+        (Ok(v), Ok(c)) => {
+            let f = &c[0][0];
+            let count: i64 = match f {
+                Field::BigInt(v) => match v.value {
+                    Some(v) => v,
+                    None => 0,
+                },
+                _ => 0,
+            };
+            Response::ok(Res::Success(SelectResult { data: v, count }))
+        }
+        (Err(e), _) => Response::error(e.to_string()),
+        (_, Err(e)) => Response::error(e.to_string()),
     }
 }
 

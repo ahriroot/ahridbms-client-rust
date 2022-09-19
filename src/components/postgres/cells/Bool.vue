@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { NCheckbox } from 'naive-ui'
 
 const props = defineProps<{
@@ -11,7 +11,7 @@ const emits = defineEmits<{
     (e: 'update:value', val: boolean | null): void
 }>()
 
-const value = ref<boolean | null>(props.value === null ? false : true)
+const value = ref<boolean | null>(props.value === null ? false : props.value)
 const nullValue = ref<boolean | null>(props.value)
 const handleChange = async (val: boolean | null) => {
     if (nullValue.value === null) {
@@ -31,6 +31,11 @@ const handleChange = async (val: boolean | null) => {
         props.onUpdateValue(null)
     }
 }
+
+watch(() => props.value, (val) => {
+    value.value = val === null ? false : val
+    nullValue.value = val
+})
 </script>
     
 <template>

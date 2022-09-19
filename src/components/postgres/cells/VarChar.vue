@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { NInput } from 'naive-ui'
 
 const props = withDefaults(defineProps<{
@@ -24,11 +24,15 @@ const handleClear = async () => {
     emits('update:value', null)
     props.onUpdateValue(null)
 }
+
+watch(() => props.value, (val) => {
+    value.value = val
+})
 </script>
     
 <template>
-    <n-input :style="`background: ${props.bg}`" size="small" :value="value" @update:value="handleChange" @clear="handleClear"
-        :placeholder="value === null ? 'NULL' : ''" clearable />
+    <n-input :style="`background: ${props.bg}`" size="small" :value="value" @update:value="handleChange"
+        @clear="handleClear" :placeholder="value === null ? 'NULL' : ''" clearable />
 </template>
     
 <style scoped>

@@ -78,10 +78,8 @@ const nodeProps = ({ option }: { option: any }) => {
             // if (option.children == undefined || option.children == null) {
             //     emits('handleOpenTab', { id: nanoid(), conn: props.conn, tab_type: option.label })
             // }
-            console.log(1)
         },
         onDblclick() {
-            console.log(2)
         },
         onContextmenu(e: MouseEvent): void {
             e.preventDefault()

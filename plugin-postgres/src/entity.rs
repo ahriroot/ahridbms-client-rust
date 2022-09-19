@@ -83,6 +83,18 @@ pub enum Field {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SelectResult {
+    pub count: i64,
+    pub data: Vec<Vec<Field>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Sort {
+    pub field: String,
+    pub order: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Info {
     pub name: String,
     pub host: String,
@@ -92,7 +104,7 @@ pub struct Info {
     pub db: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Connection {
     pub id: String,
     pub db_type: String,

@@ -12,7 +12,7 @@ export const useIndexStore = defineStore<
     },
     {},
     {
-        updateConfig(config: Config): Promise<void>
+        updateConfig(config: Config, save?: boolean): Promise<void>
     }
 >({
     id: 'index',
@@ -21,12 +21,13 @@ export const useIndexStore = defineStore<
             config: {
                 deleteNoConfirm: false,
                 showSideBar: true,
-                sideBarWidth: 250
+                sideBarWidth: 250,
+                pageSize: 20
             }
         }
     },
     actions: {
-        async updateConfig(config: Config) {
+        async updateConfig(config: Config, save: boolean = true) {
             if (config.sideBarWidth) {
                 if (config.sideBarWidth < 150) {
                     config.sideBarWidth = 150
@@ -34,7 +35,12 @@ export const useIndexStore = defineStore<
                     config.sideBarWidth = 1000
                 }
             }
-            localStorage.setItem('config', JSON.stringify(config))
+            if (!config.pageSize) {
+                config.pageSize = 20
+            }
+            if (save) {
+                localStorage.setItem('config', JSON.stringify(config))
+            }
             this.config = config
         }
     }

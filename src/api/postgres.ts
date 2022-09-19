@@ -37,6 +37,10 @@ interface SelectArgs extends InvokeArgs {
     limit: number
     page: number
     size: number
+    sorts: {
+        field: string
+        order: string
+    }[]
     database: string
     table: string
 }
@@ -57,7 +61,10 @@ const request = async <T>(command: string, params: any): Promise<T> => {
     let res = await invoke<Response<T>>(command, params)
     if (res.code !== 10000) {
         if (res.code < 50000) {
-            window.$message.warning(res.msg)
+            window.$message.warning(res.msg, {
+                closable: true,
+                duration: 10000
+            })
         } else {
             window.$message.error(res.msg)
         }
@@ -101,10 +108,16 @@ const getTableStruct = async (params: GetTableStructArgs): Promise<any[]> => {
     return result
 }
 
-const select = async (params: SelectArgs): Promise<any[]> => {
-    let res = await request<any[]>('plugin:postgres|select', params)
+const select = async (params: SelectArgs): Promise<{
+    data: any[]
+    count: number
+}> => {
+    let res = await request<{
+        data: any[]
+        count: number
+    }>('plugin:postgres|select', params)
     let result: any[] = []
-    res.forEach((rowData: any[]) => {
+    res.data.forEach((rowData: any[]) => {
         let row: any[] = []
         rowData.forEach((column: any) => {
             for (let k in column) {
@@ -118,7 +131,10 @@ const select = async (params: SelectArgs): Promise<any[]> => {
         })
         result.push(row)
     })
-    return result
+    return {
+        data: result,
+        count: res.count
+    }
 }
 
 const update = async (params: UpdateArgs): Promise<any> => {

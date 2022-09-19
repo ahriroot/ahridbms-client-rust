@@ -45,7 +45,6 @@
                 "wix": {
                     "language": [
                         "zh-CN",
-                        "ru-RU",
                         "en-US"
                     ],
                     "license": "LICENSE.rtf"
