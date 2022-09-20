@@ -184,18 +184,19 @@ const handleOpenTab = (message: OpenTabMesagae<any>) => {
             case 'redis':
                 tabs.value.push(message)
                 tab.value = message.id
+                handleTabChanged(tab.value)
                 saveTabs(tabs.value)
                 break
             case 'postgres':
                 tabs.value.push(message)
                 tab.value = message.id
+                handleTabChanged(tab.value)
                 saveTabs(tabs.value)
                 break
             default:
                 break
         }
     }
-
 }
 
 // 删除连接
@@ -381,7 +382,8 @@ const handleUpdateLang = async (_: string) => {
                         </n-space>
                     </n-modal>
 
-                    <div id="main" class="nocopy">
+                    <!-- <div id="main" class="nocopy"> -->
+                    <div id="main">
                         <aside class="side nocopy" :class="store.config?.showSideBar ? '' : 'show'">
                             <div class="sidebar">
                                 <n-button circle quaternary size="small" @click.stop="showSetting = true">
@@ -395,7 +397,7 @@ const handleUpdateLang = async (_: string) => {
                         </aside>
                         <main class="main" :class="store.config?.showSideBar ? '' : 'show'"
                             :style="`cursor: ${resizeable ? 'ew-resize' : cursor}`">
-                            <div class="connection nocopy" ref="sidebarRef" :style="`width: ${width}px`">
+                            <div class="connection" ref="sidebarRef" :style="`width: ${width}px`">
                                 <div class="header">
                                     <n-button strong secondary size="small" @click.stop="showConn = true">
                                         <template #icon>

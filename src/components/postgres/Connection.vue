@@ -11,7 +11,7 @@ import { nanoid } from 'nanoid'
 import { OpenTabMesagae } from '@/types/Message'
 import { Connection } from '@/types/Connection'
 import { PgDatabase, PostgresConnect } from '@/types/postgres'
-import { getDatabases, getTables, getColumns, executeSelectSql, update, executeWithTransaction } from '@/api/postgres'
+import { getDatabases, getTables, getColumns, executeSelectSql, update } from '@/api/postgres'
 import { PgColumn, PgTable } from '@/types/postgres/Data'
 import { useIndexStore } from '@/store'
 import { useI18n } from 'vue-i18n'
@@ -230,6 +230,21 @@ const nodeProps = ({ option }: { option: any }) => {
                                 option.isLeaf = false
                                 option.children = undefined
                                 expandedKeys.value.push(option.key)
+                                showContextmenu.value = false
+                            }
+                        }
+                    }, {
+                        label: t('create'),
+                        key: 'create',
+                        props: {
+                            onClick: async () => {
+                                emits('handleOpenTab', {
+                                    id: nanoid(), conn: props.conn, tab_type: 'create_table', data: {
+                                        title: `#create_table@${option.database}`,
+                                        database: option.database,
+                                        table: ''
+                                    }
+                                })
                                 showContextmenu.value = false
                             }
                         }
@@ -502,7 +517,7 @@ const sqlCreateDatabase = computed(() => {
         </n-modal>
         <n-modal v-model:show="showCreateDatabase" preset="card" style="width: 600px;" :title="t('info')" size="small">
             <n-spin size="large" :show="loadingCreateDatabase">
-                <n-form ref="formRef" :model="newDatabase" label-placement="left" label-width="auto"
+                <n-form :model="newDatabase" label-placement="left" label-width="auto"
                     require-mark-placement="right-hanging" size="small" :style="{
                       maxWidth: '640px'
                     }">
