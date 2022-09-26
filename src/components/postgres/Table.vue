@@ -18,16 +18,36 @@ import { useI18n } from 'vue-i18n'
 
 
 const typeRender = shallowRef<{ [key: string]: any }>({
-    int8: {
-        width: 160,
-        component: BigIntVue
-    },
     int: {
         width: 160,
         component: BigIntVue
     },
     int2: {
         width: 120,
+        component: BigIntVue
+    },
+    int4: {
+        width: 120,
+        component: BigIntVue
+    },
+    int8: {
+        width: 160,
+        component: BigIntVue
+    },
+    serial: {
+        width: 160,
+        component: BigIntVue
+    },
+    serial2: {
+        width: 160,
+        component: BigIntVue
+    },
+    serial4: {
+        width: 160,
+        component: BigIntVue
+    },
+    serial8: {
+        width: 160,
         component: BigIntVue
     },
     varchar: {

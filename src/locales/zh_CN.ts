@@ -20,6 +20,8 @@ export default {
     open: '打开',
     table: '表',
     setting: '设置',
+    column: '列',
+    index: '索引',
     noConfirmationIsRequiredForDeletion: '执行删除操作不需要确认',
     confirmToDeleteAllOperationLog: '确认删除所有操作日志？',
     deleteConnection: '删除连接',

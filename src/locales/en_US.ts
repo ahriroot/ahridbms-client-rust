@@ -20,6 +20,8 @@ export default {
     open: 'Open',
     table: 'Tables',
     setting: 'Setting',
+    column: 'Columns',
+    index: 'Indexes',
     noConfirmationIsRequiredForDeletion: 'No confirmation is required for deletion',
     confirmToDeleteAllOperationLog: 'Confirm to delete all operation log?',
     deleteConnection: 'Delete Connection',
