@@ -289,6 +289,16 @@ const handleUpdateLang = async (_: string) => {
         lang: locale.value
     })
 }
+
+const handleCloseTab = async (id: string) => {
+    tabs.value = tabs.value.filter(tab => tab.id != id)
+    saveTabs(tabs.value)
+    if (tabs.value.length > 0) {
+        tab.value = tabs.value[0].id
+    } else {
+        tab.value = ''
+    }
+}
 </script>
 
 <template>
@@ -297,7 +307,8 @@ const handleUpdateLang = async (_: string) => {
         <n-loading-bar-provider>
             <n-message-provider>
                 <n-dialog-provider>
-                    <n-modal v-model:show="showUpdateInfo" preset="card" style="width: 600px;" :title="t('info')" size="small">
+                    <n-modal v-model:show="showUpdateInfo" preset="card" style="width: 600px;" :title="t('info')"
+                        size="small">
                         <h1>Version: {{updateStatus.version}}</h1>
                         <br>
                         <p>Info: {{updateStatus.body}}</p>
@@ -434,7 +445,7 @@ const handleUpdateLang = async (_: string) => {
                                             :tab="i.data.title" :name="i.id">
                                             <component :key="i.id"
                                                 :is="tabComponents[`${i.conn.db_type}:${i.tab_type}`]" :conn="i.conn"
-                                                :data="i.data" />
+                                                :data="i.data" @handleCloseTab="handleCloseTab(i.id)" />
                                         </n-tab-pane>
                                     </n-tabs>
                                 </section>

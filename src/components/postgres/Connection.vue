@@ -15,6 +15,7 @@ import { getDatabases, getTables, getColumns, executeSelectSql, update } from '@
 import { PgColumn, PgTable } from '@/types/postgres/Data'
 import { useIndexStore } from '@/store'
 import { useI18n } from 'vue-i18n'
+import { listen } from '@tauri-apps/api/event'
 
 
 window.$message = useMessage()
@@ -33,7 +34,7 @@ const dialog = useDialog()
 const store = useIndexStore()
 
 const initConnection = async () => {
-    let k = `postgres:${props.conn.info.name}`
+    let k = props.conn.id
     data.value = [{
         key: k,
         label: props.conn.info.name,
@@ -75,6 +76,14 @@ const initConnection = async () => {
 }
 
 onBeforeMount(async () => {
+    let eks = localStorage.getItem(`expandedKeys:${props.conn.id}`) || '[]'
+    expandedKeys.value = JSON.parse(eks)
+    await listen<string>('reload', async (event) => {
+        let payload = JSON.parse(event.payload)
+        if (payload.conn.id === props.conn.id) {
+            await reloadTables(`${props.conn.id}:${payload.database}:tables`, data.value)
+        }
+    })
     await initConnection()
 })
 
@@ -127,10 +136,10 @@ const nodeProps = ({ option }: { option: any }) => {
                         key: 'reload',
                         props: {
                             onClick: async () => {
-                                expandedKeys.value = [option.key]
-                                option.isLeaf = false
+                                if (!expandedKeys.value.includes(option.key)) {
+                                    expandedKeys.value.push(option.key)
+                                }
                                 option.children = undefined
-                                await handleLoad(option)
                                 showContextmenu.value = false
                             }
                         }
@@ -225,11 +234,10 @@ const nodeProps = ({ option }: { option: any }) => {
                         key: 'reload',
                         props: {
                             onClick: async () => {
-                                handleLoad(option)
-                                expandedKeys.value.filter(key => key != option.key)
-                                option.isLeaf = false
+                                if (!expandedKeys.value.includes(option.key)) {
+                                    expandedKeys.value.push(option.key)
+                                }
                                 option.children = undefined
-                                expandedKeys.value.push(option.key)
                                 showContextmenu.value = false
                             }
                         }
@@ -271,11 +279,44 @@ const nodeProps = ({ option }: { option: any }) => {
                         key: 'reload',
                         props: {
                             onClick: async () => {
-                                handleLoad(option)
-                                expandedKeys.value.filter(key => key != option.key)
-                                option.isLeaf = false
+                                if (!expandedKeys.value.includes(option.key)) {
+                                    expandedKeys.value.push(option.key)
+                                }
                                 option.children = undefined
-                                expandedKeys.value.push(option.key)
+                                showContextmenu.value = false
+                            }
+                        }
+                    }, {
+                        label: t('delete'),
+                        key: 'delete',
+                        props: {
+                            onClick: async () => {
+                                if (store.config?.deleteNoConfirm) {
+                                    let res = await update({
+                                        conn: props.conn,
+                                        database: option.database,
+                                        sql: `DROP TABLE "public"."${option.table}"`
+                                    })
+                                    if (!res.is_error) {
+                                        await reloadParent(option.key, data.value)
+                                    }
+                                } else {
+                                    dialog.warning({
+                                        title: t('delete'),
+                                        content: `${t('deleteTable')} ${option.label} ?`,
+                                        positiveText: t('delete'),
+                                        onPositiveClick: async () => {
+                                            let res = await update({
+                                                conn: props.conn,
+                                                database: option.database,
+                                                sql: `DROP TABLE "public"."${option.table}"`
+                                            })
+                                            if (!res.is_error) {
+                                                await reloadParent(option.key, data.value)
+                                            }
+                                        }
+                                    })
+                                }
                                 showContextmenu.value = false
                             }
                         }
@@ -289,15 +330,46 @@ const nodeProps = ({ option }: { option: any }) => {
     }
 }
 
-const rangeDB = (dbs: PgDatabase[]): TreeOption[] => {
+const reloadTables = async (key: any, tree: any[]) => {
+    for (let index = 0; index < tree.length; index++) {
+        if (tree[index].key === key) {
+            tree[index].children = undefined
+            if (!expandedKeys.value.includes(key)) {
+                console.log(key)
+                expandedKeys.value.push(key)
+            }
+            return
+        } else {
+            if (tree[index].children) {
+                await reloadTables(key, tree[index].children)
+            }
+        }
+    }
+}
+
+const reloadParent = async (key: any, tree: any[]) => {
+    for (let index = 0; index < tree.length; index++) {
+        if (tree[index].children && tree[index].children.find((item: any) => item.key === key)) {
+            tree[index].children = undefined
+            if (!expandedKeys.value.includes(tree[index].key)) {
+                expandedKeys.value.push(tree[index].key)
+            }
+            return
+        } else if (tree[index].children) {
+            await reloadParent(key, tree[index].children)
+        }
+    }
+}
+
+const rangeDB = (dbs: PgDatabase[], node: any): TreeOption[] => {
     let tmp: TreeOption[] = []
     dbs.forEach((db: PgDatabase) => {
         tmp.push({
-            key: db.datname,
+            key: `${node.key}:${db.datname}`,
             label: db.datname,
             value: db.datname,
             children: [{
-                key: `${db.datname}:tables:${nanoid()}`,
+                key: `${props.conn.id}:${db.datname}:tables`,
                 label: t('table'),
                 value: db.datname,
                 isLeaf: false,
@@ -313,17 +385,17 @@ const rangeDB = (dbs: PgDatabase[]): TreeOption[] => {
     return tmp
 }
 
-const rangeTB = (dbs: PgTable[], database: string): TreeOption[] => {
+const rangeTB = (dbs: PgTable[], node: any): TreeOption[] => {
     let tmp: TreeOption[] = []
     dbs.forEach((tb: PgTable) => {
         tmp.push({
-            key: `${database}:${tb.tablename}`,
+            key: `${node.key}:${tb.tablename}`,
             label: tb.tablename,
             value: tb.tablename,
             isLeaf: false,
             children: undefined,
             prefix: () => h(NIcon, null, { default: () => h(LayersSharp) }),
-            database: database,
+            database: node.database,
             type: 'table',
             table: tb.tablename
         })
@@ -365,7 +437,7 @@ const handleLoad = async (node: TreeOption) => {
                 })
                 databases.value.push(database as PgDatabase)
             })
-            node.children = rangeDB(databases.value)
+            node.children = rangeDB(databases.value, node)
         }
     } else if (node.type == 'tables') {
         const res = await getTables({ conn: props.conn, database: node.value as string })
@@ -380,7 +452,7 @@ const handleLoad = async (node: TreeOption) => {
                 })
                 tbs.push(tables)
             })
-            node.children = rangeTB(tbs, node.database as string)
+            node.children = rangeTB(tbs, node)
         }
     } else if (node.type == 'table') {
         const res = await getColumns({ conn: props.conn, database: node.database as string, table: node.table as string })
@@ -404,6 +476,7 @@ const handleLoad = async (node: TreeOption) => {
 
 const handleExpand = (key: string[]) => {
     expandedKeys.value = key
+    localStorage.setItem(`expandedKeys:${props.conn.id}`, JSON.stringify(key))
 }
 
 const loadingCreateDatabase = ref(false)
@@ -411,12 +484,7 @@ const defaultInfo = ref<any | null>(null)
 const roles = ref<{
     label: string
     value: string
-}[]>(['groode', 'veli good', 'emazing', 'lidiculous'].map(
-    (v) => ({
-        label: v,
-        value: v
-    })
-))
+}[]>([])
 const encoding = ref<{
     label: string
     value: string
