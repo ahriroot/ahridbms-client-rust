@@ -76,8 +76,8 @@ const initConnection = async () => {
 }
 
 onBeforeMount(async () => {
-    let eks = localStorage.getItem(`expandedKeys:${props.conn.id}`) || '[]'
-    expandedKeys.value = JSON.parse(eks)
+    // let eks = localStorage.getItem(`expandedKeys:${props.conn.id}`) || '[]'
+    // expandedKeys.value = JSON.parse(eks)
     await listen<string>('reload', async (event) => {
         let payload = JSON.parse(event.payload)
         if (payload.conn.id === props.conn.id) {

@@ -74,7 +74,7 @@ const request = async <T>(command: string, params: any): Promise<T> => {
         } else {
             window.$message.error(res.msg)
         }
-        return Promise.resolve({ is_error: true, code: res.code, msg: res.msg, from: '' } as T)
+        return Promise.resolve({ is_error: true, code: res.code, msg: res.msg, from: '' } as any)
     }
     return res.data.Success
 }
