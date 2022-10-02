@@ -2,6 +2,7 @@
 import { onMounted, shallowRef } from 'vue'
 import * as monaco from 'monaco-editor'
 import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
+import SqlWorker from 'monaco-editor/esm/vs/basic-languages/sql/sql.js?worker'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js?worker'
 import { QuerySuggestionsOfRedis } from '@/data/data'
 
@@ -45,6 +46,29 @@ onMounted(() => {
                 theme: 'vs-dark',
                 selectOnLineNumbers: true,
                 language: "redis",
+                automaticLayout: true
+            })
+            // monacoEditor.value?.trigger('format', 'editor.action.formatDocument')
+            setTimeout(() => {
+                monacoEditor.value?.getAction('editor.action.formatDocument').run()
+            }, 100)
+            // 监听值变化
+            monacoEditor.value?.onDidChangeModelContent(() => {
+                const currenValue = monacoEditor.value.getValue()
+                emits('change', currenValue)
+            })
+        }
+    } else if (props.type == 'postgres_query') {
+        self.MonacoEnvironment = {
+            getWorker: () => new SqlWorker()
+        }
+        if (editorRef.value) {
+            monacoEditor.value = monaco.editor.create(editorRef.value, {
+                value: props.value,
+                readOnly: false,
+                theme: 'vs-dark',
+                selectOnLineNumbers: true,
+                language: "sql",
                 automaticLayout: true
             })
             // monacoEditor.value?.trigger('format', 'editor.action.formatDocument')

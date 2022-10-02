@@ -2,6 +2,7 @@ import { invoke, InvokeArgs } from "@tauri-apps/api/tauri"
 import { Response } from '@/types/redis'
 import { Connection } from "@/types/Connection"
 import { PostgresConnect } from "@/types/postgres"
+import { isReactive } from "vue"
 
 
 interface GetDatabasesArgs extends InvokeArgs {
@@ -153,19 +154,23 @@ const executeWithTransaction = async (params: ExecuteWithTransactionArgs): Promi
     return res
 }
 
-const executeSelectSql = async (params: ExecuteSelectSqlArgs): Promise<any> => {
+const executeSelectSql = async (params: ExecuteSelectSqlArgs, analysis: boolean = true): Promise<any> => {
     let res = await request<any>('plugin:postgres|execute_select_sql', params)
-    let result: any[] = []
-    res.forEach((rowData: any[]) => {
-        let row: any = {}
-        rowData.forEach((column: any) => {
-            for (let k in column) {
-                row[column[k].key] = column[k].value
-            }
+    if (analysis) {
+        let result: any[] = []
+        res.forEach((rowData: any[]) => {
+            let row: any = {}
+            rowData.forEach((column: any) => {
+                for (let k in column) {
+                    row[column[k].key] = column[k].value
+                }
+            })
+            result.push(row)
         })
-        result.push(row)
-    })
-    return result
+        return result
+    } else {
+        return res
+    }
 }
 
 export { getDatabases, getTables, getColumns, getPrimaryKeys, getTableStruct, select, update, executeWithTransaction, executeSelectSql }

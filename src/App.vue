@@ -394,7 +394,7 @@ const handleCloseTab = async (id: string) => {
                     </n-modal>
 
                     <!-- <div id="main" class="nocopy"> -->
-                    <div id="main">
+                    <div id="main" class="nocopy">
                         <aside class="side nocopy" :class="store.config?.showSideBar ? '' : 'show'">
                             <div class="sidebar">
                                 <n-button circle quaternary size="small" @click.stop="showSetting = true">

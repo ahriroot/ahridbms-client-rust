@@ -656,7 +656,7 @@ const handleSubmitCreateTable = async () => {
                 </n-button>
             </n-input-group>
             <n-tabs type="card" size="small">
-                <n-tab-pane display-directive="show" key="column" name="column" :label="t('column')">
+                <n-tab-pane display-directive="show" key="column" name="column" :tab="t('column')">
                     <n-table size="small" :single-line="false">
                         <thead>
                             <tr>
@@ -743,7 +743,7 @@ const handleSubmitCreateTable = async () => {
                         </tbody>
                     </n-table>
                 </n-tab-pane>
-                <n-tab-pane display-directive="show" key="index" name="index" :label="t('index')">
+                <n-tab-pane display-directive="show" key="index" name="index" :tab="t('index')">
                     <n-table size="small" :single-line="false">
                         <thead>
                             <tr>
