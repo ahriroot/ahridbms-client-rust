@@ -37,20 +37,16 @@ const handleChange = (val: string) => {
 }
 
 const editorRef = ref<any>()
-const showSelect = ref<boolean>(false)
-const data = ref<any>([])
 const results = ref<any[]>([])
 const tab = ref<string>('')
 const handleSelect = async () => {
-    let sql_str = ''
-    if (!window.getSelection()) {
-        sql_str = window.getSelection()?.toString() || ''
-    } else {
+    let sql_str = window.getSelection()?.toString() || ''
+    if (!sql_str) {
         sql_str = await editorRef.value?.getValue()
     }
     let sql_str_arr = sql_str.trim().split(/;(?=([^\\']*\\'[^\\']*\\')*[^\\']*$)/)
     let sqls = sql_str_arr.filter((sql: string) => {
-        return sql && sql.trim()
+        return sql && sql.trim() && !sql.trim().startsWith('--')
     })
     if (sqls) {
         results.value = []

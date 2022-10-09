@@ -16,7 +16,10 @@ import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
     conn: Connection<RedisConnect>
-    data: string
+    data: any
+}>()
+const emits = defineEmits<{
+    (e: 'handleCloseTab'): void
 }>()
 
 const { toClipboard } = useClipboard()
@@ -54,9 +57,12 @@ const handle = async () => {
         //     .then((v) => {
         //         console.log("获取选中值成功：", v);
         //     })
-        let res = await editorRef.value?.getValue()
+        let sql_str = window.getSelection()?.toString() || ''
+        if (!sql_str) {
+            sql_str = await editorRef.value?.getValue()
+        }
         // 命令不能以 // 杠开始
-        let cmds = res.split('\n').filter((v: string) => v.trim() != '' && !v.trim().startsWith('//'))
+        let cmds = sql_str.split('\n').filter((v: string) => v.trim() != '' && !v.trim().startsWith('//'))
         exec({ conn: props.conn, commandLines: cmds, db: '0' }).then(async res => {
             res.forEach((result: IExecResult) => {
                 let datetime = new Date().getTime()
@@ -130,6 +136,8 @@ const handle = async () => {
         }).catch((err: any) => {
             console.log(err)
         })
+    } else {
+        console.log(123)
     }
 }
 

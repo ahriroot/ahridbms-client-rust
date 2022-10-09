@@ -55,7 +55,11 @@ const nodeProps = ({ option }: { option: any }) => {
                     key: 'query',
                     props: {
                         onClick: () => {
-                            emits('handleOpenTab', { id: nanoid(), conn: props.conn, tab_type: 'query', data: 'query' })
+                            emits('handleOpenTab', {
+                                id: nanoid(), conn: props.conn, tab_type: 'query', data: {
+                                    title: `query@${props.conn.info.name}`
+                                }
+                            })
                             showContextmenu.value = false
                         }
                     }
