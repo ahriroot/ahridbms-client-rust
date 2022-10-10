@@ -26,6 +26,8 @@ const monacoEditor = shallowRef<any>(null)
 const editorRef = shallowRef<HTMLElement | null>(null)
 
 onMounted(() => {
+    let value = ''
+    let language = ''
     if (props.type == 'redis_query') {
         self.MonacoEnvironment = {
             getWorker: () => new EditorWorker()
@@ -39,75 +41,46 @@ onMounted(() => {
                 )
             } as any)
         })
-        if (editorRef.value) {
-            monacoEditor.value = monaco.editor.create(editorRef.value, {
-                value: props.value,
-                readOnly: false,
-                theme: 'vs-dark',
-                selectOnLineNumbers: true,
-                language: "redis",
-                automaticLayout: true
-            })
-            // monacoEditor.value?.trigger('format', 'editor.action.formatDocument')
-            setTimeout(() => {
-                monacoEditor.value?.getAction('editor.action.formatDocument').run()
-            }, 100)
-            // 监听值变化
-            monacoEditor.value?.onDidChangeModelContent(() => {
-                const currenValue = monacoEditor.value.getValue()
-                emits('change', currenValue)
-            })
-        }
+        value = props.value
+        language = 'redis'
     } else if (props.type == 'postgres_query') {
         self.MonacoEnvironment = {
             getWorker: () => new SqlWorker()
         }
-        if (editorRef.value) {
-            monacoEditor.value = monaco.editor.create(editorRef.value, {
-                value: props.value,
-                readOnly: false,
-                theme: 'vs-dark',
-                selectOnLineNumbers: true,
-                language: "sql",
-                automaticLayout: true
-            })
-            // monacoEditor.value?.trigger('format', 'editor.action.formatDocument')
-            setTimeout(() => {
-                monacoEditor.value?.getAction('editor.action.formatDocument').run()
-            }, 100)
-            // 监听值变化
-            monacoEditor.value?.onDidChangeModelContent(() => {
-                const currenValue = monacoEditor.value.getValue()
-                emits('change', currenValue)
-            })
-        }
+        value = props.value
+        language = 'sql'
     } else if (props.type == 'json') {
-        if (editorRef.value) {
-            let json = ''
-            try {
-                json = JSON.stringify(JSON.parse(props.value), null, '\t')
-            } catch (e) {
-                json = ''
-            }
-            self.MonacoEnvironment = {
-                getWorker: () => new JsonWorker()
-            }
-            monacoEditor.value = monaco.editor.create(editorRef.value, {
-                value: json,
-                readOnly: false,
-                theme: 'vs-dark',
-                selectOnLineNumbers: true,
-                language: "json",
-                automaticLayout: true
-            })
-            setTimeout(() => {
-                monacoEditor.value?.getAction('editor.action.formatDocument').run()
-            }, 100)
-            monacoEditor.value?.onDidChangeModelContent(() => {
-                const currenValue = monacoEditor.value.getValue()
-                emits('handle', currenValue)
-            })
+        self.MonacoEnvironment = {
+            getWorker: () => new JsonWorker()
         }
+        let json = ''
+        try {
+            json = JSON.stringify(JSON.parse(props.value), null, '\t')
+        } catch (e) {
+            json = ''
+        }
+        value = json
+        language = 'json'
+    }
+    if (editorRef.value) {
+        monacoEditor.value = monaco.editor.create(editorRef.value, {
+            mouseWheelZoom: true,
+            value: value,
+            readOnly: false,
+            theme: 'vs-dark',
+            selectOnLineNumbers: true,
+            language: language,
+            automaticLayout: true
+        })
+        // monacoEditor.value?.trigger('format', 'editor.action.formatDocument')
+        setTimeout(() => {
+            monacoEditor.value?.getAction('editor.action.formatDocument').run()
+        }, 100)
+        // 监听值变化
+        monacoEditor.value?.onDidChangeModelContent(() => {
+            const currenValue = monacoEditor.value.getValue()
+            emits('change', currenValue)
+        })
     }
 })
 

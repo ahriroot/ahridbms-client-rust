@@ -16,7 +16,7 @@ export default {
     cancel: '取消',
     delete: '删除',
     query: '查询',
-    reload: '重载',
+    reload: '刷新',
     open: '打开',
     table: '表',
     setting: '设置',

@@ -42,34 +42,6 @@ const initConnection = async () => {
         prefix: () => h(NIcon, null, { default: () => h(CropSharp) }),
         isLeaf: false,
         children: undefined,
-        suffix: () =>
-            h(
-                NButton,
-                {
-                    size: 'small',
-                    quaternary: true,
-                    style: "height: 24px",
-                },
-                {
-                    default: () => h(
-                        NIcon,
-                        {
-                            size: 'small',
-                            onClick: async () => {
-                                if (data.value.length > 0) {
-                                    data.value[0].children = undefined
-                                    data.value[0].isLeaf = false
-                                    expandedKeys.value = []
-                                    expandedKeys.value = [`postgres:${props.conn.info.name}`]
-                                }
-                            }
-                        },
-                        {
-                            default: () => h(Reload)
-                        }
-                    )
-                }
-            ),
         type: 'connection'
     }]
     return k
@@ -94,7 +66,7 @@ const showCreateDatabase = ref(false)
 const expandedKeys = ref<string[]>([])
 
 const showContextmenu = ref(false)
-const optionsContextmenu = ref<DropdownOption[]>([])
+const optionsContextmenu = ref<any[]>([])
 const xPos = ref(0)
 const yPos = ref(0)
 const nodeProps = ({ option }: { option: any }) => {
@@ -438,6 +410,8 @@ const handleLoad = async (node: TreeOption) => {
                 databases.value.push(database as PgDatabase)
             })
             node.children = rangeDB(databases.value, node)
+        } else {
+            node.children = []
         }
     } else if (node.type == 'tables') {
         const res = await getTables({ conn: props.conn, database: node.value as string })
@@ -453,6 +427,8 @@ const handleLoad = async (node: TreeOption) => {
                 tbs.push(tables)
             })
             node.children = rangeTB(tbs, node)
+        } else {
+            node.children = []
         }
     } else if (node.type == 'table') {
         const res = await getColumns({ conn: props.conn, database: node.database as string, table: node.table as string })
@@ -468,6 +444,8 @@ const handleLoad = async (node: TreeOption) => {
                 clns.push(columns)
             })
             node.children = rangeCOL(clns, node.database as string, node.table as string)
+        } else {
+            node.children = []
         }
     } else {
         node.children = []
@@ -637,7 +615,7 @@ const sqlCreateDatabase = computed(() => {
         <n-dropdown trigger="manual" size="small" placement="bottom-start" :show="showContextmenu"
             :options="(optionsContextmenu as any)" :x="xPos" :y="yPos" @clickoutside="showContextmenu = false" />
         <n-tree block-line @update:expanded-keys="handleExpand" :on-load="handleLoad" :data="data" selectable
-            :node-props="nodeProps" :render-switcher-icon="renderSwitcherIcon" :expanded-keys="expandedKeys" />
+            :node-props="(nodeProps as any)" :render-switcher-icon="renderSwitcherIcon" :expanded-keys="expandedKeys" />
     </div>
 </template>
 
