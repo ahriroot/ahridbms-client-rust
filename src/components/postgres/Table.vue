@@ -453,44 +453,16 @@ const showNewRow = ref(false)
 const handleCreate = async () => {
     showNewRow.value = !showNewRow.value
     if (showNewRow.value) {
-        data.value.push([
-            {
-                "type": "BigInt",
-                "field": "id",
+        let newLine: any[] = []
+        struct.value.forEach((column: any) => {
+            newLine.push({
+                "type": column.typname,
+                "field": column.attname,
                 "value": null,
                 "old": NaN
-            },
-            {
-                "type": "VarChar",
-                "field": "username",
-                "value": null,
-                "old": NaN
-            },
-            {
-                "type": "VarChar",
-                "field": "password",
-                "value": null,
-                "old": NaN
-            },
-            {
-                "type": "Bool",
-                "field": "active",
-                "value": null,
-                "old": NaN
-            },
-            {
-                "type": "Timestamp",
-                "field": "last_login",
-                "value": null,
-                "old": NaN
-            },
-            {
-                "type": "SmallInt",
-                "field": "age",
-                "value": null,
-                "old": NaN
-            }
-        ])
+            })
+        })
+        data.value.push(newLine)
     } else {
         data.value.pop()
     }
