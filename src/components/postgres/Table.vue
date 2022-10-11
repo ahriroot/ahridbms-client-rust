@@ -290,6 +290,8 @@ const where = (values: any[]) => {
             wheres.push(`${pk} IS NULL`)
         } else {
             if ([
+                'varchar',
+                'text',
                 'VarChar',
                 'CharN',
                 'Text',
@@ -324,6 +326,8 @@ const handleUpdate = async () => {
                     changeData.push(`${column.field} = NULL`)
                 } else {
                     if ([
+                        'varchar',
+                        'text',
                         'VarChar',
                         'CharN',
                         'Text',
@@ -414,6 +418,8 @@ const handleInsert = async (row: any) => {
                 let type = column.type;
                 fields.push(column.field)
                 if ([
+                    'varchar',
+                    'text',
                     'VarChar',
                     'CharN',
                     'Text',

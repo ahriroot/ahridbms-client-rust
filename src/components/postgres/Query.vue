@@ -50,10 +50,9 @@ const handleSelect = async () => {
     })
     if (sqls) {
         results.value = []
-        sqls.forEach(async (sql_tmp: string) => {
-            let sql = sql_tmp.trim()
+        for (let index = 0; index < sqls.length; index++) {
+            let sql = sqls[index].trim()
             if (sql.toLowerCase().startsWith('select')) {
-                // showSelect.value = false
                 let res = await executeSelectSql({
                     conn: props.conn,
                     database: props.data.database,
@@ -68,7 +67,7 @@ const handleSelect = async () => {
             } else {
                 results.value.push({
                     id: nanoid(),
-                    type: 'select',
+                    type: 'other',
                     sql: sql,
                     data: ''
                 })
@@ -76,7 +75,7 @@ const handleSelect = async () => {
             if (results.value.length == 1) {
                 tab.value = results.value[0].id
             }
-        })
+        }
     }
 }
 </script>
@@ -99,6 +98,7 @@ const handleSelect = async () => {
             <n-tabs v-model:value="tab" type="card" closable tab-style="min-width: 80px;" size="small">
                 <n-tab-pane display-directive="show" v-for="(i, index) in results" :key="i.id" :tab="`Result ${index}`"
                     :name="i.id">
+                    {{i.sql}}
                     <TableViewVue v-if="i.type == 'select'" :data="i.data" />
                     <div v-else>{{i}}</div>
                 </n-tab-pane>
