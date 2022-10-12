@@ -14,6 +14,7 @@ export default {
     submit: 'Submit',
     confirm: 'Confirm',
     cancel: 'Cancel',
+    test: 'Test',
     delete: 'Delete',
     query: 'Query',
     reload: 'Reload',

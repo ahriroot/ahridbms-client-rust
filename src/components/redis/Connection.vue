@@ -8,6 +8,7 @@ import { OpenTabMesagae } from '@/types/Message'
 import { Connection } from '@/types/Connection'
 import { RedisConnect } from '@/types/redis'
 import { info } from '@/api/redis'
+import iconRedis from '@/components/icon/redis.vue'
 
 const props = defineProps<{
     conn: Connection<RedisConnect>
@@ -24,10 +25,10 @@ const renderSwitcherIcon = () => {
 const defaultExpandedKeys = ref([])
 
 const showContextmenu = ref(false)
-const optionsContextmenu = ref<DropdownOption[]>([])
+const optionsContextmenu = ref<any[]>([])
 const xPos = ref(0)
 const yPos = ref(0)
-const nodeProps = ({ option }: { option: any }) => {
+const nodeProps = ({ option }: { option: any }): any => {
     return {
         onClick() {
             if (option.children == undefined || option.children == null) {
@@ -99,6 +100,7 @@ const data = ref<TreeOption[]>([{
     key: `redis:${props.conn.info.name}`,
     label: props.conn.info.name,
     value: `redis:${props.conn.info.name}`,
+    prefix: () => h(NIcon, null, { default: () => h(iconRedis) }),
     children: rangeDB()
 }])
 

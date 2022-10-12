@@ -429,3 +429,23 @@ pub async fn execute_select_sql(
         Err(e) => Response::error(e.to_string()),
     }
 }
+
+#[tauri::command]
+pub async fn test(conn: Connection, database: String) -> Response<bool> {
+    let conn_str = &format!(
+        "postgres://{}{}{}@{}{}{}{}{}",
+        conn.info.user,
+        if !conn.info.pass.is_empty() { ":" } else { "" },
+        conn.info.pass,
+        conn.info.host,
+        if !conn.info.port.is_empty() { ":" } else { "" },
+        conn.info.port,
+        if !database.is_empty() { "/" } else { "" },
+        database
+    );
+    let res = tokio_postgres::connect(conn_str, NoTls).await;
+    match res {
+        Ok(_) => Response::ok(Res::Success(true)),
+        Err(e) => Response::error(e.to_string()),
+    }
+}

@@ -407,3 +407,23 @@ fn resolve(value: Vec<Value>) -> Vec<ExecValue> {
     }
     resp
 }
+
+#[tauri::command]
+pub async fn test(conn: Connection, db: String) -> Response<bool> {
+    let conn_str = format!(
+        "redis://{}:{}@{}:{}/{}",
+        "", conn.info.pass, conn.info.host, conn.info.port, db
+    );
+
+    let client_result = redis::Client::open(conn_str);
+    match client_result {
+        Ok(client) => {
+            let con_result = client.get_connection();
+            match con_result {
+                Ok(_) => Response::ok(Res::Success(true)),
+                Err(e) => Response::error(e.to_string()),
+            }
+        }
+        Err(e) => Response::error(e.to_string()),
+    }
+}

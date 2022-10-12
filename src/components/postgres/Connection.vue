@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { h, ref, computed, onBeforeMount } from 'vue'
 import {
-    NTree, NIcon, NButton, TreeOption, DropdownOption, NDropdown, NModal,
+    NTree, NIcon, NButton, TreeOption, NDropdown, NModal,
     NForm, NFormItem, NInput, NInputNumber, NCheckbox, NSelect, NSpin,
     useMessage, useDialog
 } from 'naive-ui'
-import { ServerSharp, ChevronForward, Reload, LayersSharp, ListSharp, CropSharp } from '@vicons/ionicons5'
+import { ServerSharp, ChevronForward, ListSharp } from '@vicons/ionicons5'
 import { nanoid } from 'nanoid'
 
 import { OpenTabMesagae } from '@/types/Message'
@@ -16,6 +16,8 @@ import { PgColumn, PgTable } from '@/types/postgres/Data'
 import { useIndexStore } from '@/store'
 import { useI18n } from 'vue-i18n'
 import { listen } from '@tauri-apps/api/event'
+import iconPostgres from '@/components/icon/postgres.vue'
+import iconTable from '@/components/icon/table.vue'
 
 
 window.$message = useMessage()
@@ -39,7 +41,7 @@ const initConnection = async () => {
         key: k,
         label: props.conn.info.name,
         value: `postgres:${props.conn.info.name}`,
-        prefix: () => h(NIcon, null, { default: () => h(CropSharp) }),
+        prefix: () => h(NIcon, null, { default: () => h(iconPostgres) }),
         isLeaf: false,
         children: undefined,
         type: 'connection'
@@ -366,7 +368,7 @@ const rangeTB = (dbs: PgTable[], node: any): TreeOption[] => {
             value: tb.tablename,
             isLeaf: false,
             children: undefined,
-            prefix: () => h(NIcon, null, { default: () => h(LayersSharp) }),
+            prefix: () => h(NIcon, null, { default: () => h(iconTable) }),
             database: node.database,
             type: 'table',
             table: tb.tablename

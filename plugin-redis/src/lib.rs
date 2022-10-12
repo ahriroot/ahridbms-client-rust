@@ -31,6 +31,7 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         api::hash::hset,
         api::hash::hdel,
         api::json::json_set,
+        api::test,
     ]);
     plugin.build()
 }

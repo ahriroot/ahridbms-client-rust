@@ -173,5 +173,15 @@ const executeSelectSql = async (params: ExecuteSelectSqlArgs, analysis: boolean 
     }
 }
 
-export { getDatabases, getTables, getColumns, getPrimaryKeys, getTableStruct, select, update, executeWithTransaction, executeSelectSql }
+interface TestArgs extends InvokeArgs {
+    conn: Connection<PostgresConnect>
+    database: string
+}
+
+const test = async (params: TestArgs): Promise<any> => {
+    let res = await request<any>('plugin:postgres|test', params)
+    return res
+}
+
+export { getDatabases, getTables, getColumns, getPrimaryKeys, getTableStruct, select, update, executeWithTransaction, executeSelectSql, test }
 

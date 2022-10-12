@@ -14,6 +14,7 @@ export default {
     submit: '提交',
     confirm: '确认',
     cancel: '取消',
+    test: '测试',
     delete: '删除',
     query: '查询',
     reload: '刷新',

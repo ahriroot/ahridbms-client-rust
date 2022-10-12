@@ -84,6 +84,16 @@ const exec = async (params: ExecArgs): Promise<IExecResult[]> => {
     return res
 }
 
+interface TestArgs extends InvokeArgs {
+    conn: any
+    db: string
+}
+
+const test = async (params: TestArgs): Promise<IExecResult[]> => {
+    let res = await request<any>('plugin:redis|test', params)
+    return res
+}
+
 export {
     info, keys, set, del, get, expire,
     reset,  // string
@@ -92,6 +102,7 @@ export {
     zadd, zrem,  // zset
     hset, hdel,  // hash
     json_set,  // json
-    exec
+    exec,
+    test
 }
 

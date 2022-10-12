@@ -22,13 +22,15 @@ import { checkUpdate, installUpdate } from '@tauri-apps/api/updater'
 import { relaunch } from '@tauri-apps/api/process'
 import tauriConfig from '../src-tauri/tauri.conf.json'
 import { useI18n } from 'vue-i18n'
+import { test as testRedis } from '@/api/redis'
+import { test as testPostgres } from '@/api/postgres'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏
 const showConn = ref<boolean>(false)  // 显示编辑连接窗口
 const dbTypeList = ref(DBType)  // 数据库列表
 const connList = ref<Connection<RedisConnect>[]>([])  // 数据库链接列表
-const dbConn = ref<string>('redis')  // 正在编辑的连接类型
+const dbConnType = ref<string>('redis')  // 正在编辑的连接类型
 const dbRedis = ref<RedisConnect>(RedisConnectInit)  // 默认 redis 数据库连接信息
 const dbPostgres = ref<PostgresConnect>(PostgresConnectInit)  // 默认 postgres 数据库连接信息
 const connComponents = shallowRef<IConnectComponents>(ConnectionComponents)  // 数据库连接组件
@@ -145,10 +147,61 @@ const renderLabel: SelectRenderLabel = (option) => {
     )
 }
 
+// 测试连接
+const loadingTest = ref<boolean>(false)
+const handleTestConn = async () => {
+    switch (dbConnType.value) {
+        case 'redis':
+            loadingTest.value = true
+            testRedis({
+                conn: {
+                    id: '',
+                    db_type: 'redis',
+                    info: JSON.parse(JSON.stringify(dbRedis.value))
+                },
+                db: '0'
+            }).then(() => {
+                window.$message.success('OK')
+            }).finally(() => {
+                loadingTest.value = false
+            })
+            break
+        case 'postgres':
+            loadingTest.value = true
+            testPostgres({
+                conn: {
+                    id: '',
+                    db_type: 'postgres',
+                    info: JSON.parse(JSON.stringify(dbPostgres.value))
+                },
+                database: dbPostgres.value.db
+            }).then((res) => {
+                if (!res.is_error) {
+                    window.$message.success('OK')
+                }
+            }).finally(() => {
+                loadingTest.value = false
+            })
+            break
+    }
+}
+
 // 添加连接
 const handleSubmitConn = async () => {
-    switch (dbConn.value) {
+    switch (dbConnType.value) {
         case 'redis':
+            if (dbRedis.value.name == '') {
+                window.$message.error('Name is required')
+                return
+            }
+            if (dbRedis.value.host == '') {
+                window.$message.error('Host is required')
+                return
+            }
+            if (dbRedis.value.port == '') {
+                window.$message.error('Port is required')
+                return
+            }
             connList.value.push({
                 id: nanoid(),
                 db_type: 'redis',
@@ -156,6 +209,18 @@ const handleSubmitConn = async () => {
             })
             break
         case 'postgres':
+            if (dbPostgres.value.name == '') {
+                window.$message.error('Name is required')
+                return
+            }
+            if (dbPostgres.value.host == '') {
+                window.$message.error('Host is required')
+                return
+            }
+            if (dbPostgres.value.port == '') {
+                window.$message.error('Port is required')
+                return
+            }
             connList.value.push({
                 id: nanoid(),
                 db_type: 'postgres',
@@ -346,8 +411,8 @@ const handleCloseTab = async (id: string) => {
                     <n-modal v-model:show="showConn" preset="card" style="width: 600px;" :title="t('connections')"
                         size="small">
                         <n-space vertical>
-                            <n-select :options="dbTypeList" :render-label="renderLabel" v-model:value="dbConn" />
-                            <n-card v-if="dbConn == 'redis'">
+                            <n-select :options="dbTypeList" :render-label="renderLabel" v-model:value="dbConnType" />
+                            <n-card v-if="dbConnType == 'redis'">
                                 <n-space vertical>
                                     <n-input v-model:value="dbRedis.name" type="text"
                                         :placeholder="t('connection.name')" />
@@ -363,26 +428,36 @@ const handleCloseTab = async (id: string) => {
                                         <n-input v-model:value="dbRedis.pass" type="password"
                                             :placeholder="t('connection.pass')" />
                                     </n-space>
-                                    <n-input v-model:value="dbRedis.index" type="text" placeholder="DB Index" />
+                                    <n-input v-model:value="dbRedis.index" type="text"
+                                        :placeholder="t('connection.db')" />
                                 </n-space>
                             </n-card>
-                            <n-card v-else-if="dbConn == 'postgres'">
+                            <n-card v-else-if="dbConnType == 'postgres'">
                                 <n-space vertical>
-                                    <n-input v-model:value="dbPostgres.name" type="text" placeholder="Name" />
+                                    <n-input v-model:value="dbPostgres.name" type="text"
+                                        :placeholder="t('connection.name')" />
                                     <n-space>
-                                        <n-input v-model:value="dbPostgres.host" type="text" placeholder="Host" />
-                                        <n-input v-model:value="dbPostgres.port" type="text" placeholder="Port" />
+                                        <n-input v-model:value="dbPostgres.host" type="text"
+                                            :placeholder="t('connection.host')" />
+                                        <n-input v-model:value="dbPostgres.port" type="text"
+                                            :placeholder="t('connection.port')" />
                                     </n-space>
                                     <n-space>
-                                        <n-input v-model:value="dbPostgres.user" type="text" placeholder="User" />
-                                        <n-input v-model:value="dbPostgres.pass" type="password" placeholder="Pass" />
+                                        <n-input v-model:value="dbPostgres.user" type="text"
+                                            :placeholder="t('connection.user')" />
+                                        <n-input v-model:value="dbPostgres.pass" type="password"
+                                            :placeholder="t('connection.pass')" />
                                     </n-space>
-                                    <n-input v-model:value="dbPostgres.db" type="text" placeholder="DB Name" />
+                                    <n-input v-model:value="dbPostgres.db" type="text"
+                                        :placeholder="t('connection.db')" />
                                 </n-space>
                             </n-card>
                             <n-card v-else>
                             </n-card>
                             <n-space>
+                                <n-button @click="handleTestConn" :loading="loadingTest" style="margin-top: 12px;">
+                                    {{ t('test') }}
+                                </n-button>
                                 <n-button @click="handleSubmitConn" style="margin-top: 12px;">
                                     {{ t('confirm') }}
                                 </n-button>
