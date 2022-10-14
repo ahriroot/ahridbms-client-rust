@@ -4,9 +4,14 @@
 
 [Code Repository](https://git.ahriknow.com/ahriknow/ahridbms-client-rust)
 
-----
-Welcome to our new homepage [https://dbms.ahriknow.com/](https://dbms.ahriknow.com/)
-----
+# Download
+#### [Welcome to our new homepage https://dbms.ahriknow.com/](https://dbms.ahriknow.com/)
+
+#### Generate and show SHA256
+```cmd
+certutil -hashfile ${filepath} SHA256
+```
+# shortcut
 
 <div align=center>
 <img src="./screenshot/0.png" style="width: 200px; height: 120px">
@@ -20,10 +25,17 @@ Welcome to our new homepage [https://dbms.ahriknow.com/](https://dbms.ahriknow.c
 <div align=center>
 <img src="./screenshot/3.png" style="width: 500px; height: 300px">
 </div>
+<div align=center>
+<img src="./screenshot/4.png" style="width: 500px; height: 300px">
+</div>
+<div align=center>
+<img src="./screenshot/5.png" style="width: 500px; height: 300px">
+</div>
 
 # Features
 1. Support multiple databases (continuously updated...)
    - Redis
+   - Postgres
 2. Lightweight
 3. Syntax highlighting
 4. Syntax tips
@@ -44,8 +56,8 @@ Welcome to our new homepage [https://dbms.ahriknow.com/](https://dbms.ahriknow.c
 1. Support more languages
 2. Support more databases
    - [x] Redis
+   - [x] PostgreSQL
    - [ ] MongoDB
-   - [ ] PostgreSQL
    - [ ] MySQL
    - [ ] (Other undetermined...)
 3. More operations for database

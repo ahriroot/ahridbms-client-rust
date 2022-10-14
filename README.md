@@ -4,9 +4,14 @@
 
 [代码仓库](https://git.ahriknow.com/ahriknow/ahridbms-client-rust)
 
-----
-欢迎访问我们的网站 [https://dbms.ahriknow.com/](https://dbms.ahriknow.com/)
-----
+# 下载
+#### [欢迎访问我们的网站 https://dbms.ahriknow.com/](https://dbms.ahriknow.com/)
+
+#### 生成并显示文件 SHA256
+```cmd
+certutil -hashfile ${文件路径} SHA256
+```
+# 截图
 
 <div align=center>
 <img src="./screenshot/0.png" style="width: 200px; height: 120px">
@@ -20,10 +25,17 @@
 <div align=center>
 <img src="./screenshot/3.png" style="width: 500px; height: 300px">
 </div>
+<div align=center>
+<img src="./screenshot/4.png" style="width: 500px; height: 300px">
+</div>
+<div align=center>
+<img src="./screenshot/5.png" style="width: 500px; height: 300px">
+</div>
 
 # 功能特色
 1. 支持多种数据库 (持续更新中...)
-   1. Redis
+   - Redis
+   - Postgres
 2. 轻量级
 3. 语法高亮
 4. 语法提示
@@ -44,8 +56,8 @@
 1. 支持更多语言
 2. 支持更多数据库
    - [x] Redis
+   - [x] PostgreSQL
    - [ ] MongoDB
-   - [ ] PostgreSQL
    - [ ] MySQL
    - [ ] (其他未确定...)
 3. 数据库更多操作

@@ -43,7 +43,10 @@
                 "digestAlgorithm": "sha256",
                 "timestampUrl": "",
                 "wix": {
-                    "language": "zh-CN",
+                    "language": [
+                        "zh-CN",
+                        "en-US"
+                    ],
                     "license": "LICENSE.rtf"
                 }
             },
