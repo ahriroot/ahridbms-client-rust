@@ -1,7 +1,7 @@
 {
     "$schema": "../node_modules/@tauri-apps/cli/schema.json",
     "build": {
-        "beforeBuildCommand": "yarn build",
+        "beforeBuildCommand": "",
         "beforeDevCommand": "yarn dev",
         "devPath": "http://localhost:5173",
         "distDir": "../dist"
@@ -43,10 +43,7 @@
                 "digestAlgorithm": "sha256",
                 "timestampUrl": "",
                 "wix": {
-                    "language": [
-                        "zh-CN",
-                        "en-US"
-                    ],
+                    "language": "zh-CN",
                     "license": "LICENSE.rtf"
                 }
             },
