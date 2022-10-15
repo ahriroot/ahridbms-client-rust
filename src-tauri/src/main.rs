@@ -20,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut app = tauri::Builder::default();
 
     // 循环 drives
-    let drives = vec!["test", "redis", "postgres"];
+    let drives = vec!["test", "redis", "postgres", "mongodb"];
     for drive in drives {
         match drive {
             "test" => {
@@ -34,6 +34,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "postgres" => {
                 use plugin_postgres;
                 app = app.plugin(plugin_postgres::init());
+            }
+            "mongodb" => {
+                use plugin_mongodb;
+                app = app.plugin(plugin_mongodb::init());
             }
             _ => {}
         }

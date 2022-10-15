@@ -10,13 +10,14 @@ import { invoke } from '@tauri-apps/api/tauri'
 import { ArrowForward, ServerSharp, Add, Settings } from '@vicons/ionicons5'
 import { nanoid } from 'nanoid'  // 唯一 id 生成器
 
-import { DBType, ConnectionComponents, RedisConnectInit, TabComponents, PostgresConnectInit, InfoComponents } from '@/data/data'
+import { DBType, ConnectionComponents, RedisConnectInit, TabComponents, PostgresConnectInit, InfoComponents, MongodbConnectInit } from '@/data/data'
 import { IConnectComponents, IInfoComponents, ITabComponents } from '@/types/data'
 import { Connection } from '@/types/Connection'
 import { getConnections, saveConnections, getTabs, saveTabs } from '@/utils/storage'
 import { OpenTabMesagae } from '@/types/Message'
 import { RedisConnect } from '@/types/redis'
 import { PostgresConnect } from '@/types/postgres'
+import { MongodbConnect } from './types/mongodb'
 import { useIndexStore } from '@/store'
 import { checkUpdate, installUpdate } from '@tauri-apps/api/updater'
 import { relaunch } from '@tauri-apps/api/process'
@@ -24,15 +25,17 @@ import tauriConfig from '../src-tauri/tauri.conf.json'
 import { useI18n } from 'vue-i18n'
 import { test as testRedis } from '@/api/redis'
 import { test as testPostgres } from '@/api/postgres'
+import { test as testMongodb } from '@/api/mongodb'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏
 const showConn = ref<boolean>(false)  // 显示编辑连接窗口
-const dbTypeList = ref(DBType)  // 数据库列表
+const dbTypeList = shallowRef(DBType)  // 数据库列表
 const connList = ref<Connection<RedisConnect>[]>([])  // 数据库链接列表
 const dbConnType = ref<string>('redis')  // 正在编辑的连接类型
 const dbRedis = ref<RedisConnect>(RedisConnectInit)  // 默认 redis 数据库连接信息
 const dbPostgres = ref<PostgresConnect>(PostgresConnectInit)  // 默认 postgres 数据库连接信息
+const dbMongodb = ref<MongodbConnect>(MongodbConnectInit)  // 默认 postgres 数据库连接信息
 const connComponents = shallowRef<IConnectComponents>(ConnectionComponents)  // 数据库连接组件
 
 // tab 组件
@@ -141,7 +144,7 @@ const renderLabel: SelectRenderLabel = (option) => {
     return h(
         'div', { style: { display: 'flex', alignItems: 'center' } },
         [
-            h(NIcon, { size: 20 }, { default: () => h(ServerSharp) }),
+            h(NIcon, { size: 20 }, { default: () => h(option.icon as any) }),
             h('div', { style: { marginLeft: '12px', padding: '4px 0' } }, h('div', null, [option.label as string]))
         ]
     )
@@ -179,6 +182,21 @@ const handleTestConn = async () => {
                 if (!res.is_error) {
                     window.$message.success('OK')
                 }
+            }).finally(() => {
+                loadingTest.value = false
+            })
+            break
+        case 'mongodb':
+            loadingTest.value = true
+            testMongodb({
+                conn: {
+                    id: '',
+                    db_type: 'mongodb',
+                    info: JSON.parse(JSON.stringify(dbMongodb.value))
+                },
+                database: dbMongodb.value.db
+            }).then((res) => {
+                window.$message.success("OK")
             }).finally(() => {
                 loadingTest.value = false
             })
@@ -452,6 +470,26 @@ const handleCloseTab = async (id: string) => {
                                         :placeholder="t('connection.db')" />
                                 </n-space>
                             </n-card>
+                            <n-card v-else-if="dbConnType == 'mongodb'">
+                                <n-space vertical>
+                                    <n-input v-model:value="dbMongodb.name" type="text"
+                                        :placeholder="t('connection.name')" />
+                                    <n-space>
+                                        <n-input v-model:value="dbMongodb.host" type="text"
+                                            :placeholder="t('connection.host')" />
+                                        <n-input v-model:value="dbMongodb.port" type="text"
+                                            :placeholder="t('connection.port')" />
+                                    </n-space>
+                                    <n-space>
+                                        <n-input v-model:value="dbMongodb.user" type="text"
+                                            :placeholder="t('connection.user')" />
+                                        <n-input v-model:value="dbMongodb.pass" type="password"
+                                            :placeholder="t('connection.pass')" />
+                                    </n-space>
+                                    <n-input v-model:value="dbMongodb.db" type="text"
+                                        :placeholder="t('connection.db')" />
+                                </n-space>
+                            </n-card>
                             <n-card v-else>
                             </n-card>
                             <n-space>
@@ -516,7 +554,7 @@ const handleCloseTab = async (id: string) => {
                                 <section class="workspace">
                                     <n-tabs v-model:value="tab" @update:value="handleTabChanged" type="card" closable
                                         tab-style="min-width: 80px;" @close="handleClose" size="small">
-                                        <n-tab-pane display-directive="if" v-for="i in tabs" :key="i.id"
+                                        <n-tab-pane display-directive="show" v-for="i in tabs" :key="i.id"
                                             :tab="i.data.title" :name="i.id">
                                             <component :key="i.id"
                                                 :is="tabComponents[`${i.conn.db_type}:${i.tab_type}`]" :conn="i.conn"

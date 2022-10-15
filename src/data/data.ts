@@ -8,14 +8,25 @@ import RedisTabVue from '@/components/redis/TabDb.vue'
 import RedisQueryVue from '@/components/redis/TabQuery.vue'
 import RedisInfoVue from '@/components/redis/Info.vue'
 
+import iconPostgres from '@/components/icon/postgres.vue'
+import iconRedis from '@/components/icon/redis.vue'
+import iconMongodb from '@/components/icon/mongodb.vue'
+
 const DBType = [
     {
         label: 'Redis',
-        value: 'redis'
+        value: 'redis',
+        icon: iconRedis
     },
     {
         label: 'Postgres',
-        value: 'postgres'
+        value: 'postgres',
+        icon: iconPostgres
+    },
+    {
+        label: 'Mongodb',
+        value: 'mongodb',
+        icon: iconMongodb
     }
 ]
 
@@ -54,6 +65,15 @@ const PostgresConnectInit = {
     db: ''
 }
 
+const MongodbConnectInit = {
+    name: '',
+    host: 'localhost',
+    port: '27017',
+    user: '',
+    pass: '',
+    db: ''
+}
+
 const QuerySuggestionsOfRedis = async (kind: any, snippet: any) => ([
     {
         label: "GET",
@@ -86,6 +106,6 @@ const QuerySuggestionsOfRedis = async (kind: any, snippet: any) => ([
 ])
 
 export {
-    DBType, ConnectionComponents, TabComponents, InfoComponents, RedisConnectInit, PostgresConnectInit,
+    DBType, ConnectionComponents, TabComponents, InfoComponents, RedisConnectInit, PostgresConnectInit, MongodbConnectInit,
     QuerySuggestionsOfRedis
 }

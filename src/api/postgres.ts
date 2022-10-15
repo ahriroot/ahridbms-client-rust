@@ -2,7 +2,6 @@ import { invoke, InvokeArgs } from "@tauri-apps/api/tauri"
 import { Response } from '@/types/redis'
 import { Connection } from "@/types/Connection"
 import { PostgresConnect } from "@/types/postgres"
-import { isReactive } from "vue"
 
 
 interface GetDatabasesArgs extends InvokeArgs {

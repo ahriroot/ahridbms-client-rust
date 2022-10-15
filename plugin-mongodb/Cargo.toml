@@ -1,0 +1,18 @@
+[package]
+name = "plugin-mongodb"
+version = "0.0.0"
+authors = ["ahriknow"]
+description = "plugin of ahridbms for mongodb"
+edition = "2021"
+rust-version = "1.57"
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+tauri = { version = "1.0.5" }
+tokio = { version = "1.20.1", features = ["full"] }
+mongodb = "2.3.0"
+futures-util = "0.3.24"
+
+[dev-dependencies]
+tokio-test = "*"
