@@ -7,7 +7,7 @@ import {
     NCheckbox, zhCN, enUS
 } from 'naive-ui'
 import { invoke } from '@tauri-apps/api/tauri'
-import { ArrowForward, ServerSharp, Add, Settings } from '@vicons/ionicons5'
+import { ArrowForward, Add, Settings } from '@vicons/ionicons5'
 import { nanoid } from 'nanoid'  // 唯一 id 生成器
 
 import { DBType, ConnectionComponents, RedisConnectInit, TabComponents, PostgresConnectInit, InfoComponents, MongodbConnectInit } from '@/data/data'
