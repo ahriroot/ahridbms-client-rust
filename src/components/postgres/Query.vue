@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import TableViewVue from '@/components/postgres/TableView.vue'
-import { Connection } from '@/types/Connection';
-import { PostgresConnect } from '@/types/postgres';
+import { Connection } from '@/types/Connection'
+import { PostgresConnect } from '@/types/postgres'
 import EditorVue from '@/components/Editor.vue'
 import { ref, onBeforeMount } from 'vue'
-import { executeSelectSql } from '@/api/postgres';
+import { executeSelectSql } from '@/api/postgres'
 import { NTabs, NTabPane, NButton, NIcon } from 'naive-ui'
 import { Checkmark } from '@vicons/ionicons5'
 import { nanoid } from 'nanoid'

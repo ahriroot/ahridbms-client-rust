@@ -20,6 +20,7 @@ export default {
     reload: 'Reload',
     open: 'Open',
     table: 'Tables',
+    collection: 'Collections',
     setting: 'Setting',
     column: 'Columns',
     index: 'Indexes',

@@ -20,6 +20,7 @@ export default {
     reload: '刷新',
     open: '打开',
     table: '表',
+    collection: '集合',
     setting: '设置',
     column: '列',
     index: '索引',

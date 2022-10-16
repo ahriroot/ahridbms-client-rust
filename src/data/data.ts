@@ -1,3 +1,6 @@
+import MongodbConnect from '@/components/mongodb/Connection.vue'
+import MongodbCollection from '@/components/mongodb/Collection.vue'
+
 import PostgresConnect from '@/components/postgres/Connection.vue'
 import PostgresTableVue from '@/components/postgres/Table.vue'
 import PostgresQueryVue from '@/components/postgres/Query.vue'
@@ -33,6 +36,7 @@ const DBType = [
 const ConnectionComponents = {
     'redis': RedisConnect,
     'postgres': PostgresConnect,
+    'mongodb': MongodbConnect,
 }
 
 const TabComponents = {
@@ -41,6 +45,7 @@ const TabComponents = {
     'postgres:table': PostgresTableVue,
     'postgres:query': PostgresQueryVue,
     'postgres:create_table': PostgresCreateTableVue,
+    'mongodb:collection': MongodbCollection,
 }
 
 const InfoComponents = {

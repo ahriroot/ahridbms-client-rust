@@ -66,11 +66,11 @@ onMounted(() => {
         monacoEditor.value = monaco.editor.create(editorRef.value, {
             mouseWheelZoom: true,
             value: value,
-            readOnly: false,
+            readOnly: true,
             theme: 'vs-dark',
             selectOnLineNumbers: true,
             language: language,
-            automaticLayout: true
+            automaticLayout: true,
         })
         // monacoEditor.value?.trigger('format', 'editor.action.formatDocument')
         setTimeout(() => {

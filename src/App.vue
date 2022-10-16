@@ -245,6 +245,25 @@ const handleSubmitConn = async () => {
                 info: JSON.parse(JSON.stringify(dbPostgres.value))
             })
             break
+        case 'mongodb':
+            if (dbMongodb.value.name == '') {
+                window.$message.error('Name is required')
+                return
+            }
+            if (dbMongodb.value.host == '') {
+                window.$message.error('Host is required')
+                return
+            }
+            if (dbMongodb.value.port == '') {
+                window.$message.error('Port is required')
+                return
+            }
+            connList.value.push({
+                id: nanoid(),
+                db_type: 'mongodb',
+                info: JSON.parse(JSON.stringify(dbMongodb.value))
+            })
+            break
     }
     await saveConnections(connList.value)
     showConn.value = false
@@ -271,6 +290,12 @@ const handleOpenTab = (message: OpenTabMesagae<any>) => {
                 saveTabs(tabs.value)
                 break
             case 'postgres':
+                tabs.value.push(message)
+                tab.value = message.id
+                handleTabChanged(tab.value)
+                saveTabs(tabs.value)
+                break
+            case 'mongodb':
                 tabs.value.push(message)
                 tab.value = message.id
                 handleTabChanged(tab.value)

@@ -72,12 +72,6 @@ export interface Response<T> {
     data: Success<T> | Success<T> | Success<T>
 }
 
-export interface ResponseMongodb<T> {
-    code: number
-    msg: string
-    data: T
-}
-
 export interface INewFieldValue {
     string: {
         key: string
