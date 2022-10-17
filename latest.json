@@ -1,11 +1,11 @@
 {
-    "version": "v0.1.0",
-    "notes": "New version 0.1.0",
-    "pub_date": "2022-10-14T12:00:00Z",
+    "version": "v0.2.0",
+    "notes": "New version 0.2.0",
+    "pub_date": "2022-10-17T12:00:00Z",
     "platforms": {
         "windows-x86_64": {
             "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTVlliN1g0Z0d5dWdxU3l4ZGNSQkQwbEFvNEZON3ZJVDcxSHIrU0JFYXdpcDZtV2M1VXh3L2tlTkJFVW5IZjFmUUJReUd1VktBa0hXVzFUdHZLYkplaGJ0c2d5SExTdUFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNjY1NzI3MTE0CWZpbGU6QWhyaURCTVNfMC4xLjBfeDY0X3poLUNOLm1zaS56aXAKMlRWaDBvSDA4WXVpb0ZDVmJiUHJQVEVzZ3NVZ1ZwWVpabGlNQmNDVUQyYUZZbWZMSi95a3NiUFRxQkVzVDVIZXBSTEhHc0tCRnRuMHkzYm9nN1VJQXc9PQo=",
-            "url": "https://installer.service.ahriknow.com/ahridbms/rust/releases/v0.1.0/msi/AhriDBMS_0.1.0_x64_zh-CN.msi.zip"
+            "url": "https://installer.service.ahriknow.com/ahridbms/rust/releases/v0.2.0/msi/AhriDBMS_0.2.0_x64_zh-CN.msi.zip"
         }
     }
 }

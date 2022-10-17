@@ -36,12 +36,14 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
         for column in columns {
             let name = column.name();
             let typ = column.type_();
+            let typename = typ.name();
 
             match *typ {
                 Type::BOOL => {
                     let data: Option<bool> = row.get(name);
                     result_row.push(Field::Bool(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: data,
                     }));
                 }
@@ -49,6 +51,7 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                     let data: Option<i8> = row.get(name);
                     result_row.push(Field::Char(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: data,
                     }));
                 }
@@ -56,6 +59,7 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                     let data: Option<String> = row.get(name);
                     result_row.push(Field::VarChar(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: data,
                     }));
                 }
@@ -63,6 +67,7 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                     let data: Option<i16> = row.get(name);
                     result_row.push(Field::SmallInt(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: data,
                     }));
                 }
@@ -70,6 +75,7 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                     let data: Option<i32> = row.get(name);
                     result_row.push(Field::Int(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: data,
                     }));
                 }
@@ -77,6 +83,7 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                     let data: Option<i64> = row.get(name);
                     result_row.push(Field::BigInt(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: data,
                     }));
                 }
@@ -84,6 +91,7 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                     let data: Option<String> = row.get(name);
                     result_row.push(Field::Text(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: data,
                     }));
                 }
@@ -91,6 +99,7 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                     let data: Option<u32> = row.get(name);
                     result_row.push(Field::Oid(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: data,
                     }));
                 }
@@ -98,6 +107,7 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                     let data: Option<f32> = row.get(name);
                     result_row.push(Field::Real(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: data,
                     }));
                 }
@@ -105,6 +115,7 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                     let data: Option<f64> = row.get(name);
                     result_row.push(Field::Double(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: data,
                     }));
                 }
@@ -114,11 +125,13 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                         let timestamp = data.duration_since(UNIX_EPOCH).unwrap().as_secs();
                         result_row.push(Field::TimestampTZ(KV {
                             key: name.to_string(),
+                            typename: typename.to_string(),
                             value: Some(timestamp),
                         }));
                     } else {
                         result_row.push(Field::TimestampTZ(KV {
                             key: name.to_string(),
+                            typename: typename.to_string(),
                             value: None,
                         }));
                     }
@@ -129,11 +142,13 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                         let timestamp = data.duration_since(UNIX_EPOCH).unwrap().as_secs();
                         result_row.push(Field::Timestamp(KV {
                             key: name.to_string(),
+                            typename: typename.to_string(),
                             value: Some(timestamp),
                         }));
                     } else {
                         result_row.push(Field::Timestamp(KV {
                             key: name.to_string(),
+                            typename: typename.to_string(),
                             value: None,
                         }));
                     }
@@ -142,24 +157,28 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                     let data: Option<String> = row.get(name);
                     result_row.push(Field::Name(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: data,
                     }));
                 }
                 Type::XID => {
                     result_row.push(Field::Ignore(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: None,
                     }));
                 }
                 Type::ACLITEM => {
                     result_row.push(Field::Ignore(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: None,
                     }));
                 }
                 Type::ACLITEM_ARRAY => {
                     result_row.push(Field::Ignore(KV {
                         key: name.to_string(),
+                        typename: typename.to_string(),
                         value: None,
                     }));
                 }

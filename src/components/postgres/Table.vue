@@ -9,68 +9,12 @@ import {
 import { Trash, Add, Checkmark } from '@vicons/ionicons5'
 import useClipboard from "vue-clipboard3"
 
-import BigIntVue from '@/components/postgres/cells/BigInt.vue'
-import VarCharVue from '@/components/postgres/cells/VarChar.vue'
-import BoolVue from '@/components/postgres/cells/Bool.vue'
-import TimestampVue from '@/components/postgres/cells/Timestamp.vue'
 import { useIndexStore } from '@/store'
 import { useI18n } from 'vue-i18n'
+import { FieldComponents } from '@/data/postgres'
 
 
-const typeRender = shallowRef<{ [key: string]: any }>({
-    int: {
-        width: 160,
-        component: BigIntVue
-    },
-    int2: {
-        width: 120,
-        component: BigIntVue
-    },
-    int4: {
-        width: 120,
-        component: BigIntVue
-    },
-    int8: {
-        width: 160,
-        component: BigIntVue
-    },
-    serial: {
-        width: 160,
-        component: BigIntVue
-    },
-    serial2: {
-        width: 160,
-        component: BigIntVue
-    },
-    serial4: {
-        width: 160,
-        component: BigIntVue
-    },
-    serial8: {
-        width: 160,
-        component: BigIntVue
-    },
-    varchar: {
-        width: undefined,
-        component: VarCharVue
-    },
-    name: {
-        width: 200,
-        component: VarCharVue
-    },
-    bool: {
-        width: 90,
-        component: BoolVue
-    },
-    timestamp: {
-        width: 200,
-        component: TimestampVue
-    },
-    timestamptz: {
-        width: 200,
-        component: TimestampVue
-    }
-})
+const typeRender = shallowRef<{ [key: string]: any }>(FieldComponents)
 
 const props = defineProps<{
     conn: Connection<PostgresConnect>
@@ -289,22 +233,9 @@ const where = (values: any[]) => {
         if (tmp.old === null) {
             wheres.push(`${pk} IS NULL`)
         } else {
-            if ([
-                'varchar',
-                'text',
-                'VarChar',
-                'CharN',
-                'Text',
-                'Citext',
-                'Name',
-                'Unknown',
-                'Json',
-                'Xml',
-                'Aclitem',
-                'Ignore'
-            ].includes(type)) {
+            if (['char', 'varchar', 'text'].includes(type)) {
                 wheres.push(`${pk} = '${tmp.old}'`)
-            } else if (type == 'TimestampTZ' || type == 'Timestamp') {
+            } else if (['time', 'timetz', 'date', 'timestamptz', 'timestamp', 'interval'].includes(type)) {
                 wheres.push(`${pk} = '${format(tmp.old)}'`)
             } else {
                 wheres.push(`${pk} = ${tmp.old}`)
@@ -325,22 +256,9 @@ const handleUpdate = async () => {
                 if (column.value === null) {
                     changeData.push(`${column.field} = NULL`)
                 } else {
-                    if ([
-                        'varchar',
-                        'text',
-                        'VarChar',
-                        'CharN',
-                        'Text',
-                        'Citext',
-                        'Name',
-                        'Unknown',
-                        'Json',
-                        'Xml',
-                        'Aclitem',
-                        'Ignore'
-                    ].includes(type)) {
+                    if (['char', 'varchar', 'text'].includes(type)) {
                         changeData.push(`${column.field} = '${column.value}'`)
-                    } else if (type == 'TimestampTZ' || type == 'Timestamp') {
+                    } else if (['time', 'timetz', 'date', 'timestamptz', 'timestamp', 'interval'].includes(type)) {
                         changeData.push(`${column.field} = '${format(column.value)}'`)
                     } else {
                         changeData.push(`${column.field} = ${column.value}`)
@@ -405,8 +323,6 @@ const handleDelete = async (row: any) => {
             }
         })
     }
-
-
 }
 
 const handleInsert = async (row: any) => {
@@ -417,22 +333,9 @@ const handleInsert = async (row: any) => {
             if (column.value !== null) {
                 let type = column.type;
                 fields.push(column.field)
-                if ([
-                    'varchar',
-                    'text',
-                    'VarChar',
-                    'CharN',
-                    'Text',
-                    'Citext',
-                    'Name',
-                    'Unknown',
-                    'Json',
-                    'Xml',
-                    'Aclitem',
-                    'Ignore'
-                ].includes(type)) {
+                if (['char', 'varchar', 'text'].includes(type)) {
                     values.push(`'${column.value}'`)
-                } else if (type == 'TimestampTZ' || type == 'Timestamp') {
+                } else if (['time', 'timetz', 'date', 'timestamptz', 'timestamp', 'interval'].includes(type)) {
                     values.push(`'${format(column.value)}'`)
                 } else {
                     values.push(`${column.value}`)

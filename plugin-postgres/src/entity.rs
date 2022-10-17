@@ -41,6 +41,7 @@ impl<T> Response<T> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct KV<T> {
     pub key: String,
+    pub typename: String,
     pub value: Option<T>,
 }
 

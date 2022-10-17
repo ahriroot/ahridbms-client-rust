@@ -128,7 +128,7 @@ const select = async (params: SelectArgs): Promise<{
         rowData.forEach((column: any) => {
             for (let k in column) {
                 row.push({
-                    type: k,
+                    type: column[k].typename,
                     field: column[k].key,
                     value: column[k].value,
                     old: column[k].value

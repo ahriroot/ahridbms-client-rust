@@ -1626,9 +1626,8 @@ const handlePattern = async () => {
                                                 v-model:value="editHashItem.value" placeholder="Value" size="small"
                                                 @keyup.enter.native="handleEditHashValue" />
                                             <div v-show="editHashItem.field != i.field"
-                                                @click="editHashItem.field = i.field; editHashItem.value = i.value">{{
-                                                i.value
-                                                }}
+                                                @click="editHashItem.field = i.field; editHashItem.value = i.value">
+                                                {{ i.value }}
                                             </div>
                                         </td>
                                         <td class="hash-opera">
