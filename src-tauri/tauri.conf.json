@@ -8,7 +8,7 @@
     },
     "package": {
         "productName": "AhriDBMS",
-        "version": "0.2.0"
+        "version": "0.1.0"
     },
     "tauri": {
         "allowlist": {
@@ -43,10 +43,7 @@
                 "digestAlgorithm": "sha256",
                 "timestampUrl": "",
                 "wix": {
-                    "language": [
-                        "zh-CN",
-                        "en-US"
-                    ],
+                    "language": "zh-CN",
                     "license": "LICENSE.rtf"
                 }
             },
@@ -66,7 +63,7 @@
                 "https://installer.service.ahriknow.com/ahridbms/rust/latest.json"
             ],
             "dialog": false,
-            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJBQjIwMUUyRDdCRTYxOTUKUldTVlliN1g0Z0d5dXNVam1kMXZxRkQyMkRiZjhqOE9zN1ErR3BmdnhQSUxBYWd6OXJuSzBqQ0oK"
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVERTE0RjYxQzI3NDA1M0QKUldROUJYVENZVS9oWGFtOG5xWlBRYUlaMGtaelgyNUVCQ3RXZ0RqMEUxdXZxd3B4Sy9xTk95NWEK"
         },
         "windows": [
             {
