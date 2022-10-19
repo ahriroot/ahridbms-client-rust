@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, ref, computed, onBeforeMount } from 'vue'
+import { h, ref, computed, onBeforeMount, watch } from 'vue'
 import {
     NTree, NIcon, NButton, TreeOption, NDropdown, NModal,
     NForm, NFormItem, NInput, NInputNumber, NCheckbox, NSelect, NSpin,
@@ -28,7 +28,14 @@ const props = defineProps<{
 const emits = defineEmits<{
     (e: 'handleOpenTab', val: OpenTabMesagae<any>): void
     (e: 'handleDeleteConnection', id: string): void
+    (e: 'handleEditConnection', id: string): void
 }>()
+
+watch(() => props.conn.info, async (val) => {
+    if (val) {
+        await initConnection()
+    }
+})
 
 const { t } = useI18n()
 const databases = ref<PgDatabase[]>([])
@@ -79,6 +86,16 @@ const nodeProps = ({ option }: { option: any }) => {
             // }
         },
         onDblclick() {
+            if (option.type === 'table') {
+                emits('handleOpenTab', {
+                    id: nanoid(), conn: props.conn, tab_type: 'table', data: {
+                        title: `${option.table}.${option.database}@${props.conn.info.name}`,
+                        database: option.database,
+                        table: option.table
+                    }
+                })
+                showContextmenu.value = false
+            }
         },
         onContextmenu(e: MouseEvent): void {
             e.preventDefault()
@@ -102,6 +119,17 @@ const nodeProps = ({ option }: { option: any }) => {
                                         }
                                     })
                                 }
+                                showContextmenu.value = false
+                            }
+                        }
+                    }, {
+                        label: t('edit'),
+                        key: 'edit',
+                        props: {
+                            onClick: async () => {
+                                emits('handleEditConnection', props.conn.id)
+                                expandedKeys.value = []
+                                await initConnection()
                                 showContextmenu.value = false
                             }
                         }

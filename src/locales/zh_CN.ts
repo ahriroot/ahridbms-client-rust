@@ -18,6 +18,7 @@ export default {
     delete: '删除',
     query: '查询',
     reload: '刷新',
+    edit: '编辑',
     open: '打开',
     table: '表',
     collection: '集合',

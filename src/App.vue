@@ -204,73 +204,96 @@ const handleTestConn = async () => {
     }
 }
 
-// 添加连接
 const handleSubmitConn = async () => {
-    switch (dbConnType.value) {
-        case 'redis':
-            if (dbRedis.value.name == '') {
-                window.$message.error('Name is required')
-                return
+    if (isEdit.value) {
+        // 编辑连接
+        let conn = connList.value.find(item => item.id == editConnId.value)
+        if (conn) {
+            switch (conn.db_type) {
+                case 'redis':
+                    conn.info = JSON.parse(JSON.stringify(dbRedis.value))
+                    break
+                case 'postgres':
+                    conn.info = JSON.parse(JSON.stringify(dbPostgres.value))
+                    break
+                case 'mongodb':
+                    conn.info = JSON.parse(JSON.stringify(dbMongodb.value))
+                    break
             }
-            if (dbRedis.value.host == '') {
-                window.$message.error('Host is required')
-                return
-            }
-            if (dbRedis.value.port == '') {
-                window.$message.error('Port is required')
-                return
-            }
-            connList.value.push({
-                id: nanoid(),
-                db_type: 'redis',
-                info: JSON.parse(JSON.stringify(dbRedis.value))
-            })
-            break
-        case 'postgres':
-            if (dbPostgres.value.name == '') {
-                window.$message.error('Name is required')
-                return
-            }
-            if (dbPostgres.value.host == '') {
-                window.$message.error('Host is required')
-                return
-            }
-            if (dbPostgres.value.port == '') {
-                window.$message.error('Port is required')
-                return
-            }
-            connList.value.push({
-                id: nanoid(),
-                db_type: 'postgres',
-                info: JSON.parse(JSON.stringify(dbPostgres.value))
-            })
-            break
-        case 'mongodb':
-            if (dbMongodb.value.name == '') {
-                window.$message.error('Name is required')
-                return
-            }
-            if (dbMongodb.value.host == '') {
-                window.$message.error('Host is required')
-                return
-            }
-            if (dbMongodb.value.port == '') {
-                window.$message.error('Port is required')
-                return
-            }
-            connList.value.push({
-                id: nanoid(),
-                db_type: 'mongodb',
-                info: JSON.parse(JSON.stringify(dbMongodb.value))
-            })
-            break
+            await saveConnections(connList.value)
+            isEdit.value = false
+            showConn.value = false
+        }
+    } else {
+        // 添加连接
+        switch (dbConnType.value) {
+            case 'redis':
+                if (dbRedis.value.name == '') {
+                    window.$message.error('Name is required')
+                    return
+                }
+                if (dbRedis.value.host == '') {
+                    window.$message.error('Host is required')
+                    return
+                }
+                if (dbRedis.value.port == '') {
+                    window.$message.error('Port is required')
+                    return
+                }
+                connList.value.push({
+                    id: nanoid(),
+                    db_type: 'redis',
+                    info: JSON.parse(JSON.stringify(dbRedis.value))
+                })
+                break
+            case 'postgres':
+                if (dbPostgres.value.name == '') {
+                    window.$message.error('Name is required')
+                    return
+                }
+                if (dbPostgres.value.host == '') {
+                    window.$message.error('Host is required')
+                    return
+                }
+                if (dbPostgres.value.port == '') {
+                    window.$message.error('Port is required')
+                    return
+                }
+                connList.value.push({
+                    id: nanoid(),
+                    db_type: 'postgres',
+                    info: JSON.parse(JSON.stringify(dbPostgres.value))
+                })
+                break
+            case 'mongodb':
+                if (dbMongodb.value.name == '') {
+                    window.$message.error('Name is required')
+                    return
+                }
+                if (dbMongodb.value.host == '') {
+                    window.$message.error('Host is required')
+                    return
+                }
+                if (dbMongodb.value.port == '') {
+                    window.$message.error('Port is required')
+                    return
+                }
+                connList.value.push({
+                    id: nanoid(),
+                    db_type: 'mongodb',
+                    info: JSON.parse(JSON.stringify(dbMongodb.value))
+                })
+                break
+        }
+        await saveConnections(connList.value)
+        isEdit.value = false
+        showConn.value = false
     }
-    await saveConnections(connList.value)
-    showConn.value = false
 }
 
 // 取消添加连接
 const handleCancelConn = () => {
+    isEdit.value = false
     showConn.value = false
     dbRedis.value = RedisConnectInit
 }
@@ -307,15 +330,19 @@ const handleOpenTab = (message: OpenTabMesagae<any>) => {
     }
 }
 
-// 删除连接
-const handleDeleteConnection = async (id: string) => {
-    connList.value = connList.value.filter(item => item.id !== id)
-    await saveConnections(connList.value)
+const handleCloseTabs = (id: string) => {
     tabs.value = tabs.value.filter(item => item.conn.id !== id)
     if (!tabs.value.find(item => item.conn.id === id)) {
         tab.value = tabs.value.length > 0 ? tabs.value[0].id : ''
     }
     saveTabs(tabs.value)
+}
+
+// 删除连接
+const handleDeleteConnection = async (id: string) => {
+    connList.value = connList.value.filter(item => item.id !== id)
+    await saveConnections(connList.value)
+    await handleCloseTabs(id)
 }
 
 const handleTabChanged = (val: string) => {
@@ -405,6 +432,41 @@ const handleCloseTab = async (id: string) => {
         tab.value = tabs.value[0].id
     } else {
         tab.value = ''
+    }
+}
+
+const isEdit = ref(false)
+const editConnId = ref<string>('')
+const handleEditConnection = async (id: string) => {
+    const conn = connList.value.find(item => item.id == id)
+    if (conn) {
+        await handleCloseTabs(id)
+        isEdit.value = true
+        showConn.value = true
+        editConnId.value = id
+        switch (conn.db_type) {
+            case 'redis':
+                dbConnType.value = 'redis'
+                dbRedis.value = {
+                    ...RedisConnectInit,
+                    ...conn.info
+                }
+                break
+            case 'postgres':
+                dbConnType.value = 'postgres'
+                dbPostgres.value = {
+                    ...PostgresConnectInit,
+                    ...conn.info
+                }
+                break
+            case 'mongodb':
+                dbConnType.value = 'mongodb'
+                dbMongodb.value = {
+                    ...MongodbConnectInit,
+                    ...conn.info
+                }
+                break
+        }
     }
 }
 </script>
@@ -561,7 +623,8 @@ const handleCloseTab = async (id: string) => {
                                         :native-scrollbar="false" content-style="padding: 10px;">
                                         <component v-for="i in connList" :key="i.id" :is="connComponents[i.db_type]"
                                             :conn="i" @handleOpenTab="handleOpenTab"
-                                            @handleDeleteConnection="handleDeleteConnection" />
+                                            @handleDeleteConnection="handleDeleteConnection"
+                                            @handleEditConnection="handleEditConnection" />
                                     </n-layout>
                                 </div>
                                 <div class="btn-side">

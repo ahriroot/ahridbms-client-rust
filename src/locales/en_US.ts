@@ -18,6 +18,7 @@ export default {
     delete: 'Delete',
     query: 'Query',
     reload: 'Reload',
+    edit: 'Edit',
     open: 'Open',
     table: 'Tables',
     collection: 'Collections',

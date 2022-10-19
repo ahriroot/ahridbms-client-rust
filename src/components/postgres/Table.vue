@@ -6,7 +6,7 @@ import { h, ref, shallowRef, onBeforeMount, reactive } from 'vue'
 import {
     useLoadingBar, NDataTable, NButton, NIcon, useDialog, useMessage
 } from 'naive-ui'
-import { Trash, Add, Checkmark } from '@vicons/ionicons5'
+import { Trash, Add, Checkmark, Reload } from '@vicons/ionicons5'
 import useClipboard from "vue-clipboard3"
 
 import { useIndexStore } from '@/store'
@@ -85,6 +85,9 @@ const sorts = ref<{
     order: string
 }[]>([])
 const handleUpdateSorter = async (sorter: any) => {
+    if (showNewRow.value) {
+        await handleCreate()
+    }
     sorter.value = sorter
     sorts.value = []
     sorter.forEach((item: any) => {
@@ -191,7 +194,7 @@ onBeforeMount(async () => {
                     NButton,
                     {
                         size: 'small',
-                        onClick: async () => await handleInsert(row)
+                        onClick: async () => await handleInsert()
                     },
                     {
                         default: () => h(
@@ -246,6 +249,10 @@ const where = (values: any[]) => {
 }
 
 const handleUpdate = async () => {
+    if (showNewRow.value) {
+        await handleInsert()
+        return
+    }
     let sqls: string[] = []
     data.value.forEach((row: any) => {
         let w = where(row)
@@ -325,12 +332,16 @@ const handleDelete = async (row: any) => {
     }
 }
 
-const handleInsert = async (row: any) => {
+const handleInsert = async () => {
+    if (!showNewRow.value) {
+        return
+    }
+    let row = data.value[data.value.length - 1]
     let fields: any[] = []
     let values: any[] = []
     row.forEach((column: any) => {
         if (column.value !== column.old) {
-            if (column.value !== null) {
+            if (isNaN(column.old)) {
                 let type = column.type;
                 fields.push(column.field)
                 if (['char', 'varchar', 'text'].includes(type)) {
@@ -358,6 +369,10 @@ const handleInsert = async (row: any) => {
     }
 }
 
+const handleReload = async () => {
+    await handleLoadData()
+}
+
 const showNewRow = ref(false)
 const handleCreate = async () => {
     showNewRow.value = !showNewRow.value
@@ -383,17 +398,24 @@ const handleCreate = async () => {
         <div class="opera-content">
             <div class="left">Count: {{ count }}</div>
             <div class="right">
-                <n-button strong secondary size="small" @click="handleUpdate">
+                <n-button strong secondary size="small" @click="handleReload" :disabled="loadingCount > 0">
                     <template #icon>
                         <n-icon>
-                            <checkmark />
+                            <reload />
                         </n-icon>
                     </template>
                 </n-button>&nbsp;
-                <n-button strong secondary size="small" @click="handleCreate">
+                <n-button strong secondary size="small" @click="handleCreate" :disabled="loadingCount > 0">
                     <template #icon>
                         <n-icon>
                             <Add />
+                        </n-icon>
+                    </template>
+                </n-button>&nbsp;
+                <n-button strong secondary size="small" @click="handleUpdate" :disabled="loadingCount > 0">
+                    <template #icon>
+                        <n-icon>
+                            <checkmark />
                         </n-icon>
                     </template>
                 </n-button>
