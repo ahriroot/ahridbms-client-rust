@@ -331,16 +331,53 @@ const formatIndexFields = (fields: any[]) => {
 }
 
 const handleSubmitCreateTable = async () => {
+    loadingCreateTable.value = true
     console.log(sqlCreateTable.value.sql)
-    // let res = await update({
-    //     conn: props.conn,
-    //     database: props.data.database,
-    //     sql: sqlCreateTable.value.sql
-    // })
-    // if (!res.is_error) {
-    //     await emit('reload', { conn: props.conn, database: props.data.database, table: tablename.value || 'Untitled' });
-    //     await emits('handleCloseTab');
-    // }
+    let resCreateTable = await update({
+        conn: props.conn,
+        database: props.data.database,
+        sql: sqlCreateTable.value.sql
+    })
+    if (resCreateTable.is_error) {
+        loadingCreateTable.value = false
+        return
+    }
+    for (let index = 0; index < sqlCreateTable.value.comments.length; index++) {
+        let resCreateTableComment = await update({
+            conn: props.conn,
+            database: props.data.database,
+            sql: sqlCreateTable.value.comments[index]
+        })
+        if (resCreateTableComment.is_error) {
+            loadingCreateTable.value = false
+            return
+        }
+    }
+    for (let index = 0; index < sqlIndex.value.sqls.length; index++) {
+        let resIndex = await update({
+            conn: props.conn,
+            database: props.data.database,
+            sql: sqlIndex.value.sqls[index]
+        })
+        if (resIndex.is_error) {
+            loadingCreateTable.value = false
+            return
+        }
+    }
+    for (let index = 0; index < sqlIndex.value.comments.length; index++) {
+        let resIndexComment = await update({
+            conn: props.conn,
+            database: props.data.database,
+            sql: sqlIndex.value.comments[index]
+        })
+        if (resIndexComment.is_error) {
+            loadingCreateTable.value = false
+            return
+        }
+    }
+    await emit('reload', { conn: props.conn, database: props.data.database, table: tablename.value || 'Untitled' })
+    await emits('handleCloseTab')
+    loadingCreateTable.value = false
 }
 </script>
     
