@@ -127,9 +127,16 @@ const nodeProps = ({ option }: { option: any }) => {
                         key: 'edit',
                         props: {
                             onClick: async () => {
-                                emits('handleEditConnection', props.conn.id)
-                                expandedKeys.value = []
-                                await initConnection()
+                                dialog.info({
+                                    title: t('edit'),
+                                    content: `${t('closeConnectionforEdit')} ${props.conn.info.name} ?`,
+                                    positiveText: t('edit'),
+                                    onPositiveClick: async () => {
+                                        emits('handleEditConnection', props.conn.id)
+                                        expandedKeys.value = []
+                                        await initConnection()
+                                    }
+                                })
                                 showContextmenu.value = false
                             }
                         }
@@ -228,6 +235,36 @@ const nodeProps = ({ option }: { option: any }) => {
                                 showContextmenu.value = false
                             }
                         }
+                    }, {
+                        label: t('create'),
+                        key: 'create',
+                        props: {
+                            onClick: async () => {
+                                emits('handleOpenTab', {
+                                    id: nanoid(), conn: props.conn, tab_type: 'create_table', data: {
+                                        title: `#create_table@${option.database}`,
+                                        database: option.database,
+                                        table: ''
+                                    }
+                                })
+                                showContextmenu.value = false
+                            }
+                        }
+                    }, {
+                        label: t('create_s'),
+                        key: 'create_s',
+                        props: {
+                            onClick: async () => {
+                                emits('handleOpenTab', {
+                                    id: nanoid(), conn: props.conn, tab_type: 'create_table_s', data: {
+                                        title: `#create_table@${option.database}`,
+                                        database: option.database,
+                                        table: ''
+                                    }
+                                })
+                                showContextmenu.value = false
+                            }
+                        }
                     }]
                     break
                 case 'tables':
@@ -250,6 +287,21 @@ const nodeProps = ({ option }: { option: any }) => {
                             onClick: async () => {
                                 emits('handleOpenTab', {
                                     id: nanoid(), conn: props.conn, tab_type: 'create_table', data: {
+                                        title: `#create_table@${option.database}`,
+                                        database: option.database,
+                                        table: ''
+                                    }
+                                })
+                                showContextmenu.value = false
+                            }
+                        }
+                    }, {
+                        label: t('create_s'),
+                        key: 'create_s',
+                        props: {
+                            onClick: async () => {
+                                emits('handleOpenTab', {
+                                    id: nanoid(), conn: props.conn, tab_type: 'create_tables', data: {
                                         title: `#create_table@${option.database}`,
                                         database: option.database,
                                         table: ''
@@ -587,7 +639,7 @@ const sqlCreateDatabase = computed(() => {
 </script>
 
 <template>
-    <div>
+    <div class="nocopy">
         <n-modal v-model:show="showPreviewSql" preset="card" style="width: 600px;" :title="t('info')" size="small">
             <pre>{{sqlCreateDatabase}}</pre>
         </n-modal>

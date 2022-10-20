@@ -215,7 +215,7 @@ onBeforeMount(async () => {
         </div>
         <div class="result">
             <EditorVue v-show="showType == 'json'" ref="editorRef" @change="handleChange" :value="config.query"
-                :type="'json'" />
+                :type="'json'" :read-only="true" />
             <n-data-table v-show="showType == 'table'" size="small" :single-line="false" :columns="columns" :data="data"
                 flex-height style="position: absolute; top: 32px; bottom: 40px;" :loading="loadingCount > 0"
                 :pagination="pagination" :remote="true" :scroll-x="900" @update:sorter="handleUpdateSorter" />

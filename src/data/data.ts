@@ -5,6 +5,7 @@ import PostgresConnect from '@/components/postgres/Connection.vue'
 import PostgresTableVue from '@/components/postgres/Table.vue'
 import PostgresQueryVue from '@/components/postgres/Query.vue'
 import PostgresCreateTableVue from '@/components/postgres/CreateTable.vue'
+import PostgresCreateTableSVue from '@/components/postgres/CreateTableS.vue'
 
 import RedisConnect from '@/components/redis/Connection.vue'
 import RedisTabVue from '@/components/redis/TabDb.vue'
@@ -45,6 +46,7 @@ const TabComponents = {
     'postgres:table': PostgresTableVue,
     'postgres:query': PostgresQueryVue,
     'postgres:create_table': PostgresCreateTableVue,
+    'postgres:create_table_s': PostgresCreateTableSVue,
     'mongodb:collection': MongodbCollection,
 }
 

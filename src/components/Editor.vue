@@ -10,6 +10,7 @@ import { QuerySuggestionsOfRedis } from '@/data/data'
 const props = defineProps<{
     value: any
     type?: string
+    readOnly?: boolean
 }>()
 const emits = defineEmits<{
     (e: 'handle', val: null): void
@@ -66,7 +67,7 @@ onMounted(() => {
         monacoEditor.value = monaco.editor.create(editorRef.value, {
             mouseWheelZoom: true,
             value: value,
-            readOnly: true,
+            readOnly: props.readOnly ? true : false,
             theme: 'vs-dark',
             selectOnLineNumbers: true,
             language: language,
