@@ -480,7 +480,7 @@ const handleSubmitCreateTable = async () => {
         <n-spin size="large" :show="loadingCreateTable">
             <n-input-group>
                 <n-input v-model:value="tablename" placeholder="Table Name" clearable />
-                <n-button ghost @click="handleSubmitCreateTable">
+                <n-button ghost @click="handleSubmitCreateTable" :loading="loadingCreateTable">
                     <template #icon>
                         <n-icon>
                             <checkmark />
