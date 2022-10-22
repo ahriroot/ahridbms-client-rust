@@ -194,7 +194,9 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
 pub async fn get_databases(conn: Connection) -> Response<Vec<Vec<Field>>> {
     let res = execsql_select(
         conn,
-        "SELECT * FROM pg_database WHERE datistemplate = false;",
+        "SELECT datname, datdba, encoding, datcollate, datctype, datistemplate, datallowconn, datconnlimit, datlastsysoid, datfrozenxid, datminmxid, dattablespace
+        FROM pg_database
+        WHERE datistemplate = false;",
     )
     .await;
 

@@ -500,7 +500,7 @@ const sqlCreateDatabase = computed(() => {
 </script>
 
 <template>
-    <div>
+    <div class="nocopy">
         <n-modal v-model:show="showPreviewSql" preset="card" style="width: 600px;" :title="t('info')" size="small">
             <pre>{{sqlCreateDatabase}}</pre>
         </n-modal>

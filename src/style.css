@@ -1,32 +1,31 @@
 html,
 body {
-  background-color: #333842;
+    background-color: #333842;
 }
 
 /* 禁止复制 */
 .nocopy {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-/* 允许复制 */
-.copy {
-  -webkit-user-select: auto;
-  -moz-user-select: auto;
-  -ms-user-select: auto;
-  user-select: auto;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .n-collapse-item__header {
-  padding: 0 !important;
+    padding: 0 !important;
 }
 
 .n-collapse-item__content-inner {
-  padding: 0 20px !important;
+    padding: 0 20px !important;
 }
 
 .n-collapse-item {
-  margin: 4px !important;
+    margin: 4px !important;
+}
+
+.n-tabs-nav {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
