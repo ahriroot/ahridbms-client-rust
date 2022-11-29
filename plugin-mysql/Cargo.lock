@@ -2234,7 +2234,7 @@ dependencies = [
 
 [[package]]
 name = "plugin-mysql"
-version = "0.0.0"
+version = "0.2.0"
 dependencies = [
  "mysql_async",
  "serde",
