@@ -95,10 +95,10 @@ const handleSelect = async () => {
             <EditorVue ref="editorRef" @change="handleChange" :value="config.query" :type="'postgres_query'" />
         </div>
         <div class="output">
-            <n-tabs v-model:value="tab" type="card" closable tab-style="min-width: 80px;" size="small">
+            <n-tabs v-model:value="tab" type="card" tab-style="min-width: 80px;" size="small">
                 <n-tab-pane display-directive="show" v-for="(i, index) in results" :key="i.id" :tab="`Result ${index}`"
                     :name="i.id">
-                    {{i.sql}}
+                    <div class="sql">{{i.sql}}</div>
                     <TableViewVue v-if="i.type == 'select'" :data="i.data" />
                     <div v-else>{{i}}</div>
                 </n-tab-pane>
@@ -143,7 +143,15 @@ const handleSelect = async () => {
     top: 436px;
     left: 0;
     right: 0;
-    bottom: -36px;
+    bottom: -42px;
+}
+
+.page .output .sql{
+    line-height: 30px;
+    padding: 0 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;    
 }
 </style>
     
