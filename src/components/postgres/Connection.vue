@@ -6,7 +6,6 @@ import {
     useMessage, useDialog
 } from 'naive-ui'
 import { ServerSharp, ChevronForward, ListSharp } from '@vicons/ionicons5'
-import { nanoid } from 'nanoid'
 
 import { OpenTabMesagae } from '@/types/Message'
 import { Connection } from '@/types/Connection'
@@ -18,6 +17,7 @@ import { useI18n } from 'vue-i18n'
 import { listen } from '@tauri-apps/api/event'
 import iconPostgres from '@/components/icon/postgres.vue'
 import iconTable from '@/components/icon/table.vue'
+import { uuid } from '@/utils/crypto'
 
 
 window.$message = useMessage()
@@ -80,15 +80,15 @@ const xPos = ref(0)
 const yPos = ref(0)
 const nodeProps = ({ option }: { option: any }) => {
     return {
-        onClick() {
+        async onClick() {
             // if (option.children == undefined || option.children == null) {
-            //     emits('handleOpenTab', { id: nanoid(), conn: props.conn, tab_type: option.label })
+            //     emits('handleOpenTab', { id: await uuid(), conn: props.conn, tab_type: option.label })
             // }
         },
-        onDblclick() {
+        async onDblclick() {
             if (option.type === 'table') {
                 emits('handleOpenTab', {
-                    id: nanoid(), conn: props.conn, tab_type: 'table', data: {
+                    id: await uuid(), conn: props.conn, tab_type: 'table', data: {
                         title: `${option.table}.${option.database}@${props.conn.info.name}`,
                         database: option.database,
                         table: option.table
@@ -224,10 +224,10 @@ const nodeProps = ({ option }: { option: any }) => {
                         label: t('query'),
                         key: 'query',
                         props: {
-                            onClick: () => {
+                            onClick: async () => {
                                 emits('handleOpenTab', {
-                                    id: nanoid(), conn: props.conn, tab_type: 'query', data: {
-                                        title: `query@${option.database}`,
+                                    id: await uuid(), conn: props.conn, tab_type: 'query', data: {
+                                        title: `#query@${option.database}`,
                                         database: option.database,
                                         table: option.table
                                     }
@@ -241,7 +241,7 @@ const nodeProps = ({ option }: { option: any }) => {
                         props: {
                             onClick: async () => {
                                 emits('handleOpenTab', {
-                                    id: nanoid(), conn: props.conn, tab_type: 'create_table', data: {
+                                    id: await uuid(), conn: props.conn, tab_type: 'create_table', data: {
                                         title: `#create_table@${option.database}`,
                                         database: option.database,
                                         table: ''
@@ -256,7 +256,7 @@ const nodeProps = ({ option }: { option: any }) => {
                         props: {
                             onClick: async () => {
                                 emits('handleOpenTab', {
-                                    id: nanoid(), conn: props.conn, tab_type: 'create_table_s', data: {
+                                    id: await uuid(), conn: props.conn, tab_type: 'create_table_s', data: {
                                         title: `#create_table@${option.database}`,
                                         database: option.database,
                                         table: ''
@@ -286,7 +286,7 @@ const nodeProps = ({ option }: { option: any }) => {
                         props: {
                             onClick: async () => {
                                 emits('handleOpenTab', {
-                                    id: nanoid(), conn: props.conn, tab_type: 'create_table', data: {
+                                    id: await uuid(), conn: props.conn, tab_type: 'create_table', data: {
                                         title: `#create_table@${option.database}`,
                                         database: option.database,
                                         table: ''
@@ -301,7 +301,7 @@ const nodeProps = ({ option }: { option: any }) => {
                         props: {
                             onClick: async () => {
                                 emits('handleOpenTab', {
-                                    id: nanoid(), conn: props.conn, tab_type: 'create_tables', data: {
+                                    id: await uuid(), conn: props.conn, tab_type: 'create_tables', data: {
                                         title: `#create_table@${option.database}`,
                                         database: option.database,
                                         table: ''
@@ -319,7 +319,7 @@ const nodeProps = ({ option }: { option: any }) => {
                         props: {
                             onClick: async () => {
                                 emits('handleOpenTab', {
-                                    id: nanoid(), conn: props.conn, tab_type: 'table', data: {
+                                    id: await uuid(), conn: props.conn, tab_type: 'table', data: {
                                         title: `${option.table}@${option.database}`,
                                         database: option.database,
                                         table: option.table

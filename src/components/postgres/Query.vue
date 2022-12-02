@@ -7,7 +7,7 @@ import { ref, onBeforeMount } from 'vue'
 import { executeSelectSql } from '@/api/postgres'
 import { NTabs, NTabPane, NButton, NIcon } from 'naive-ui'
 import { Checkmark } from '@vicons/ionicons5'
-import { nanoid } from 'nanoid'
+import { uuid } from '@/utils/crypto'
 
 const props = defineProps<{
     conn: Connection<PostgresConnect>
@@ -39,16 +39,19 @@ const handleChange = (val: string) => {
 const editorRef = ref<any>()
 const results = ref<any[]>([])
 const tab = ref<string>('')
+const loading = ref<boolean>(false)
 const handleSelect = async () => {
     let sql_str = window.getSelection()?.toString() || ''
     if (!sql_str) {
         sql_str = await editorRef.value?.getValue()
     }
-    let sql_str_arr = sql_str.trim().split(/;(?=([^\\']*\\'[^\\']*\\')*[^\\']*$)/)
+    // 正则根据分号分割，排除引号中的分号
+    let sql_str_arr = sql_str.trim().split(/;(?=(?:[^'"]|'[^']*'|"[^"]*")*$)/)
     let sqls = sql_str_arr.filter((sql: string) => {
         return sql && sql.trim() && !sql.trim().startsWith('--')
     })
     if (sqls) {
+        loading.value = true
         results.value = []
         for (let index = 0; index < sqls.length; index++) {
             let sql = sqls[index].trim()
@@ -59,14 +62,14 @@ const handleSelect = async () => {
                     sql: sql
                 }, false)
                 results.value.push({
-                    id: nanoid(),
+                    id: await uuid(),
                     type: 'select',
                     sql: sql,
                     data: res
                 })
             } else {
                 results.value.push({
-                    id: nanoid(),
+                    id: await uuid(),
                     type: 'other',
                     sql: sql,
                     data: ''
@@ -76,6 +79,7 @@ const handleSelect = async () => {
                 tab.value = results.value[0].id
             }
         }
+        loading.value = false
     }
 }
 </script>
@@ -83,7 +87,7 @@ const handleSelect = async () => {
 <template>
     <div class="page">
         <div class="menu">
-            <n-button strong secondary size="small" @click="handleSelect">
+            <n-button strong secondary size="small" @click="handleSelect" :loading="loading">
                 <template #icon>
                     <n-icon>
                         <Checkmark />
@@ -144,6 +148,17 @@ const handleSelect = async () => {
     left: 0;
     right: 0;
     bottom: -42px;
+}
+
+.page .output::before {
+    content: 'Result';
+    position: absolute;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: large;
+    color: #ccc;
+    opacity: 0.5;
 }
 
 .page .output .sql{

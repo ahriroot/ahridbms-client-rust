@@ -8,7 +8,6 @@ import {
 } from 'naive-ui'
 import { invoke } from '@tauri-apps/api/tauri'
 import { ArrowForward, Add, Settings } from '@vicons/ionicons5'
-import { nanoid } from 'nanoid'  // 唯一 id 生成器
 
 import { DBType, ConnectionComponents, RedisConnectInit, TabComponents, PostgresConnectInit, InfoComponents, MongodbConnectInit } from '@/data/data'
 import { IConnectComponents, IInfoComponents, ITabComponents } from '@/types/data'
@@ -26,6 +25,7 @@ import { useI18n } from 'vue-i18n'
 import { test as testRedis } from '@/api/redis'
 import { test as testPostgres } from '@/api/postgres'
 import { test as testMongodb } from '@/api/mongodb'
+import { uuid } from '@/utils/crypto'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏
@@ -241,7 +241,7 @@ const handleSubmitConn = async () => {
                     return
                 }
                 connList.value.push({
-                    id: nanoid(),
+                    id: await uuid(),
                     db_type: 'redis',
                     info: JSON.parse(JSON.stringify(dbRedis.value))
                 })
@@ -260,7 +260,7 @@ const handleSubmitConn = async () => {
                     return
                 }
                 connList.value.push({
-                    id: nanoid(),
+                    id: await uuid(),
                     db_type: 'postgres',
                     info: JSON.parse(JSON.stringify(dbPostgres.value))
                 })
@@ -279,7 +279,7 @@ const handleSubmitConn = async () => {
                     return
                 }
                 connList.value.push({
-                    id: nanoid(),
+                    id: await uuid(),
                     db_type: 'mongodb',
                     info: JSON.parse(JSON.stringify(dbMongodb.value))
                 })

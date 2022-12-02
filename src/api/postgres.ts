@@ -143,6 +143,57 @@ const select = async (params: SelectArgs): Promise<{
     }
 }
 
+const selectWithStruct = async (params: SelectArgs): Promise<{
+    table_primary: any
+    table_struct: any[],
+    table_data: {
+        data: any[]
+        count: number
+    }
+}> => {
+    let res = await request<{
+        table_primary: any
+        table_struct: any[],
+        table_data: {
+            data: any[]
+            count: number
+        }
+    }>('plugin:postgres|select_with_struct', params)
+    let result1: any[] = []
+    res.table_struct.forEach((rowData: any[]) => {
+        let row: any = {}
+        rowData.forEach((column: any) => {
+            for (let k in column) {
+                row[column[k].key] = column[k].value
+            }
+        })
+        result1.push(row)
+    })
+    let result2: any[] = []
+    res.table_data.data.forEach((rowData: any[]) => {
+        let row: any[] = []
+        rowData.forEach((column: any) => {
+            for (let k in column) {
+                row.push({
+                    type: column[k].typename,
+                    field: column[k].key,
+                    value: column[k].value,
+                    old: column[k].value
+                })
+            }
+        })
+        result2.push(row)
+    })
+    return {
+        table_primary: res.table_primary,
+        table_struct: result1,
+        table_data: {
+            data: result2,
+            count: res.table_data.count
+        },
+    }
+}
+
 const update = async (params: UpdateArgs): Promise<any> => {
     let res = await request<any>('plugin:postgres|update', params)
     return res
@@ -182,5 +233,5 @@ const test = async (params: TestArgs): Promise<any> => {
     return res
 }
 
-export { getDatabases, getTables, getColumns, getPrimaryKeys, getTableStruct, select, update, executeWithTransaction, executeSelectSql, test }
+export { getDatabases, getTables, getColumns, getPrimaryKeys, getTableStruct, select, selectWithStruct, update, executeWithTransaction, executeSelectSql, test }
 

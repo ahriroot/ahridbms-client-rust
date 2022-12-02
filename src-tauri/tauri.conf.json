@@ -73,7 +73,7 @@
                 "title": "AhriDBMS",
                 "width": 1600,
                 "center": true,
-                "visible": false
+                "visible": true
             },
             {
                 "width": 400,

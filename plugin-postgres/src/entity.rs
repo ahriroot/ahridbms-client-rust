@@ -46,6 +46,13 @@ pub struct KV<T> {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct SelectWithStruct {
+    pub table_primary: Vec<Vec<Field>>,
+    pub table_struct: Vec<Vec<Field>>,
+    pub table_data: SelectResult,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Field {
     Null(KV<bool>),
     Bool(KV<bool>),

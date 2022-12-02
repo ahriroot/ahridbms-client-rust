@@ -470,3 +470,58 @@ pub async fn test(conn: Connection, database: String) -> Response<bool> {
         Err(e) => Response::error(e.to_string()),
     }
 }
+
+#[tauri::command]
+pub async fn select_with_struct(
+    conn: Connection,
+    skip: i64,
+    limit: i64,
+    page: i64,
+    size: i64,
+    sorts: Vec<Sort>,
+    database: String,
+    table: String,
+) -> Response<SelectWithStruct> {
+    let table_primary = get_primary_keys(conn.clone(), database.clone(), table.clone()).await;
+    let table_struct = get_table_struct(conn.clone(), database.clone(), table.clone()).await;
+    let table_data = select(conn, skip, limit, page, size, sorts, database, table).await;
+
+    if table_primary.code != 10000 {
+        return Response::error(table_primary.msg);
+    }
+
+    if table_struct.code != 10000 {
+        return Response::error(table_struct.msg);
+    }
+
+    if table_data.code != 10000 {
+        return Response::error(table_data.msg);
+    }
+
+    let table_primary = match table_primary.data {
+        Res::Success(v) => v,
+        Res::Error(e) => return Response::error(e),
+        Res::Error5(_) => return Response::error5(),
+        Res::Null => return Response::error("Null".to_string()),
+    };
+
+    let table_struct = match table_struct.data {
+        Res::Success(v) => v,
+        Res::Error(e) => return Response::error(e),
+        Res::Error5(_) => return Response::error5(),
+        Res::Null => return Response::error("Null".to_string()),
+    };
+
+    let table_data = match table_data.data {
+        Res::Success(v) => v,
+        Res::Error(e) => return Response::error(e),
+        Res::Error5(_) => return Response::error5(),
+        Res::Null => return Response::error("Null".to_string()),
+    };
+
+    Response::ok(Res::Success(SelectWithStruct {
+        table_primary,
+        table_struct,
+        table_data,
+    }))
+}

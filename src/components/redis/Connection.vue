@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { h, ref } from 'vue'
-import { NTree, NIcon, TreeOption, DropdownOption, NDropdown, NModal, NCard, NLayout, NSpin } from 'naive-ui'
+import { NTree, NIcon, TreeOption, NDropdown, NModal, NCard, NLayout, NSpin } from 'naive-ui'
 import { ServerSharp, ChevronForward } from '@vicons/ionicons5'
-import { nanoid } from 'nanoid'
 
 import { OpenTabMesagae } from '@/types/Message'
 import { Connection } from '@/types/Connection'
 import { RedisConnect } from '@/types/redis'
 import { info } from '@/api/redis'
 import iconRedis from '@/components/icon/redis.vue'
+import { uuid } from '@/utils/crypto'
 
 const props = defineProps<{
     conn: Connection<RedisConnect>
@@ -30,10 +30,10 @@ const xPos = ref(0)
 const yPos = ref(0)
 const nodeProps = ({ option }: { option: any }): any => {
     return {
-        onClick() {
+        async onClick() {
             if (option.children == undefined || option.children == null) {
                 emits('handleOpenTab', {
-                    id: nanoid(), conn: props.conn, tab_type: 'db', data: {
+                    id: await uuid(), conn: props.conn, tab_type: 'db', data: {
                         title: `${option.label}@${props.conn.info.name}`,
                         table: option.label
                     }
@@ -55,9 +55,9 @@ const nodeProps = ({ option }: { option: any }): any => {
                     label: 'Query',
                     key: 'query',
                     props: {
-                        onClick: () => {
+                        onClick: async () => {
                             emits('handleOpenTab', {
-                                id: nanoid(), conn: props.conn, tab_type: 'query', data: {
+                                id: await uuid(), conn: props.conn, tab_type: 'query', data: {
                                     title: `query@${props.conn.info.name}`
                                 }
                             })

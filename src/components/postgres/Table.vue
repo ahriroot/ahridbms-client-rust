@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { executeWithTransaction, getPrimaryKeys, getTableStruct, select, update } from '@/api/postgres'
-import { Connection } from '@/types/Connection'
-import { PostgresConnect } from '@/types/postgres'
 import { h, ref, shallowRef, onBeforeMount, reactive } from 'vue'
 import {
     useLoadingBar, NDataTable, NButton, NIcon, useDialog, useMessage
 } from 'naive-ui'
+import { executeWithTransaction, select, selectWithStruct, update } from '@/api/postgres'
+import { Connection } from '@/types/Connection'
+import { PostgresConnect } from '@/types/postgres'
 import { Trash, Add, Checkmark, Reload } from '@vicons/ionicons5'
 import useClipboard from "vue-clipboard3"
 
@@ -69,6 +69,10 @@ const loadingFinish = () => {
         loadingBar.finish()
     }
 }
+const loadingStop = () => {
+    loadingCount.value = 0
+    loadingBar.finish()
+}
 const format = (time: number) => {
     const date = new Date(time * 1000)
     const year = date.getUTCFullYear()
@@ -117,7 +121,7 @@ const handleLoadData = async () => {
     data.value = res.data
     pagination.itemCount = res.count
     count.value = res.count
-    loadingFinish()
+    loadingStop()
 }
 
 const columns = ref<any[]>([])
@@ -125,28 +129,32 @@ const struct = ref<any[]>([])
 const newData = ref<any[]>([])
 const pks = ref<string[]>([])
 onBeforeMount(async () => {
+    loadingStart()
     pagination.pageSize = store.config.pageSize
-    getPrimaryKeys({
+
+    let res = await selectWithStruct({
         conn: props.conn,
+        skip: 0,
+        limit: 0,
+        page: pagination.page,
+        size: pagination.pageSize,
+        sorts: sorts.value,
         database: props.data.database,
         table: props.data.table
-    }).then((res: any) => {
-        pks.value = []
-        res.forEach((fields: any) => {
-            fields.forEach((field: any) => {
-                for (let k in field) {
-                    if (field[k].key == 'colname') {
-                        pks.value.push(field[k].value)
-                    }
+    })
+
+    pks.value = []
+    res.table_primary.forEach((fields: any) => {
+        fields.forEach((field: any) => {
+            for (let k in field) {
+                if (field[k].key == 'colname') {
+                    pks.value.push(field[k].value)
                 }
-            })
+            }
         })
     })
-    struct.value = await getTableStruct({
-        conn: props.conn,
-        database: props.data.database,
-        table: props.data.table
-    })
+
+    struct.value = res.table_struct
     struct.value.forEach((field: any) => {
         newData.value.push({
             type: field.typname,
@@ -154,7 +162,11 @@ onBeforeMount(async () => {
             value: null
         })
     })
-    await handleLoadData()
+
+    data.value = res.table_data.data
+    pagination.itemCount = res.table_data.count
+    count.value = res.table_data.count
+
     columns.value = []
     struct.value.forEach((column: any) => {
         let t = column.typname
@@ -226,6 +238,7 @@ onBeforeMount(async () => {
             }
         }
     })
+    loadingFinish()
 })
 
 const where = (values: any[]) => {
