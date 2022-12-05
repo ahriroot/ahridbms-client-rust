@@ -1,3 +1,4 @@
+import SettingVue from '@/components/Setting.vue'
 import MongodbConnect from '@/components/mongodb/Connection.vue'
 import MongodbCollection from '@/components/mongodb/Collection.vue'
 
@@ -41,6 +42,7 @@ const ConnectionComponents = {
 }
 
 const TabComponents = {
+    ':setting': SettingVue,
     'redis:db': RedisTabVue,
     'redis:query': RedisQueryVue,
     'postgres:table': PostgresTableVue,

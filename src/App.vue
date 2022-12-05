@@ -48,6 +48,27 @@ const store = useIndexStore()
 const { t, locale } = useI18n()
 /** ------------------ 变量 End ------------------ **/
 
+const handleShowSetting = async () => {
+    // showSetting.value = true
+    // add tab
+    const message = {
+        id: await uuid(),
+        conn: {
+            db_type: '',
+        },
+        tab_type: 'setting',
+        data: {
+            title: `Setting`,
+            table: ''
+        }
+    }
+    
+    tabs.value.push(message)
+    tab.value = message.id
+    handleTabChanged(tab.value)
+    saveTabs(tabs.value)
+}
+
 onBeforeMount(async () => {
     try {
         let config = localStorage.getItem('config')
@@ -75,7 +96,7 @@ onBeforeMount(async () => {
             if (item.id == current_tab) {
                 tab.value = current_tab
             }
-            return connIds.includes(item.conn.id)
+            return connIds.includes(item.conn.id) || item.tab_type == 'setting'
         })  // 存在连接的标签页
         saveTabs(tabs.value)
         if (tabs.value.length > 0 && !tab.value) {
@@ -597,7 +618,7 @@ const handleEditConnection = async (id: string) => {
                     <div id="main">
                         <aside class="side nocopy" :class="store.config?.showSideBar ? '' : 'show'">
                             <div class="sidebar">
-                                <n-button circle quaternary size="small" @click.stop="showSetting = true">
+                                <n-button circle quaternary size="small" @click.stop="handleShowSetting">
                                     <template #icon>
                                         <n-icon class="btn-icon-setting">
                                             <Settings />
