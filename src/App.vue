@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, ref, shallowRef, onBeforeMount, onMounted } from 'vue'
+import { h, ref, shallowRef, onBeforeMount, onMounted, onBeforeUnmount } from 'vue'
 import {
     darkTheme, NConfigProvider, NGlobalStyle, NIcon, NLayout,
     NButton, NModal, NSelect, SelectRenderLabel, NInput, NCard, NSpace,
@@ -26,6 +26,7 @@ import { test as testRedis } from '@/api/redis'
 import { test as testPostgres } from '@/api/postgres'
 import { test as testMongodb } from '@/api/mongodb'
 import { uuid } from '@/utils/crypto'
+import { emit, listen } from '@tauri-apps/api/event'
 
 /** ------------------ 变量 Start ------------------ **/
 const showSide = ref<boolean>(true)  // 显示侧边栏
@@ -69,7 +70,40 @@ const handleShowSetting = async () => {
     saveTabs(tabs.value)
 }
 
+onBeforeUnmount(async () => {
+    if (unlisten && typeof unlisten == 'function') {
+        unlisten()
+    }
+})
+
+let unlisten: any = null
 onBeforeMount(async () => {
+    /* Listening Start */
+    unlisten = await listen('global', async (event: { payload:string }) => {
+        let payload = JSON.parse(event.payload)
+        switch(payload.from) {
+            case 'redis':
+                break
+            case 'postgres':
+                if (payload.event === "has_tab_opened") {
+                    await emit('postgres', JSON.stringify({
+                        event: 'has_tab_opened',
+                        data: {
+                            id: payload.data.id,
+                            has: tabs.value.some((item) =>item.conn.id === payload.data.id)
+                        }
+                    }))
+                } else if (payload.event === "edit_connection") {
+                    await handleEditConnection(payload.data.id)
+                } else if (payload.event === "delete_connection") {
+                    await handleDeleteConnection(payload.data.id)
+                }
+                break
+            case 'mongodb':
+                break
+        }
+    })
+    /* Listening End */
     try {
         let config = localStorage.getItem('config')
         if (config) {
@@ -203,7 +237,8 @@ const handleTestConn = async () => {
                 if (!res.is_error) {
                     window.$message.success('OK')
                 }
-            }).finally(() => {
+            })
+            .finally(() => {
                 loadingTest.value = false
             })
             break
@@ -236,6 +271,12 @@ const handleSubmitConn = async () => {
                     break
                 case 'postgres':
                     conn.info = JSON.parse(JSON.stringify(dbPostgres.value))
+                    await emit('postgres', JSON.stringify({
+                        event: 'edit_connection',
+                        data: {
+                            id: conn.id
+                        }
+                    }))
                     break
                 case 'mongodb':
                     conn.info = JSON.parse(JSON.stringify(dbMongodb.value))

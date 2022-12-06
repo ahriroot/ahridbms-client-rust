@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, ref, computed, onBeforeMount, watch } from 'vue'
+import { h, ref, computed, onBeforeMount, onBeforeUnmount, watch } from 'vue'
 import {
     NTree, NIcon, NButton, TreeOption, NDropdown, NModal,
     NForm, NFormItem, NInput, NInputNumber, NCheckbox, NSelect, NSpin,
@@ -14,7 +14,7 @@ import { getDatabases, getTables, getColumns, executeSelectSql, update } from '@
 import { PgColumn, PgTable } from '@/types/postgres/Data'
 import { useIndexStore } from '@/store'
 import { useI18n } from 'vue-i18n'
-import { listen } from '@tauri-apps/api/event'
+import { emit, listen } from '@tauri-apps/api/event'
 import iconPostgres from '@/components/icon/postgres.vue'
 import iconTable from '@/components/icon/table.vue'
 import { uuid } from '@/utils/crypto'
@@ -27,8 +27,6 @@ const props = defineProps<{
 }>()
 const emits = defineEmits<{
     (e: 'handleOpenTab', val: OpenTabMesagae<any>): void
-    (e: 'handleDeleteConnection', id: string): void
-    (e: 'handleEditConnection', id: string): void
 }>()
 
 watch(() => props.conn.info, async (val) => {
@@ -56,7 +54,28 @@ const initConnection = async () => {
     return k
 }
 
+onBeforeUnmount(async () => {
+    if (unlisten && typeof unlisten == 'function') {
+        unlisten()
+    }
+})
+
+let unlisten: any = null
 onBeforeMount(async () => {
+    unlisten = await listen('postgres', async (event: { payload:string }) => {
+        let payload = JSON.parse(event.payload)
+        if (payload.data.id === props.conn.id) {
+            switch(payload.event) {
+                case 'has_tab_opened':
+                    await editConnection(payload.data.has)
+                    break
+                case 'edit_connection':
+                    expandedKeys.value = []
+                    await initConnection()
+                    break
+            }
+        }
+    })
     // let eks = localStorage.getItem(`expandedKeys:${props.conn.id}`) || '[]'
     // expandedKeys.value = JSON.parse(eks)
     await listen<string>('reload', async (event) => {
@@ -106,16 +125,28 @@ const nodeProps = ({ option }: { option: any }) => {
                         label: t('delete'),
                         key: 'delete',
                         props: {
-                            onClick: () => {
+                            onClick: async () => {
                                 if (store.config?.deleteNoConfirm) {
-                                    emits('handleDeleteConnection', props.conn.id)
+                                    await emit('global', JSON.stringify({
+                                        from: 'postgres',
+                                        event: 'delete_connection',
+                                        data: {
+                                            id: props.conn.id,
+                                        }
+                                    }))
                                 } else {
                                     dialog.warning({
                                         title: t('delete'),
                                         content: `${t('deleteConnection')} ${props.conn.info.name} ?`,
                                         positiveText: t('delete'),
                                         onPositiveClick: async () => {
-                                            emits('handleDeleteConnection', props.conn.id)
+                                            await emit('global', JSON.stringify({
+                                                from: 'postgres',
+                                                event: 'delete_connection',
+                                                data: {
+                                                    id: props.conn.id,
+                                                }
+                                            }))
                                         }
                                     })
                                 }
@@ -127,16 +158,13 @@ const nodeProps = ({ option }: { option: any }) => {
                         key: 'edit',
                         props: {
                             onClick: async () => {
-                                dialog.info({
-                                    title: t('edit'),
-                                    content: `${t('closeConnectionforEdit')} ${props.conn.info.name} ?`,
-                                    positiveText: t('edit'),
-                                    onPositiveClick: async () => {
-                                        emits('handleEditConnection', props.conn.id)
-                                        expandedKeys.value = []
-                                        await initConnection()
+                                await emit('global', JSON.stringify({
+                                    from: 'postgres',
+                                    event: 'has_tab_opened',
+                                    data: {
+                                        id: props.conn.id,
                                     }
-                                })
+                                }))
                                 showContextmenu.value = false
                             }
                         }
@@ -384,6 +412,35 @@ const nodeProps = ({ option }: { option: any }) => {
     }
 }
 
+const editConnection = async (has: boolean) => {
+    if (has || expandedKeys.value.length > 0) {
+        dialog.info({
+            title: t('edit'),
+            content: `${t('closeConnectionforEdit')} ${props.conn.info.name} ?`,
+            positiveText: t('edit'),
+            onPositiveClick: async () => {
+                await emit('global', JSON.stringify({
+                    from: 'postgres',
+                    event: 'edit_connection',
+                    data: {
+                        id: props.conn.id,
+                    }
+                }))
+                expandedKeys.value = []
+                await initConnection()
+            }
+        })
+    } else {
+        await emit('global', JSON.stringify({
+            from: 'postgres',
+            event: 'edit_connection',
+            data: {
+                id: props.conn.id,
+            }
+        }))
+    }
+}
+
 const reloadTables = async (key: any, tree: any[]) => {
     for (let index = 0; index < tree.length; index++) {
         if (tree[index].key === key) {
@@ -534,7 +591,7 @@ const handleLoad = async (node: TreeOption) => {
     }
 }
 
-const handleExpand = (key: string[]) => {
+const handleExpand = (key: string[] | any) => {
     expandedKeys.value = key
     localStorage.setItem(`expandedKeys:${props.conn.id}`, JSON.stringify(key))
 }
