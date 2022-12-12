@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NButton, NSelect, NCheckbox, zhCN, enUS } from 'naive-ui'
+import { NButton, NSelect, NCheckbox, NModal } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
 import { useIndexStore } from '@/store'
 import { checkUpdate, installUpdate } from '@tauri-apps/api/updater'
+import { relaunch } from '@tauri-apps/api/process'
 import tauriConfig from '../../src-tauri/tauri.conf.json'
 
 
@@ -21,10 +22,6 @@ const langs = ref([
     { label: '简体中文', value: 'zh-CN' },
     { label: 'English', value: 'en-US' }
 ])
-const languages = ref<{ [x: string]: any }>({
-    'zh-CN': zhCN,
-    'en-US': enUS
-})
 const handleUpdateLang = async (_: string) => {
     store.updateConfig({
         ...store.config,
@@ -45,8 +42,10 @@ const handleClearAllData = async () => {
         loadingClear.value = false
     }, 1000)
 }
+
+// ------------- Update Start -------------
 const showUpdateInfo = ref(false)
-const updateStatus = ref<any>(null)
+const updateStatus = ref<any>({})
 const updateLoading = ref(false)
 const handleUpdate = async () => {
     try {
@@ -58,13 +57,35 @@ const handleUpdate = async () => {
             alert('当前已是最新版本')
         }
     } catch (error) {
-        console.log(error)
+        alert(error)
     }
 }
+const handleStartUpdate = async () => {
+    updateLoading.value = true
+    await installUpdate()
+    await relaunch()
+    updateLoading.value = false
+}
+const handleCancelUpdate = () => {
+    showUpdateInfo.value = false
+}
+// ------------- Update End -------------
 </script>
 
 <template>
     <div class="setting">
+        <n-modal v-model:show="showUpdateInfo" preset="card" style="width: 600px;" :title="t('info')"
+            size="small">
+            <h1>Version: {{updateStatus.version}}</h1>
+            <br>
+            <p>Info: {{updateStatus.body}}</p>
+            <br>
+            <p>Publish Date: {{updateStatus.date}}</p>
+            <br>
+            <n-button size="small" @click="handleStartUpdate" :loading="updateLoading">Install</n-button>
+            &nbsp;
+            <n-button size="small" @click="handleCancelUpdate">Cancel</n-button>
+        </n-modal>
         <div class="space-setting">
             <n-select size="small" v-model:value="locale" :options="langs"
                 @update:value="handleUpdateLang" />

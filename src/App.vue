@@ -4,7 +4,7 @@ import {
     darkTheme, NConfigProvider, NGlobalStyle, NIcon, NLayout,
     NButton, NModal, NSelect, SelectRenderLabel, NInput, NCard, NSpace,
     NTabs, NTabPane, NLoadingBarProvider, NMessageProvider, NDialogProvider,
-    NCheckbox, zhCN, enUS
+    zhCN, enUS
 } from 'naive-ui'
 import { invoke } from '@tauri-apps/api/tauri'
 import { ArrowForward, Add, Settings } from '@vicons/ionicons5'
@@ -18,9 +18,6 @@ import { RedisConnect } from '@/types/redis'
 import { PostgresConnect } from '@/types/postgres'
 import { MongodbConnect } from './types/mongodb'
 import { useIndexStore } from '@/store'
-import { checkUpdate, installUpdate } from '@tauri-apps/api/updater'
-import { relaunch } from '@tauri-apps/api/process'
-import tauriConfig from '../src-tauri/tauri.conf.json'
 import { useI18n } from 'vue-i18n'
 import { test as testRedis } from '@/api/redis'
 import { test as testPostgres } from '@/api/postgres'
@@ -29,6 +26,10 @@ import { uuid } from '@/utils/crypto'
 import { emit, listen } from '@tauri-apps/api/event'
 
 /** ------------------ 变量 Start ------------------ **/
+const languages = ref<{ [x: string]: any }>({
+    'zh-CN': zhCN,
+    'en-US': enUS
+})
 const showSide = ref<boolean>(true)  // 显示侧边栏
 const showConn = ref<boolean>(false)  // 显示编辑连接窗口
 const dbTypeList = shallowRef(DBType)  // 数据库列表
@@ -428,65 +429,10 @@ const handleShowSide = async () => {
     })
 }
 
-const showSetting = ref(false)
-const handleCheckedChange = async (val: boolean) => {
-    store.updateConfig({
-        ...store.config,
-        deleteNoConfirm: val
-    })
-}
-
-const loadingClear = ref(false)
-const handleClearAllData = async () => {
-    loadingClear.value = true
-    localStorage.clear()
-    setTimeout(() => {
-        loadingClear.value = false
-    }, 1000)
-}
-
-// Update
-const showUpdateInfo = ref(false)
-const updateStatus = ref<any>(null)
-const updateLoading = ref(false)
-const handleUpdate = async () => {
-    try {
-        const { shouldUpdate, manifest } = await checkUpdate()
-        if (shouldUpdate) {
-            updateStatus.value = manifest
-            showUpdateInfo.value = true
-        } else {
-            alert('当前已是最新版本')
-        }
-    } catch (error) {
-        console.log(error)
-    }
-}
-const handleStartUpdate = async () => {
-    updateLoading.value = true
-    await installUpdate()
-    await relaunch()
-    updateLoading.value = false
-}
-const handleCancelUpdate = () => {
-    showUpdateInfo.value = false
-}
-
-const langs = ref([
-    { label: '简体中文', value: 'zh-CN' },
-    { label: 'English', value: 'en-US' }
-])
-const languages = ref<{ [x: string]: any }>({
-    'zh-CN': zhCN,
-    'en-US': enUS
-})
-const handleUpdateLang = async (_: string) => {
-    store.updateConfig({
-        ...store.config,
-        lang: locale.value
-    })
-}
-
+/**
+ * 关闭标签页
+ * @param id 连接id
+ */
 const handleCloseTab = async (id: string) => {
     tabs.value = tabs.value.filter(tab => tab.id != id)
     saveTabs(tabs.value)
@@ -497,15 +443,20 @@ const handleCloseTab = async (id: string) => {
     }
 }
 
-const isEdit = ref(false)
-const editConnId = ref<string>('')
+const isEdit = ref(false)  // 是否是编辑连接
+const editConnId = ref<string>('')  // 正在编辑的连接id
+
+/**
+ * 关闭相关标签页, 打开编辑连接的弹窗
+ * @param id 连接id
+ */
 const handleEditConnection = async (id: string) => {
     const conn = connList.value.find(item => item.id == id)
     if (conn) {
         await handleCloseTabs(id)
-        isEdit.value = true
-        showConn.value = true
-        editConnId.value = id
+        isEdit.value = true  // 编辑连接而不是新建连接
+        showConn.value = true  // 打开连接弹窗
+        editConnId.value = id  // 编辑的连接id
         switch (conn.db_type) {
             case 'redis':
                 dbConnType.value = 'redis'
@@ -539,42 +490,6 @@ const handleEditConnection = async (id: string) => {
         <n-loading-bar-provider>
             <n-message-provider>
                 <n-dialog-provider>
-                    <n-modal v-model:show="showUpdateInfo" preset="card" style="width: 600px;" :title="t('info')"
-                        size="small">
-                        <h1>Version: {{updateStatus.version}}</h1>
-                        <br>
-                        <p>Info: {{updateStatus.body}}</p>
-                        <br>
-                        <p>Publish Date: {{updateStatus.date}}</p>
-                        <br>
-                        <n-button size="small" @click="handleStartUpdate" :loading="updateLoading">Install</n-button>
-                        &nbsp;
-                        <n-button size="small" @click="handleCancelUpdate">Cancel</n-button>
-                    </n-modal>
-
-                    <n-modal v-model:show="showSetting" preset="card" style="width: 600px;" :title="t('setting')"
-                        size="small">
-                        <n-select size="small" v-model:value="locale" :options="langs"
-                            @update:value="handleUpdateLang" />
-                        <br>
-                        <n-checkbox :checked="store.config?.deleteNoConfirm" @update:checked="handleCheckedChange">
-                            {{ t('noConfirmationIsRequiredForDeletion') }}
-                        </n-checkbox>
-                        <br>
-                        <br>
-                        <n-button :loading="loadingClear" size="small" @click="handleClearAllData">
-                            {{ t('clearAllData') }}
-                        </n-button>
-                        <br>
-                        <br>
-                        <n-button :loading="updateLoading" size="small" @click="handleUpdate">
-                            {{ t('checkForUpdates') }}
-                        </n-button>
-                        <br>
-                        <br>
-                        <div>Version: {{tauriConfig.package.version}}</div>
-                    </n-modal>
-
                     <n-modal v-model:show="showConn" preset="card" style="width: 600px;" :title="t('connections')"
                         size="small">
                         <n-space vertical>
@@ -696,7 +611,7 @@ const handleEditConnection = async (id: string) => {
                                 </div>
                             </div>
                             <div class="content" ref="contentRef" :style="`left: ${width}px`">
-                                <header class="header">
+                                <header data-tauri-drag-region class="header">
                                     <div v-for="i in connList" v-show="i.id == tabs.find(t => t.id == tab)?.conn.id">
                                         <component :key="i.id" :is="infoComponents[i.db_type]" :conn="i" />
                                     </div>
