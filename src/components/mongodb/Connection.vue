@@ -557,7 +557,7 @@ const sqlCreateDatabase = computed(() => {
         </n-modal>
         <n-dropdown trigger="manual" size="small" placement="bottom-start" :show="showContextmenu"
             :options="(optionsContextmenu as any)" :x="xPos" :y="yPos" @clickoutside="showContextmenu = false" />
-        <n-tree block-line @update:expanded-keys="handleExpand" :on-load="handleLoad" :data="data" selectable
+        <n-tree block-line @update:expanded-keys="handleExpand as any" :on-load="handleLoad" :data="data" selectable
             :node-props="(nodeProps as any)" :render-switcher-icon="renderSwitcherIcon" :expanded-keys="expandedKeys" />
     </div>
 </template>

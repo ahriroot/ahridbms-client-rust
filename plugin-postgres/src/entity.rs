@@ -77,6 +77,8 @@ pub enum Field {
     Hstore(KV<HashMap<String, Option<String>>>),
     Timestamp(KV<u64>),
     TimestampTZ(KV<u64>),
+    Date(KV<String>),
+    Time(KV<String>),
     Inet(KV<IpAddr>),
 
     // other

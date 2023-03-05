@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, ref } from 'vue'
+import { h, ref, onBeforeMount } from 'vue'
 import { NTree, NIcon, TreeOption, NDropdown, NModal, NCard, NLayout, NSpin } from 'naive-ui'
 import { ServerSharp, ChevronForward } from '@vicons/ionicons5'
 
@@ -9,6 +9,8 @@ import { RedisConnect } from '@/types/redis'
 import { info } from '@/api/redis'
 import iconRedis from '@/components/icon/redis.vue'
 import { uuid } from '@/utils/crypto'
+import { useI18n } from 'vue-i18n'
+import treeNodeEvent from '@/components/redis/TreeNodeEvent.vue'
 
 const props = defineProps<{
     conn: Connection<RedisConnect>
@@ -22,7 +24,12 @@ const renderSwitcherIcon = () => {
     return h(NIcon, null, { default: () => h(ChevronForward) })
 }
 
-const defaultExpandedKeys = ref([])
+const { t } = useI18n()
+
+const expandedKeys = ref<string[]>([])
+const handleExpandKeys = (keys: string[]) => {
+    expandedKeys.value = keys
+}
 
 const showContextmenu = ref(false)
 const optionsContextmenu = ref<any[]>([])
@@ -31,19 +38,13 @@ const yPos = ref(0)
 const nodeProps = ({ option }: { option: any }): any => {
     return {
         async onClick() {
-            if (option.children == undefined || option.children == null) {
-                emits('handleOpenTab', {
-                    id: await uuid(), conn: props.conn, tab_type: 'db', data: {
-                        title: `${option.label}@${props.conn.info.name}`,
-                        table: option.label
-                    }
-                })
-            }
+        },
+        async onDblclick() {
         },
         onContextmenu(e: MouseEvent): void {
             if (option.children != undefined && option.children != null) {
                 optionsContextmenu.value = [{
-                    label: 'Delete',
+                    label: t('delete'),
                     key: 'delete',
                     props: {
                         onClick: () => {
@@ -52,7 +53,7 @@ const nodeProps = ({ option }: { option: any }): any => {
                         }
                     }
                 }, {
-                    label: 'Query',
+                    label: t('query'),
                     key: 'query',
                     props: {
                         onClick: async () => {
@@ -65,7 +66,7 @@ const nodeProps = ({ option }: { option: any }): any => {
                         }
                     }
                 }, {
-                    label: 'Info',
+                    label: t('info'),
                     key: 'info',
                     props: {
                         onClick: () => {
@@ -78,6 +79,73 @@ const nodeProps = ({ option }: { option: any }): any => {
                 xPos.value = e.clientX
                 yPos.value = e.clientY
                 e.preventDefault()
+            } else if (option.is_db) {
+                optionsContextmenu.value = [{
+                    label: t('open'),
+                    key: 'open',
+                    props: {
+                        onClick: async () => {
+                            emits('handleOpenTab', {
+                                id: await uuid(), conn: props.conn, tab_type: 'db', data: {
+                                    title: `${option.label}@${props.conn.info.name}`,
+                                    table: option.label
+                                }
+                            })
+                        }
+                    }
+                }]
+                showContextmenu.value = true
+                xPos.value = e.clientX
+                yPos.value = e.clientY
+                e.preventDefault()
+            }
+        }
+    }
+}
+
+onBeforeMount(async () => {
+    await handleGetInfo()
+})
+
+const dbKeyCount = ref<{ [k: string]: string }>({
+    'db0': '0',
+    'db1': '0',
+    'db2': '0',
+    'db3': '0',
+    'db4': '0',
+    'db5': '0',
+    'db6': '0',
+    'db7': '0',
+    'db8': '0',
+    'db9': '0',
+    'db10': '0',
+    'db11': '0',
+    'db12': '0',
+    'db13': '0',
+    'db14': '0',
+    'db15': '0',
+})
+
+const handleGetInfo = async (index: number = -1) => {
+    let result = await info({ conn: props.conn, db: '0' })
+    if (result) {
+        let results = result.split('\n')
+        let handle_key_space = false
+        for (let c = 0; c < results.length; c++) {
+            let line = results[c]
+            if (handle_key_space && line && line.startsWith('db')) {
+                let [db, count] = line.split(':')
+                if (index == -1) {
+                    dbKeyCount.value[db] = count.split(',')[0].split('=')[1]
+                } else {
+                    if (db == `db${index}`) {
+                        dbKeyCount.value[db] = count.split(',')[0].split('=')[1]
+                        break
+                    }
+                }
+            } else if (line && line.startsWith('#') && line.includes('Keyspace')) {
+                handle_key_space = true
+                continue
             }
         }
     }
@@ -90,7 +158,24 @@ const rangeDB = (): TreeOption[] => {
             key: `db${index}`,
             label: index.toString(),
             value: index,
-            prefix: () => h(NIcon, null, { default: () => h(ServerSharp) })
+            is_db: true,
+            prefix: () => h(NIcon, null, { default: () => h(ServerSharp) }),
+            suffix: () => h(
+                treeNodeEvent,
+                {
+                    show: true,
+                    count: dbKeyCount.value[`db${index}`],
+                    onReload: async (e: MouseEvent) => {
+                        e.stopPropagation()
+                        await handleGetInfo(index)
+                    },
+                    onFlush: async (e: MouseEvent) => {
+                        e.stopPropagation()
+                    }
+                },
+                {
+                }
+            )
         })
     }
     return tmp
@@ -101,6 +186,22 @@ const data = ref<TreeOption[]>([{
     label: props.conn.info.name,
     value: `redis:${props.conn.info.name}`,
     prefix: () => h(NIcon, null, { default: () => h(iconRedis) }),
+    suffix: () => h(
+        treeNodeEvent,
+        {
+            show: expandedKeys.value.includes(`redis:${props.conn.info.name}`),
+            count: '-1',
+            onReload: async (e: MouseEvent) => {
+                e.stopPropagation()
+                await handleGetInfo()
+            },
+            onFlush: async (e: MouseEvent) => {
+                e.stopPropagation()
+            }
+        },
+        {
+        }
+    ),
     children: rangeDB()
 }])
 
@@ -146,11 +247,9 @@ const handleShowInfo = async () => {
         </n-modal>
         <n-dropdown trigger="manual" size="small" placement="bottom-start" :show="showContextmenu"
             :options="(optionsContextmenu as any)" :x="xPos" :y="yPos" @clickoutside="showContextmenu = false" />
-        <n-tree block-line :data="data" selectable :node-props="nodeProps" expand-on-click
-            :render-switcher-icon="renderSwitcherIcon" :default-expanded-keys="defaultExpandedKeys" />
+        <n-tree block-line :data="data" :node-props="nodeProps" expand-on-click :render-switcher-icon="renderSwitcherIcon"
+            :expanded-keys="expandedKeys" :on-update:expanded-keys="(handleExpandKeys as any)" />
     </div>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>

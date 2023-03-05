@@ -64,7 +64,7 @@ const handleShowSetting = async () => {
             table: ''
         }
     }
-    
+
     tabs.value.push(message)
     tab.value = message.id
     handleTabChanged(tab.value)
@@ -80,9 +80,9 @@ onBeforeUnmount(async () => {
 let unlisten: any = null
 onBeforeMount(async () => {
     /* Listening Start */
-    unlisten = await listen('global', async (event: { payload:string }) => {
+    unlisten = await listen('global', async (event: { payload: string }) => {
         let payload = JSON.parse(event.payload)
-        switch(payload.from) {
+        switch (payload.from) {
             case 'redis':
                 break
             case 'postgres':
@@ -91,7 +91,7 @@ onBeforeMount(async () => {
                         event: 'has_tab_opened',
                         data: {
                             id: payload.data.id,
-                            has: tabs.value.some((item) =>item.conn.id === payload.data.id)
+                            has: tabs.value.some((item) => item.conn.id === payload.data.id)
                         }
                     }))
                 } else if (payload.event === "edit_connection") {
@@ -239,9 +239,9 @@ const handleTestConn = async () => {
                     window.$message.success('OK')
                 }
             })
-            .finally(() => {
-                loadingTest.value = false
-            })
+                .finally(() => {
+                    loadingTest.value = false
+                })
             break
         case 'mongodb':
             loadingTest.value = true
@@ -496,8 +496,7 @@ const handleEditConnection = async (id: string) => {
                             <n-select :options="dbTypeList" :render-label="renderLabel" v-model:value="dbConnType" />
                             <n-card v-if="dbConnType == 'redis'">
                                 <n-space vertical>
-                                    <n-input v-model:value="dbRedis.name" type="text"
-                                        :placeholder="t('connection.name')" />
+                                    <n-input v-model:value="dbRedis.name" type="text" :placeholder="t('connection.name')" />
                                     <n-space>
                                         <n-input v-model:value="dbRedis.host" type="text"
                                             :placeholder="t('connection.host')" />
@@ -510,8 +509,7 @@ const handleEditConnection = async (id: string) => {
                                         <n-input v-model:value="dbRedis.pass" type="password"
                                             :placeholder="t('connection.pass')" />
                                     </n-space>
-                                    <n-input v-model:value="dbRedis.index" type="text"
-                                        :placeholder="t('connection.db')" />
+                                    <n-input v-model:value="dbRedis.index" type="text" :placeholder="t('connection.db')" />
                                 </n-space>
                             </n-card>
                             <n-card v-else-if="dbConnType == 'postgres'">
@@ -530,8 +528,7 @@ const handleEditConnection = async (id: string) => {
                                         <n-input v-model:value="dbPostgres.pass" type="password"
                                             :placeholder="t('connection.pass')" />
                                     </n-space>
-                                    <n-input v-model:value="dbPostgres.db" type="text"
-                                        :placeholder="t('connection.db')" />
+                                    <n-input v-model:value="dbPostgres.db" type="text" :placeholder="t('connection.db')" />
                                 </n-space>
                             </n-card>
                             <n-card v-else-if="dbConnType == 'mongodb'">
@@ -550,8 +547,7 @@ const handleEditConnection = async (id: string) => {
                                         <n-input v-model:value="dbMongodb.pass" type="password"
                                             :placeholder="t('connection.pass')" />
                                     </n-space>
-                                    <n-input v-model:value="dbMongodb.db" type="text"
-                                        :placeholder="t('connection.db')" />
+                                    <n-input v-model:value="dbMongodb.db" type="text" :placeholder="t('connection.db')" />
                                 </n-space>
                             </n-card>
                             <n-card v-else>
@@ -621,9 +617,8 @@ const handleEditConnection = async (id: string) => {
                                         tab-style="min-width: 80px;" @close="handleClose" size="small">
                                         <n-tab-pane display-directive="show" v-for="i in tabs" :key="i.id"
                                             :tab="i.data.title" :name="i.id">
-                                            <component :key="i.id"
-                                                :is="tabComponents[`${i.conn.db_type}:${i.tab_type}`]" :conn="i.conn"
-                                                :data="i.data" @handleCloseTab="handleCloseTab(i.id)" />
+                                            <component :key="i.id" :is="tabComponents[`${i.conn.db_type}:${i.tab_type}`]"
+                                                :conn="i.conn" :data="i.data" @handleCloseTab="handleCloseTab(i.id)" />
                                         </n-tab-pane>
                                     </n-tabs>
                                 </section>

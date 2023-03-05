@@ -171,10 +171,13 @@ onBeforeMount(async () => {
     struct.value.forEach((column: any) => {
         let t = column.typname
         let comp = typeRender.value[t].component
+        minWidth.value += typeRender.value[t].minWidth
         columns.value.push({
             title: column.attname,
             key: column.attname,
             width: typeRender.value[t].width,
+            resizable: true,
+            minWidth: typeRender.value[t].minWidth,
             sorter: {
                 multiple: 3
             },
@@ -200,12 +203,14 @@ onBeforeMount(async () => {
         title: '',
         key: 'opera',
         width: 34,
+        fixed: 'right',
         render: (row: any, index: number) => {
             if (isNaN(row[0].old)) {
                 return h(
                     NButton,
                     {
                         size: 'small',
+                        style: 'background: #282c34',
                         onClick: async () => await handleInsert()
                     },
                     {
@@ -223,6 +228,7 @@ onBeforeMount(async () => {
                     NButton,
                     {
                         size: 'small',
+                        style: 'background: #282c34',
                         onClick: async () => await handleDelete(row)
                     },
                     {
@@ -249,7 +255,7 @@ const where = (values: any[]) => {
         if (tmp.old === null) {
             wheres.push(`${pk} IS NULL`)
         } else {
-            if (['char', 'varchar', 'text'].includes(type)) {
+            if (['char', 'varchar', 'text', 'date', 'time'].includes(type)) {
                 wheres.push(`${pk} = '${tmp.old}'`)
             } else if (['time', 'timetz', 'date', 'timestamptz', 'timestamp', 'interval'].includes(type)) {
                 wheres.push(`${pk} = '${format(tmp.old)}'`)
@@ -276,7 +282,7 @@ const handleUpdate = async () => {
                 if (column.value === null) {
                     changeData.push(`${column.field} = NULL`)
                 } else {
-                    if (['char', 'varchar', 'text'].includes(type)) {
+                    if (['char', 'varchar', 'text', 'date', 'time'].includes(type)) {
                         changeData.push(`${column.field} = '${column.value}'`)
                     } else if (['time', 'timetz', 'date', 'timestamptz', 'timestamp', 'interval'].includes(type)) {
                         changeData.push(`${column.field} = '${format(column.value)}'`)
@@ -357,7 +363,7 @@ const handleInsert = async () => {
             if (isNaN(column.old)) {
                 let type = column.type;
                 fields.push(column.field)
-                if (['char', 'varchar', 'text'].includes(type)) {
+                if (['char', 'varchar', 'text', 'date', 'time'].includes(type)) {
                     values.push(`'${column.value}'`)
                 } else if (['time', 'timetz', 'date', 'timestamptz', 'timestamp', 'interval'].includes(type)) {
                     values.push(`'${format(column.value)}'`)
@@ -404,6 +410,7 @@ const handleCreate = async () => {
         data.value.pop()
     }
 }
+const minWidth = ref(36)
 </script>
     
 <template>
@@ -436,7 +443,7 @@ const handleCreate = async () => {
         </div>
         <n-data-table size="small" :single-line="false" :columns="columns" :data="data" flex-height
             style="position: absolute; top: 32px; bottom: 40px;" :loading="loadingCount > 0" :pagination="pagination"
-            :remote="true" :scroll-x="900" @update:sorter="handleUpdateSorter" />
+            :remote="true" :scroll-x="minWidth" @update:sorter="handleUpdateSorter" />
     </div>
 </template>
     

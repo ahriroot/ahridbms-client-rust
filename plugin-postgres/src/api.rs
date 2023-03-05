@@ -1,3 +1,4 @@
+use chrono::{NaiveDate, NaiveTime};
 use postgres::Error;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio_postgres::{types::Type, NoTls};
@@ -153,6 +154,30 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
                         }));
                     }
                 }
+                Type::DATE => {
+                    let data: Option<NaiveDate> = row.get(name);
+                    let res: String = match data {
+                        Some(data) => data.format("%Y-%m-%d").to_string(),
+                        None => "".to_string(),
+                    };
+                    result_row.push(Field::Date(KV {
+                        key: name.to_string(),
+                        typename: typename.to_string(),
+                        value: Some(res),
+                    }));
+                }
+                Type::TIME => {
+                    let data: Option<NaiveTime> = row.get(name);
+                    let res: String = match data {
+                        Some(data) => data.format("%H:%M:%S").to_string(),
+                        None => "".to_string(),
+                    };
+                    result_row.push(Field::Time(KV {
+                        key: name.to_string(),
+                        typename: typename.to_string(),
+                        value: Some(res),
+                    }));
+                }
                 Type::NAME => {
                     let data: Option<String> = row.get(name);
                     result_row.push(Field::Name(KV {
@@ -192,18 +217,53 @@ pub async fn execsql_select(conn: Connection, sql: &str) -> Result<Vec<Vec<Field
 
 #[tauri::command]
 pub async fn get_databases(conn: Connection) -> Response<Vec<Vec<Field>>> {
-    let res = execsql_select(
-        conn,
-        "SELECT datname, datdba, encoding, datcollate, datctype, datistemplate, datallowconn, datconnlimit, datlastsysoid, datfrozenxid, datminmxid, dattablespace
-        FROM pg_database
-        WHERE datistemplate = false;",
+    let columns_result = get_columns(
+        conn.clone(),
+        "postgres".to_string(),
+        "pg_database".to_string(),
     )
     .await;
 
-    match res {
+    let columns: Vec<Vec<Field>> = match columns_result.data {
+        Res::Null => return Response::error("No data".to_string()),
+        Res::Success(c) => c,
+        Res::Error(e) => return Response::error(e),
+        Res::Error5(e) => return Response::error(e),
+    };
+
+    let mut column_names = Vec::new();
+    for cols in columns {
+        for col in cols {
+            match col {
+                Field::Name(KV { key, value, .. }) => {
+                    if key == "field" {
+                        column_names.push(value.unwrap());
+                        break;
+                    }
+                }
+                _ => {}
+            }
+        }
+    }
+
+    let columns_str = column_names.join(", ");
+
+    println!("columns_str: {}", columns_str);
+
+    let res = execsql_select(
+        conn,
+        &format!(
+            "SELECT {} FROM pg_database WHERE datistemplate = false;",
+            columns_str,
+        ),
+    )
+    .await;
+
+    let r = match res {
         Ok(v) => Response::ok(Res::Success(v)),
         Err(e) => Response::error(e.to_string()),
-    }
+    };
+    r
 }
 
 #[tauri::command]

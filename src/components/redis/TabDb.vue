@@ -14,6 +14,7 @@ import { NewFieldValue } from '@/data/redis'
 import EditorVue from '@/components/Editor.vue'
 import { useIndexStore } from '@/store'
 import { useI18n } from 'vue-i18n'
+import { info } from '@/api/redis'
 
 window.$message = useMessage()
 
@@ -252,6 +253,7 @@ const renderLabel: SelectRenderLabel = (option) => {
 
 const handleReload = async () => {
     await init()
+    await handleGetInfo()
 }
 const handleReloadKey = async () => {
     if (!detailKey.value) {
@@ -568,6 +570,7 @@ const handleDetail = async (val: Keyvalue) => {
 }
 
 onBeforeMount(async () => {
+    await handleGetInfo()
     width.value = Number(localStorage.getItem('redis-sidebar-width')) || 600
     oldWidth.value = width.value
     await init()
@@ -951,14 +954,35 @@ const handlePattern = async () => {
         loadingFinish()
     })
 }
+
+const dbKeyCount = ref<string>('')
+
+const handleGetInfo = async () => {
+    let result = await info({ conn: props.conn, db: '0' })
+    if (result) {
+        let results = result.split('\n')
+        let handle_key_space = false
+        for (let c = 0; c < results.length; c++) {
+            let line = results[c]
+            if (handle_key_space && line && line.startsWith('db')) {
+                let [db, count] = line.split(':')
+                if (db == `db${props.data.table}`) {
+                    dbKeyCount.value = count
+                }
+            } else if (line && line.startsWith('#') && line.includes('Keyspace')) {
+                handle_key_space = true
+                continue
+            }
+        }
+    }
+}
 </script>
 
 <template>
     <n-modal v-model:show="showAdd" preset="card" style="width: 600px; height: 80vh" title="新建" size="small">
         <div style="height: 100%; position: relative;">
             <n-select :options="fieldTypeList" :render-label="renderLabel" v-model:value="fieldType" />
-            <n-layout position="absolute" style="top: 50px; bottom: 50px; background: #2c2c32;"
-                :native-scrollbar="false">
+            <n-layout position="absolute" style="top: 50px; bottom: 50px; background: #2c2c32;" :native-scrollbar="false">
                 <n-card v-show="fieldType == 'ReJSON-RL'">
                     <n-space vertical>
                         <n-input v-model:value="fieldValue.json.key" type="text" placeholder="Key" />
@@ -988,8 +1012,7 @@ const handlePattern = async () => {
                                     </template>
                                 </n-button>
                                 <n-button strong secondary type="info" size="small"
-                                    :disabled="index == fieldValue.list.value.length - 1"
-                                    @click="handleListItem(index, 1)">
+                                    :disabled="index == fieldValue.list.value.length - 1" @click="handleListItem(index, 1)">
                                     <template #icon>
                                         <n-icon>
                                             <arrow-down />
@@ -1028,8 +1051,7 @@ const handlePattern = async () => {
                                     </template>
                                 </n-button>
                                 <n-button strong secondary type="info" size="small"
-                                    :disabled="index == fieldValue.set.value.length - 1"
-                                    @click="handleSetItem(index, 1)">
+                                    :disabled="index == fieldValue.set.value.length - 1" @click="handleSetItem(index, 1)">
                                     <template #icon>
                                         <n-icon>
                                             <arrow-down />
@@ -1069,8 +1091,7 @@ const handlePattern = async () => {
                                     </template>
                                 </n-button>
                                 <n-button strong secondary type="info" size="small"
-                                    :disabled="index == fieldValue.zset.value.length - 1"
-                                    @click="handleZsetItem(index, 1)">
+                                    :disabled="index == fieldValue.zset.value.length - 1" @click="handleZsetItem(index, 1)">
                                     <template #icon>
                                         <n-icon>
                                             <arrow-down />
@@ -1110,8 +1131,7 @@ const handlePattern = async () => {
                                     </template>
                                 </n-button>
                                 <n-button strong secondary type="info" size="small"
-                                    :disabled="index == fieldValue.hash.value.length - 1"
-                                    @click="handleHashItem(index, 1)">
+                                    :disabled="index == fieldValue.hash.value.length - 1" @click="handleHashItem(index, 1)">
                                     <template #icon>
                                         <n-icon>
                                             <arrow-down />
@@ -1150,7 +1170,7 @@ const handlePattern = async () => {
             <div class="header">
                 <div></div>
                 <div>
-                    {{ lastReload }}
+                    <span>{{ dbKeyCount }}</span>&nbsp;&nbsp;&nbsp;&nbsp;<span>{{ lastReload }}</span>&nbsp;
                     <n-dropdown trigger="hover" size="small" placement="bottom-start" :options="dropdownList"
                         @select="handleSelect">
                         <n-button strong secondary circle type="info" size="small" @click="showAdd = true">
@@ -1259,8 +1279,7 @@ const handlePattern = async () => {
                     &nbsp;
                     <n-tooltip trigger="hover">
                         <template #trigger>
-                            <n-button strong secondary circle type="info" size="small"
-                                @click.stop="handleCopy(detailKey)">
+                            <n-button strong secondary circle type="info" size="small" @click.stop="handleCopy(detailKey)">
                                 <template #icon>
                                     <n-icon>
                                         <key />
@@ -1518,7 +1537,7 @@ const handlePattern = async () => {
                                         <td class="list-value">
                                             <div v-show="editListItem.index != i.index"
                                                 @click="editListItem.index = i.index; editListItem.value = i.value">{{
-                                                i.value
+                                                    i.value
                                                 }}
                                             </div>
                                             <n-input v-show="editListItem.index == i.index"
@@ -1575,12 +1594,11 @@ const handlePattern = async () => {
                                         v-for="i in zsetToJson.filter((item: any) => !detailFilter || item.member.includes(detailFilter))">
                                         <td class="zset-member">{{ i.member }}</td>
                                         <td class="zset-score" style="width: 120px">
-                                            <n-input-number v-show="editZsetItem.member == i.member"
-                                                style="width: 120px" v-model:value="editZsetItem.score"
-                                                placeholder="Score" size="small" />
+                                            <n-input-number v-show="editZsetItem.member == i.member" style="width: 120px"
+                                                v-model:value="editZsetItem.score" placeholder="Score" size="small" />
                                             <div v-show="editZsetItem.member != i.member"
                                                 @click="editZsetItem.member = i.member; editZsetItem.score = i.score">{{
-                                                i.score
+                                                    i.score
                                                 }}
                                             </div>
                                         </td>
