@@ -21,7 +21,7 @@ export const useIndexStore = defineStore<
             config: {
                 deleteNoConfirm: false,
                 showSideBar: true,
-                sideBarWidth: 250,
+                treeWidth: 250,
                 pageSize: 20,
                 lang: 'zh-CN'
             }
@@ -29,11 +29,11 @@ export const useIndexStore = defineStore<
     },
     actions: {
         async updateConfig(config: Config, save: boolean = true) {
-            if (config.sideBarWidth) {
-                if (config.sideBarWidth < 150) {
-                    config.sideBarWidth = 150
-                } else if (config.sideBarWidth > 1000) {
-                    config.sideBarWidth = 1000
+            if (config.treeWidth) {
+                if (config.treeWidth < 250) {
+                    config.treeWidth = 250
+                } else if (config.treeWidth > 1300) {
+                    config.treeWidth = 1300
                 }
             }
             if (!config.pageSize) {

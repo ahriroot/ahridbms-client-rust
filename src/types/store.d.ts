@@ -1,7 +1,7 @@
 export interface Config {
     deleteNoConfirm: boolean
     showSideBar: boolean
-    sideBarWidth: number
+    treeWidth: number
     pageSize: number
     lang: string
 }

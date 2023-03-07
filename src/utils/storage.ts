@@ -20,4 +20,12 @@ const getTabs = async (): Promise<OpenTabMesagae<any>[]> => {
     return tabs ? JSON.parse(tabs) : []
 }
 
-export { saveConnections, getConnections, saveTabs, getTabs }
+const saveTab = async (tab: string) => {
+    localStorage.setItem('current_tab', tab)
+}
+
+const getTab = async () => {
+    return localStorage.getItem('current_tab')
+}
+
+export { saveConnections, getConnections, saveTabs, getTabs, saveTab, getTab }

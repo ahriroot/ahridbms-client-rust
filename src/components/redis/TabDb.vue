@@ -16,7 +16,6 @@ import { useIndexStore } from '@/store'
 import { useI18n } from 'vue-i18n'
 import { info } from '@/api/redis'
 
-window.$message = useMessage()
 
 const props = defineProps<{
     conn: Connection<RedisConnect>
@@ -44,46 +43,58 @@ const lastReload = ref<string>('less 1m')  // 距离上次刷新时间
 
 const editorNewRef = shallowRef<any>(undefined)  // 新建 json 数据编辑器
 
-const sidebarRef = shallowRef<HTMLElement | null>(null)  // 左边 html 元素
-const resizeable = ref<boolean>(false)  // 正在调整大小
-const width = ref(600)  // 左边实时宽度
-const oldWidth = ref(600)  // 左边开始宽度
-const cursor = ref('default')  // 默认鼠标显示
-const currentMoveX = ref(0)  // 鼠标移动距离
 const editorRef = shallowRef<any>(undefined)  // 显示 json 数据编辑器
-onMounted(() => {
-    if (sidebarRef.value) {
-        sidebarRef.value.addEventListener('mousedown', (ev) => {
-            if (cursor.value == 'ew-resize') {
-                resizeable.value = true
-                currentMoveX.value = ev.clientX
-                oldWidth.value = width.value
-            }
-        })
-        document.body.addEventListener('mousemove', (ev) => {
-            if (sidebarRef.value && (width.value - 4 < ev.offsetX && ev.offsetX < width.value + 4)) {
-                cursor.value = 'ew-resize'
-            } else {
-                cursor.value = 'default'
-            }
-            if (resizeable.value) {
-                const tmp = oldWidth.value + ev.clientX - currentMoveX.value
-                if (tmp < 400) {
-                    width.value = 400
-                } else if (tmp > 1000) {
-                    width.value = 1000
-                } else {
-                    width.value = tmp
-                }
-            }
-        })
-        document.body.addEventListener('mouseup', (_) => {
-            if (resizeable.value) {
-                resizeable.value = false
-                localStorage.setItem('redis-sidebar-width', width.value.toString())
-            }
-        })
+
+const oldWidth = ref(500)
+const width = ref(500)
+const sizePixel = computed(() => {
+    return {
+        listWidth: width.value + 'px',
+        drawLeft: width.value + 'px',
+        drawWidth: '4px',
+        ContentLeft: width.value + 4 + 'px',
     }
+})
+const drawRef = shallowRef<HTMLElement | null>(null)
+const resizeable = ref<boolean>(false)
+const currentX = ref(0)
+const handleDown = (e: MouseEvent) => {
+    resizeable.value = true
+    currentX.value = e.clientX
+}
+const handleUp = (e: MouseEvent) => {
+    resizeable.value = false
+    oldWidth.value = width.value
+    // store.updateConfig({
+    //     ...store.config,
+    //     treeWidth: width.value
+    // })
+}
+onMounted(() => {
+    document.body.addEventListener('mousemove', (ev) => {
+        if (resizeable.value) {
+            let m = oldWidth.value + ev.clientX - currentX.value
+            if (m < 250) {
+                width.value = 250
+                return
+            } else if (m > 1300) {
+                width.value = 1300
+                return
+            } else {
+                width.value = oldWidth.value + ev.clientX - currentX.value
+            }
+        }
+    })
+    document.body.addEventListener('mouseup', (ev) => {
+        if (resizeable.value) {
+            oldWidth.value = width.value
+            resizeable.value = false
+            // store.updateConfig({
+            //     ...store.config,
+            //     treeWidth: width.value
+            // })
+        }
+    })
 })
 
 const init = async () => {
@@ -1165,9 +1176,9 @@ const handleGetInfo = async () => {
         </div>
     </n-modal>
 
-    <div class="keys" :style="`cursor: ${resizeable ? 'ew-resize' : cursor}`">
-        <div class="list" ref="sidebarRef" :style="`width: ${width}px`">
-            <div class="header">
+    <div class="keys">
+        <div class="list">
+            <div class="header nocopy">
                 <div></div>
                 <div>
                     <span>{{ dbKeyCount }}</span>&nbsp;&nbsp;&nbsp;&nbsp;<span>{{ lastReload }}</span>&nbsp;
@@ -1192,7 +1203,7 @@ const handleGetInfo = async () => {
                 </div>
             </div>
             <n-table :bordered="true" :single-line="false" size="small" style="position: absolute; top: 36px">
-                <thead>
+                <thead class="nocopy">
                     <tr>
                         <th class="td-type">Type</th>
                         <th>
@@ -1208,7 +1219,7 @@ const handleGetInfo = async () => {
                     </tr>
                 </thead>
             </n-table>
-            <n-layout position="absolute" style="top: 77px; bottom: 36px; color: #fff;" :native-scrollbar="false">
+            <n-layout position="absolute" style="top: 77px; bottom: 0; color: #fff;" :native-scrollbar="false">
                 <n-table :bordered="true" :single-line="false" size="small">
                     <tbody>
                         <tr v-for="i in result" style="cursor: pointer;" @click="handleDetail(i)">
@@ -1253,8 +1264,9 @@ const handleGetInfo = async () => {
                 </n-table>
             </n-layout>
         </div>
-        <div class="content" :style="`left: ${width}px`" v-if="detailKey == null"></div>
-        <div class="content" :style="`left: ${width}px`" v-else>
+        <div class="draw nocopy" ref="drawRef" @mousedown="handleDown($event)" @mouseup="handleUp($event)"></div>
+        <div class="content" v-if="detailKey == null"></div>
+        <div class="content" v-else>
             <div class="header">
                 <div></div>
                 <div style="display: flex; align-items: center;">
@@ -1685,10 +1697,14 @@ const handleGetInfo = async () => {
         </div>
     </div>
 </template>
+
 <style scoped>
 .keys {
-    height: 100%;
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
 
 .keys .list {
@@ -1696,35 +1712,45 @@ const handleGetInfo = async () => {
     top: 0;
     left: 0;
     bottom: 0;
-    border-right: #333842 2px solid;
+    width: v-bind('sizePixel.listWidth');
 }
 
 .keys .list .header {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
+    right: 0;
     height: 36px;
+    padding: 0 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 10px;
     border-bottom: #333842 1px solid;
+}
+
+.keys .draw {
+    position: absolute;
+    top: 0;
+    left: v-bind('sizePixel.drawLeft');
+    width: v-bind('sizePixel.drawWidth');
+    bottom: 0;
+    cursor: ew-resize;
+    background: #333842;
 }
 
 .keys .content {
     position: absolute;
     top: 0;
+    left: v-bind('sizePixel.ContentLeft');
     right: 0;
     bottom: 0;
-    border-left: #333842 2px solid;
 }
 
 .keys .content .header {
     position: absolute;
     top: 0;
     left: 0;
-    width: 100%;
+    right: 0;
     height: 36px;
     display: flex;
     justify-content: space-between;
@@ -1739,7 +1765,7 @@ const handleGetInfo = async () => {
     top: 36px;
     left: 0;
     bottom: 0;
-    width: 100%;
+    right: 0;
     background: #282c34;
     border-bottom: #333842 1px solid;
 }

@@ -32,6 +32,7 @@ export default {
     closeConnectionforEdit: '关闭连接以编辑',
     deleteDatabase: '删除数据库',
     deleteTable: '删除表',
+    deleteCollection: '删除集合',
     clearAllData: '清除所有数据',
     checkForUpdates: '检查更新',
 }

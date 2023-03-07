@@ -60,6 +60,39 @@ const documents = async (params: DocumentArgs): Promise<any> => {
     return res
 }
 
+interface DeleteManyArgs extends InvokeArgs {
+    conn: Connection<MongodbConnect>
+    database: string
+    collection: string
+    documents: object[]
+}
+
+const deleteMany = async (params: DeleteManyArgs): Promise<any> => {
+    let res = await request<any>('plugin:mongodb|delete_many', params)
+    return res
+}
+
+interface DropDatabaseManyArgs extends InvokeArgs {
+    conn: Connection<MongodbConnect>
+    database: string
+}
+
+const dropDatabase = async (params: DropDatabaseManyArgs): Promise<any> => {
+    let res = await request<any>('plugin:mongodb|drop_database', params)
+    return res
+}
+
+interface DropCollectionArgs extends InvokeArgs {
+    conn: Connection<MongodbConnect>
+    database: string
+    collection: string
+}
+
+const dropCollection = async (params: DropCollectionArgs): Promise<any> => {
+    let res = await request<any>('plugin:mongodb|drop_collection', params)
+    return res
+}
+
 interface TestArgs extends InvokeArgs {
     conn: Connection<MongodbConnect>
     database: string
@@ -70,5 +103,5 @@ const test = async (params: TestArgs): Promise<any> => {
     return res
 }
 
-export { databases, collections, documents, test }
+export { databases, collections, documents, deleteMany, dropDatabase, dropCollection, test }
 

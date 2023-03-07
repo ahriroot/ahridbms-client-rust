@@ -45,42 +45,47 @@ const handleSelect = async () => {
     if (!sql_str) {
         sql_str = await editorRef.value?.getValue()
     }
-    // 正则根据分号分割，排除引号中的分号
+    sql_str = sql_str.split('\n').filter((sql: string) => {
+        return sql && sql.trim() && !sql.trim().startsWith('//')
+    }).join('\n')
     let sql_str_arr = sql_str.trim().split(/;(?=(?:[^'"]|'[^']*'|"[^"]*")*$)/)
-    let sqls = sql_str_arr.filter((sql: string) => {
-        return sql && sql.trim() && !sql.trim().startsWith('--')
-    })
-    if (sqls) {
-        loading.value = true
-        results.value = []
-        for (let index = 0; index < sqls.length; index++) {
-            let sql = sqls[index].trim()
-            if (sql.toLowerCase().startsWith('select')) {
-                let res = await executeSelectSql({
-                    conn: props.conn,
-                    database: props.data.database,
-                    sql: sql
-                }, false)
-                results.value.push({
-                    id: await uuid(),
-                    type: 'select',
-                    sql: sql,
-                    data: res
-                })
-            } else {
-                results.value.push({
-                    id: await uuid(),
-                    type: 'other',
-                    sql: sql,
-                    data: ''
-                })
-            }
-            if (results.value.length == 1) {
-                tab.value = results.value[0].id
+    let regMap = [
+        {
+            type: 'use',
+            reg: /use\s*(\w+)/,
+        },
+        {
+            type: 'db',
+            reg: /db\.(\w+).(\w+)\((.*),\s*(.*)\)/,
+        },
+    ]
+    let exec: any[] = []
+    sql_str_arr.forEach((sql: string) => {
+        for (let i = 0; i < regMap.length; i++) {
+            let rm = regMap[i]
+            let match = sql.match(rm.reg)
+            if (match) {
+                switch (rm.type) {
+                    case 'use':
+                        exec.push({
+                            type: 'use',
+                            db: match[1],
+                        })
+                        break
+                    case 'db':
+                        exec.push({
+                            type: 'db',
+                            col: match[1],
+                            func: match[2],
+                            document: match[3],
+                            options: match[4],
+                        })
+                        break
+                }
             }
         }
-        loading.value = false
-    }
+    })
+    console.log(exec)
 }
 </script>
     
@@ -96,19 +101,19 @@ const handleSelect = async () => {
             </n-button>
         </div>
         <div class="input">
-            <EditorVue ref="editorRef" @change="handleChange" :value="config.query" :type="'postgres_query'" />
+            <EditorVue ref="editorRef" @change="handleChange" :value="config.query" :type="'mongo_query'" />
         </div>
         <div class="output">
-            <n-tabs v-model:value="tab" type="card" tab-style="min-width: 80px;" size="small">
-                <n-tab-pane display-directive="show" v-for="(i, index) in results" :key="i.id" :tab="`Result ${index}`"
-                    :name="i.id">
-                    <div class="sql">{{ i.sql }}</div>
-                    <div class="res">
-                        <TableViewVue v-if="i.type == 'select'" :data="i.data" />
-                        <div v-else>{{ i }}</div>
-                    </div>
-                </n-tab-pane>
-            </n-tabs>
+            <!-- <n-tabs v-model:value="tab" type="card" tab-style="min-width: 80px;" size="small">
+                                                                                                <n-tab-pane display-directive="show" v-for="(i, index) in results" :key="i.id" :tab="`Result ${index}`"
+                                                                                                    :name="i.id">
+                                                                                                    <div class="sql">{{ i.sql }}</div>
+                                                                                                    <div class="res">
+                                                                                                        <TableViewVue v-if="i.type == 'select'" :data="i.data" />
+                                                                                                        <div v-else>{{ i }}</div>
+                                                                                                    </div>
+                                                                                                </n-tab-pane>
+                                                                                            </n-tabs> -->
         </div>
     </div>
 </template>

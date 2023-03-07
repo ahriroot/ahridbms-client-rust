@@ -1,6 +1,8 @@
 import SettingVue from '@/components/Setting.vue'
+
 import MongodbConnect from '@/components/mongodb/Connection.vue'
 import MongodbCollection from '@/components/mongodb/Collection.vue'
+import MongodbQuery from '@/components/mongodb/Query.vue'
 
 import PostgresConnect from '@/components/postgres/Connection.vue'
 import PostgresTableVue from '@/components/postgres/Table.vue'
@@ -50,6 +52,7 @@ const TabComponents = {
     'postgres:create_table': PostgresCreateTableVue,
     'postgres:create_table_s': PostgresCreateTableSVue,
     'mongodb:collection': MongodbCollection,
+    'mongodb:query': MongodbQuery,
 }
 
 const InfoComponents = {
@@ -114,7 +117,38 @@ const QuerySuggestionsOfRedis = async (kind: any, snippet: any) => ([
     },
 ])
 
+const QuerySuggestionsOfMongo = async (kind: any, snippet: any) => ([
+    {
+        label: "db",
+        kind: kind.Function,
+        insertText: "db.${0:col}",
+        insertTextRules: snippet,
+        detail: "collection of db",
+    },
+    {
+        label: "insertOne",
+        kind: kind.Function,
+        insertText: "insertOne(${1:document}, ${0:options})",
+        insertTextRules: snippet,
+        detail: "insert one data",
+    },
+    {
+        label: "insertMany",
+        kind: kind.Function,
+        insertText: "insertMany(${1:document}, ${0:options})",
+        insertTextRules: snippet,
+        detail: "insert many data",
+    },
+    {
+        label: "insert",
+        kind: kind.Function,
+        insertText: "insert(${1:document}, ${0:options})",
+        insertTextRules: snippet,
+        detail: "insert data",
+    },
+])
+
 export {
     DBType, ConnectionComponents, TabComponents, InfoComponents, RedisConnectInit, PostgresConnectInit, MongodbConnectInit,
-    QuerySuggestionsOfRedis
+    QuerySuggestionsOfRedis, QuerySuggestionsOfMongo
 }

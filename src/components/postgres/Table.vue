@@ -414,7 +414,7 @@ const minWidth = ref(36)
 </script>
     
 <template>
-    <div style="height: 100%; position: relative;">
+    <div class="table">
         <div class="opera-content">
             <div class="left">Count: {{ count }}</div>
             <div class="right">
@@ -441,23 +441,47 @@ const minWidth = ref(36)
                 </n-button>
             </div>
         </div>
-        <n-data-table size="small" :single-line="false" :columns="columns" :data="data" flex-height
-            style="position: absolute; top: 32px; bottom: 40px;" :loading="loadingCount > 0" :pagination="pagination"
-            :remote="true" :scroll-x="minWidth" @update:sorter="handleUpdateSorter" />
+        <div class="data-content">
+            <n-data-table size="small" :single-line="false" :columns="columns" :data="data" flex-height
+                style="position: absolute; top: 0; left: 0; right: 0; bottom: 0" :loading="loadingCount > 0"
+                :pagination="pagination" :remote="true" :scroll-x="minWidth" @update:sorter="handleUpdateSorter" />
+        </div>
     </div>
 </template>
     
 <style scoped>
+.table {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
 .opera-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 34px;
     display: flex;
     justify-content: space-between;
-    padding: 2px 5px;
+    align-items: center;
+    padding: 0 4px;
 }
 
 .opera-content .left,
 .opera-content .right {
     display: flex;
     align-items: center;
+}
+
+.data-content {
+    position: absolute;
+    top: 34px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
 }
 
 .n-data-table :deep(td) {

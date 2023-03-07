@@ -248,8 +248,6 @@ pub async fn get_databases(conn: Connection) -> Response<Vec<Vec<Field>>> {
 
     let columns_str = column_names.join(", ");
 
-    println!("columns_str: {}", columns_str);
-
     let res = execsql_select(
         conn,
         &format!(

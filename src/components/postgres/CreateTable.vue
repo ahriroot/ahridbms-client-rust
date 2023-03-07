@@ -3,11 +3,12 @@ import { Connection } from '@/types/Connection'
 import { PostgresConnect } from '@/types/postgres'
 import { computed, ref } from 'vue'
 import {
-    NIcon, NButton, NInput, NInputNumber, NCheckbox, NSelect, NSpin, NModal, NTable, NTabs, NTabPane, NPopover, NInputGroup
+    NIcon, NButton, NInput, NInputNumber, NCheckbox, NSelect, NSpin, NModal,
+    NTable, NTabs, NTabPane, NPopover, NInputGroup, useMessage
 } from 'naive-ui'
 import { Add, ArrowDown, ArrowUp, Trash, EllipsisHorizontal, Checkmark } from '@vicons/ionicons5'
 import { useI18n } from 'vue-i18n'
-import { update } from '@/api/postgres'
+import { executeWithTransaction, update } from '@/api/postgres'
 import { emit } from '@tauri-apps/api/event'
 
 const props = defineProps<{
@@ -19,6 +20,7 @@ const emits = defineEmits<{
 }>()
 
 const { t } = useI18n()
+const message = useMessage()
 
 /** ------------- column ------------- **/
 const tablename = ref('')
@@ -425,69 +427,87 @@ const formatIndexFields = (fields: any[]) => {
 }
 
 const handleSubmitCreateTable = async () => {
-    loadingCreateTable.value = true
-    console.log(sqlCreateTable.value.sql)
-    let resCreateTable = await update({
-        conn: props.conn,
-        database: props.data.database,
-        sql: sqlCreateTable.value.sql
-    })
-    if (resCreateTable.is_error) {
+    try {
+        loadingCreateTable.value = true
+        let sqls: string[] = [
+            sqlCreateTable.value.sql
+        ]
+        // let resCreateTable = await update({
+        //     conn: props.conn,
+        //     database: props.data.database,
+        //     sql: sqlCreateTable.value.sql
+        // })
+        // if (resCreateTable.is_error) {
+        //     loadingCreateTable.value = false
+        //     return
+        // }
+        for (let index = 0; index < sqlCreateTable.value.comments.length; index++) {
+            sqls.push(sqlCreateTable.value.comments[index])
+            // let resCreateTableComment = await update({
+            //     conn: props.conn,
+            //     database: props.data.database,
+            //     sql: sqlCreateTable.value.comments[index]
+            // })
+            // if (resCreateTableComment.is_error) {
+            //     loadingCreateTable.value = false
+            //     return
+            // }
+        }
+        for (let index = 0; index < sqlIndex.value.sqls.length; index++) {
+            sqls.push(sqlIndex.value.sqls[index])
+            // let resIndex = await update({
+            //     conn: props.conn,
+            //     database: props.data.database,
+            //     sql: sqlIndex.value.sqls[index]
+            // })
+            // if (resIndex.is_error) {
+            //     loadingCreateTable.value = false
+            //     return
+            // }
+        }
+        for (let index = 0; index < sqlIndex.value.comments.length; index++) {
+            sqls.push(sqlIndex.value.comments[index])
+            // let resIndexComment = await update({
+            //     conn: props.conn,
+            //     database: props.data.database,
+            //     sql: sqlIndex.value.comments[index]
+            // })
+            // if (resIndexComment.is_error) {
+            //     loadingCreateTable.value = false
+            //     return
+            // }
+        }
+        let res = await executeWithTransaction({
+            conn: props.conn,
+            database: props.data.database,
+            sqls: sqls
+        })
+        if (!res.is_error) {
+            message.success(res)
+        }
+        // await emit('reload', { conn: props.conn, database: props.data.database, table: tablename.value || 'Untitled' })
+        // await emits('handleCloseTab')
+    } catch (e) {
+        message.error(e as string)
+    } finally {
         loadingCreateTable.value = false
-        return
     }
-    for (let index = 0; index < sqlCreateTable.value.comments.length; index++) {
-        let resCreateTableComment = await update({
-            conn: props.conn,
-            database: props.data.database,
-            sql: sqlCreateTable.value.comments[index]
-        })
-        if (resCreateTableComment.is_error) {
-            loadingCreateTable.value = false
-            return
-        }
-    }
-    for (let index = 0; index < sqlIndex.value.sqls.length; index++) {
-        let resIndex = await update({
-            conn: props.conn,
-            database: props.data.database,
-            sql: sqlIndex.value.sqls[index]
-        })
-        if (resIndex.is_error) {
-            loadingCreateTable.value = false
-            return
-        }
-    }
-    for (let index = 0; index < sqlIndex.value.comments.length; index++) {
-        let resIndexComment = await update({
-            conn: props.conn,
-            database: props.data.database,
-            sql: sqlIndex.value.comments[index]
-        })
-        if (resIndexComment.is_error) {
-            loadingCreateTable.value = false
-            return
-        }
-    }
-    await emit('reload', { conn: props.conn, database: props.data.database, table: tablename.value || 'Untitled' })
-    await emits('handleCloseTab')
-    loadingCreateTable.value = false
 }
 </script>
     
 <template>
-    <div style="padding: 14px">
-        <n-modal v-model:show="showColumnItemDetail" class="nocopy" preset="card" style="width: 574px;"
-            :title="t('info')" size="small">
+    <div class="create-table" style="padding: 14px">
+        <n-modal v-model:show="showColumnItemDetail" class="nocopy" preset="card" style="width: 574px;" :title="t('info')"
+            size="small">
             <n-table size="small" :single-line="true">
                 <tbody>
                     <tr>
                         <td>Default: </td>
                         <td>
-                            <n-select size="small" filterable tag
-                                v-model:value="table.columns[showColumnItemIndex].default" :options="[
-                                    {label: 'NULL',value: 'NULL'},
-                                    {label: 'Empty String',value: '\'\''},
+                            <n-select size="small" filterable tag v-model:value="table.columns[showColumnItemIndex].default"
+                                :options="[
+                                    { label: 'NULL', value: 'NULL' },
+                                    { label: 'Empty String', value: '\'\'' },
                                 ]" clearable />
                         </td>
                     </tr>
@@ -496,10 +516,10 @@ const handleSubmitCreateTable = async () => {
                         <td style="display: flex;">
                             <n-select size="small" filterable tag
                                 v-model:value="table.columns[showColumnItemIndex].collation1" :options="[
-                                    {label: 'information_schema', value: 'information_schema'},
-                                    {label: 'pg_catalog', value: 'pg_catalog'},
-                                    {label: 'pg_toast', value: 'pg_toast'},
-                                    {label: 'public', value: 'public'}
+                                    { label: 'information_schema', value: 'information_schema' },
+                                    { label: 'pg_catalog', value: 'pg_catalog' },
+                                    { label: 'pg_toast', value: 'pg_toast' },
+                                    { label: 'public', value: 'public' }
                                 ]" clearable />
                             &nbsp;
                             <n-select size="small" filterable tag
@@ -515,16 +535,15 @@ const handleSubmitCreateTable = async () => {
                     <tr>
                         <td>Virtual Type: </td>
                         <td>
-                            <n-select size="small" v-model:value="table.columns[showColumnItemIndex].virtualType"
-                                :options="[
-                                    {label: 'GENERATED ALWAYS AS IDENTITY', value: 'GENERATED ALWAYS AS IDENTITY'},
-                                    {label: 'GENERATED BY DEFAULT AS IDENTITY', value: 'GENERATED BY DEFAULT AS IDENTITY'},
-                                    {label: 'GENERATED ALWAYS AS STORED', value: 'GENERATED ALWAYS AS STORED'}
-                                ]" clearable />
+                            <n-select size="small" v-model:value="table.columns[showColumnItemIndex].virtualType" :options="[
+                                { label: 'GENERATED ALWAYS AS IDENTITY', value: 'GENERATED ALWAYS AS IDENTITY' },
+                                { label: 'GENERATED BY DEFAULT AS IDENTITY', value: 'GENERATED BY DEFAULT AS IDENTITY' },
+                                { label: 'GENERATED ALWAYS AS STORED', value: 'GENERATED ALWAYS AS STORED' }
+                            ]" clearable />
                         </td>
                     </tr>
                     <tr v-show="
-                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY'||
+                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY' ||
                         table.columns[showColumnItemIndex].virtualType === 'GENERATED BY DEFAULT AS IDENTITY'
                     ">
                         <td>Increment: </td>
@@ -533,7 +552,7 @@ const handleSubmitCreateTable = async () => {
                         </td>
                     </tr>
                     <tr v-show="
-                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY'||
+                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY' ||
                         table.columns[showColumnItemIndex].virtualType === 'GENERATED BY DEFAULT AS IDENTITY'
                     ">
                         <td>Minvalue: </td>
@@ -542,7 +561,7 @@ const handleSubmitCreateTable = async () => {
                         </td>
                     </tr>
                     <tr v-show="
-                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY'||
+                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY' ||
                         table.columns[showColumnItemIndex].virtualType === 'GENERATED BY DEFAULT AS IDENTITY'
                     ">
                         <td>Maxvalue: </td>
@@ -551,7 +570,7 @@ const handleSubmitCreateTable = async () => {
                         </td>
                     </tr>
                     <tr v-show="
-                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY'||
+                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY' ||
                         table.columns[showColumnItemIndex].virtualType === 'GENERATED BY DEFAULT AS IDENTITY'
                     ">
                         <td>Start: </td>
@@ -560,7 +579,7 @@ const handleSubmitCreateTable = async () => {
                         </td>
                     </tr>
                     <tr v-show="
-                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY'||
+                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY' ||
                         table.columns[showColumnItemIndex].virtualType === 'GENERATED BY DEFAULT AS IDENTITY'
                     ">
                         <td>Cache: </td>
@@ -569,7 +588,7 @@ const handleSubmitCreateTable = async () => {
                         </td>
                     </tr>
                     <tr v-show="
-                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY'||
+                        table.columns[showColumnItemIndex].virtualType === 'GENERATED ALWAYS AS IDENTITY' ||
                         table.columns[showColumnItemIndex].virtualType === 'GENERATED BY DEFAULT AS IDENTITY'
                     ">
                         <td>Cycle: </td>
@@ -616,42 +635,41 @@ const handleSubmitCreateTable = async () => {
                     <tr v-for="(i, j) in index[showIndexFieldsIndex].fields">
                         <td>
                             <n-select size="small" filterable tag v-model:value="i.name" placeholder="Name"
-                                :options="table.columns.map((column: any) => ({label: column.name, value: column.name}))"
+                                :options="table.columns.map((column: any) => ({ label: column.name, value: column.name }))"
                                 clearable />
                         </td>
                         <td>
                             <n-select size="small" filterable tag v-model:value="i.collationPattern" placeholder=""
                                 :options="[
-                                    {label: 'information_schema', value: 'information_schema'},
-                                    {label: 'pg_catalog', value: 'pg_catalog'},
-                                    {label: 'pg_toast', value: 'pg_toast'},
-                                    {label: 'public', value: 'public'}
+                                    { label: 'information_schema', value: 'information_schema' },
+                                    { label: 'pg_catalog', value: 'pg_catalog' },
+                                    { label: 'pg_toast', value: 'pg_toast' },
+                                    { label: 'public', value: 'public' }
                                 ]" clearable />
                         </td>
                         <td>
-                            <n-select size="small" filterable tag v-model:value="i.collation" placeholder=""
-                                :options="[]" clearable />
+                            <n-select size="small" filterable tag v-model:value="i.collation" placeholder="" :options="[]"
+                                clearable />
                         </td>
                         <td>
-                            <n-select size="small" filterable tag v-model:value="i.operatorPattern" placeholder=""
-                                :options="[
-                                    {label: 'information_schema', value: 'information_schema'},
-                                    {label: 'pg_catalog', value: 'pg_catalog'},
-                                    {label: 'pg_toast', value: 'pg_toast'},
-                                    {label: 'public', value: 'public'}
-                                ]" clearable />
+                            <n-select size="small" filterable tag v-model:value="i.operatorPattern" placeholder="" :options="[
+                                { label: 'information_schema', value: 'information_schema' },
+                                { label: 'pg_catalog', value: 'pg_catalog' },
+                                { label: 'pg_toast', value: 'pg_toast' },
+                                { label: 'public', value: 'public' }
+                            ]" clearable />
                         </td>
                         <td>
-                            <n-select size="small" filterable tag v-model:value="i.operator" placeholder=""
-                                :options="[]" clearable />
+                            <n-select size="small" filterable tag v-model:value="i.operator" placeholder="" :options="[]"
+                                clearable />
                         </td>
                         <td>
                             <n-select size="small" v-model:value="i.sortOrder" placeholder=""
-                                :options="[{label: 'ASC', value: 'ASC'}, {label: 'DESC', value: 'DESC'}]" clearable />
+                                :options="[{ label: 'ASC', value: 'ASC' }, { label: 'DESC', value: 'DESC' }]" clearable />
                         </td>
                         <td>
                             <n-select size="small" v-model:value="i.nullsSort" placeholder=""
-                                :options="[{label: 'NULLS FIRST', value: 'NULLS FIRST'}, {label: 'NULLS LAST', value: 'NULLS LAST'}]"
+                                :options="[{ label: 'NULLS FIRST', value: 'NULLS FIRST' }, { label: 'NULLS LAST', value: 'NULLS LAST' }]"
                                 clearable />
                         </td>
                         <td style="display: flex; justify-content: space-between;">
@@ -662,8 +680,8 @@ const handleSubmitCreateTable = async () => {
                                     </n-icon>
                                 </template>
                             </n-button>
-                            <n-button strong secondary type="info" size="small"
-                                :disabled="j == table.columns.length - 1" @click="handleIndexFieldsItem(j, 1)">
+                            <n-button strong secondary type="info" size="small" :disabled="j == table.columns.length - 1"
+                                @click="handleIndexFieldsItem(j, 1)">
                                 <template #icon>
                                     <n-icon>
                                         <arrow-down />
@@ -727,8 +745,7 @@ const handleSubmitCreateTable = async () => {
                                         :options="types" />
                                 </td>
                                 <td>
-                                    <n-input-number size="small" v-model:value="i.length" placeholder="Length"
-                                        clearable />
+                                    <n-input-number size="small" v-model:value="i.length" placeholder="Length" clearable />
                                 </td>
                                 <td>
                                     <n-input-number size="small" v-model:value="i.decimalDigits"
@@ -752,8 +769,7 @@ const handleSubmitCreateTable = async () => {
                                             </n-icon>
                                         </template>
                                     </n-button>
-                                    <n-button strong secondary type="info" size="small"
-                                        @click="handleColumnItem(index, 3)">
+                                    <n-button strong secondary type="info" size="small" @click="handleColumnItem(index, 3)">
                                         <template #icon>
                                             <n-icon>
                                                 <trash />
@@ -761,8 +777,7 @@ const handleSubmitCreateTable = async () => {
                                         </template>
                                     </n-button>
                                     <n-button strong secondary type="info" size="small"
-                                        :disabled="index == table.columns.length - 1"
-                                        @click="handleColumnItem(index, 1)">
+                                        :disabled="index == table.columns.length - 1" @click="handleColumnItem(index, 1)">
                                         <template #icon>
                                             <n-icon>
                                                 <arrow-down />
@@ -859,18 +874,34 @@ const handleSubmitCreateTable = async () => {
                         </tbody>
                     </n-table>
                 </n-tab-pane>
+                <n-tab-pane display-directive="show" key="preview" name="preview" :tab="t('preview')">
+                    <pre>
+{{ sqlCreateTable.sql }}
+{{ sqlIndex.sqls.join('\n') }}
+{{ sqlIndex.comments.join('\n') }}
+{{ sqlCreateTable.comments.join('\n') }}
+</pre>
+                </n-tab-pane>
             </n-tabs>
-            <pre>
-{{sqlCreateTable.sql}}
-{{sqlIndex.sqls.join('\n')}}
-{{sqlIndex.comments.join('\n')}}
-{{sqlCreateTable.comments.join('\n')}}
-        </pre>
         </n-spin>
     </div>
 </template>
     
 <style scoped>
+.create-table {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
 
+.n-tabs {
+    position: absolute;
+    top: 40px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
 </style>
     

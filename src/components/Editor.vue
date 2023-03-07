@@ -3,8 +3,10 @@ import { onMounted, shallowRef } from 'vue'
 import * as monaco from 'monaco-editor'
 import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import SqlWorker from 'monaco-editor/esm/vs/basic-languages/sql/sql.js?worker'
+import MongoWorker from 'monaco-editor/esm/vs/basic-languages/mongo/mongo.js?worker'
+import RedisWorker from 'monaco-editor/esm/vs/basic-languages/redis/redis.js?worker'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js?worker'
-import { QuerySuggestionsOfRedis } from '@/data/data'
+import { QuerySuggestionsOfRedis, QuerySuggestionsOfMongo } from '@/data/data'
 
 
 const props = defineProps<{
@@ -31,7 +33,7 @@ onMounted(() => {
     let language = ''
     if (props.type == 'redis_query') {
         self.MonacoEnvironment = {
-            getWorker: () => new EditorWorker()
+            getWorker: () => new RedisWorker()
         }
         monaco.languages.register({ id: "redis" })
         monaco.languages.registerCompletionItemProvider("redis", {
@@ -50,6 +52,21 @@ onMounted(() => {
         }
         value = props.value
         language = 'sql'
+    } else if (props.type == 'mongo_query') {
+        self.MonacoEnvironment = {
+            getWorker: () => new EditorWorker()
+        }
+        monaco.languages.register({ id: "mongo" })
+        monaco.languages.registerCompletionItemProvider("mongo", {
+            provideCompletionItems: async () => ({
+                suggestions: await QuerySuggestionsOfMongo(
+                    monaco.languages.CompletionItemKind,
+                    monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+                )
+            } as any)
+        })
+        value = props.value
+        language = 'mongo'
     } else if (props.type == 'json') {
         self.MonacoEnvironment = {
             getWorker: () => new JsonWorker()
@@ -72,6 +89,7 @@ onMounted(() => {
             selectOnLineNumbers: true,
             language: language,
             automaticLayout: true,
+            fontSize: 18,
         })
         // monacoEditor.value?.trigger('format', 'editor.action.formatDocument')
         setTimeout(() => {

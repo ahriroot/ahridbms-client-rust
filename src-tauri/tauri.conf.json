@@ -2,7 +2,7 @@
     "$schema": "../node_modules/@tauri-apps/cli/schema.json",
     "build": {
         "beforeBuildCommand": "",
-        "beforeDevCommand": "yarn dev",
+        "beforeDevCommand": "",
         "devPath": "http://localhost:5173",
         "distDir": "../dist"
     },
@@ -73,7 +73,7 @@
                 "title": "AhriDBMS",
                 "width": 1600,
                 "center": true,
-                "visible": true
+                "visible": false
             },
             {
                 "width": 400,

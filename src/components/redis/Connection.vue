@@ -17,6 +17,7 @@ const props = defineProps<{
 }>()
 const emits = defineEmits<{
     (e: 'handleOpenTab', val: OpenTabMesagae<any>): void
+    (e: 'handleEditConnection', id: string): void
     (e: 'handleDeleteConnection', id: string): void
 }>()
 
@@ -40,23 +41,23 @@ const nodeProps = ({ option }: { option: any }): any => {
         async onClick() {
         },
         async onDblclick() {
+            if (option.is_db) {
+                emits('handleOpenTab', {
+                    id: `${option.label}@${props.conn.id}`, conn: props.conn, tab_type: 'db', data: {
+                        title: `${option.label}@${props.conn.info.name}`,
+                        table: option.label
+                    }
+                })
+            }
         },
         onContextmenu(e: MouseEvent): void {
             if (option.children != undefined && option.children != null) {
                 optionsContextmenu.value = [{
-                    label: t('delete'),
-                    key: 'delete',
-                    props: {
-                        onClick: () => {
-                            emits('handleDeleteConnection', props.conn.id)
-                            showContextmenu.value = false
-                        }
-                    }
-                }, {
                     label: t('query'),
                     key: 'query',
                     props: {
                         onClick: async () => {
+                            let id = `query@${props.conn.info.name}`
                             emits('handleOpenTab', {
                                 id: await uuid(), conn: props.conn, tab_type: 'query', data: {
                                     title: `query@${props.conn.info.name}`
@@ -74,6 +75,24 @@ const nodeProps = ({ option }: { option: any }): any => {
                             showContextmenu.value = false
                         }
                     }
+                }, {
+                    label: t('edit'),
+                    key: 'edit',
+                    props: {
+                        onClick: () => {
+                            emits('handleEditConnection', props.conn.id)
+                            showContextmenu.value = false
+                        }
+                    }
+                }, {
+                    label: t('delete'),
+                    key: 'delete',
+                    props: {
+                        onClick: () => {
+                            emits('handleDeleteConnection', props.conn.id)
+                            showContextmenu.value = false
+                        }
+                    }
                 }]
                 showContextmenu.value = true
                 xPos.value = e.clientX
@@ -86,11 +105,12 @@ const nodeProps = ({ option }: { option: any }): any => {
                     props: {
                         onClick: async () => {
                             emits('handleOpenTab', {
-                                id: await uuid(), conn: props.conn, tab_type: 'db', data: {
+                                id: `${option.label}@${props.conn.id}`, conn: props.conn, tab_type: 'db', data: {
                                     title: `${option.label}@${props.conn.info.name}`,
                                     table: option.label
                                 }
                             })
+                            showContextmenu.value = false
                         }
                     }
                 }]
@@ -185,6 +205,7 @@ const data = ref<TreeOption[]>([{
     key: `redis:${props.conn.info.name}`,
     label: props.conn.info.name,
     value: `redis:${props.conn.info.name}`,
+    is_db: false,
     prefix: () => h(NIcon, null, { default: () => h(iconRedis) }),
     suffix: () => h(
         treeNodeEvent,

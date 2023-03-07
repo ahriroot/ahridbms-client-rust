@@ -32,6 +32,7 @@ export default {
     closeConnectionforEdit: 'Close Connection for Edit',
     deleteDatabase: 'Delete Database',
     deleteTable: 'Delete Table',
+    deleteCollection: 'Delete Collection',
     clearAllData: 'Clear all data',
     checkForUpdates: 'Check for updates',
 }

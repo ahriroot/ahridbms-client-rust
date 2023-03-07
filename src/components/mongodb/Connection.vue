@@ -10,7 +10,7 @@ import { ServerSharp, ChevronForward } from '@vicons/ionicons5'
 import { OpenTabMesagae } from '@/types/Message'
 import { Connection } from '@/types/Connection'
 import { MongodbConnect } from '@/types/mongodb'
-import { databases, collections, documents } from '@/api/mongodb'
+import { databases, collections, dropDatabase, dropCollection } from '@/api/mongodb'
 import { useIndexStore } from '@/store'
 import { useI18n } from 'vue-i18n'
 import { listen } from '@tauri-apps/api/event'
@@ -56,6 +56,109 @@ onBeforeMount(async () => {
     })
     await initConnection()
 })
+
+const handleDropDatabase = async (database: string) => {
+    if (store.config?.deleteNoConfirm) {
+        if (['admin', 'config', 'local'].includes(database)) {
+            dialog.error({
+                title: t('delete'),
+                content: `${t('deleteDatabase')} ${database} ?`,
+                positiveText: t('delete'),
+                onPositiveClick: async () => {
+                    await dropDatabase({
+                        conn: props.conn,
+                        database: database
+                    })
+                }
+            })
+        } else {
+            await dropDatabase({
+                conn: props.conn,
+                database: database
+            })
+        }
+    } else {
+        dialog.warning({
+            title: t('delete'),
+            content: `${t('deleteDatabase')} ${database} ?`,
+            positiveText: t('delete'),
+            onPositiveClick: async () => {
+
+                if (['admin', 'config', 'local'].includes(database)) {
+                    dialog.error({
+                        title: t('delete'),
+                        content: `${t('deleteDatabase')} ${database} ?`,
+                        positiveText: t('delete'),
+                        onPositiveClick: async () => {
+                            await dropDatabase({
+                                conn: props.conn,
+                                database: database
+                            })
+                        }
+                    })
+                } else {
+                    await dropDatabase({
+                        conn: props.conn,
+                        database: database
+                    })
+                }
+            }
+        })
+    }
+}
+
+const handleDropCollection = async (database: string, collection: string) => {
+    if (store.config?.deleteNoConfirm) {
+        if (['admin', 'config', 'local'].includes(database)) {
+            dialog.error({
+                title: t('delete'),
+                content: `${t('deleteCollection')} ${collection} ?`,
+                positiveText: t('delete'),
+                onPositiveClick: async () => {
+                    await dropCollection({
+                        conn: props.conn,
+                        database: database,
+                        collection: collection
+                    })
+                }
+            })
+        } else {
+            await dropCollection({
+                conn: props.conn,
+                database: database,
+                collection: collection
+            })
+        }
+    } else {
+        dialog.warning({
+            title: t('delete'),
+            content: `${t('deleteCollection')} ${collection} ?`,
+            positiveText: t('delete'),
+            onPositiveClick: async () => {
+                if (['admin', 'config', 'local'].includes(database)) {
+                    dialog.error({
+                        title: t('delete'),
+                        content: `${t('deleteCollection')} ${collection} ?`,
+                        positiveText: t('delete'),
+                        onPositiveClick: async () => {
+                            await dropCollection({
+                                conn: props.conn,
+                                database: database,
+                                collection: collection
+                            })
+                        }
+                    })
+                } else {
+                    await dropCollection({
+                        conn: props.conn,
+                        database: database,
+                        collection: collection
+                    })
+                }
+            }
+        })
+    }
+}
 
 const renderSwitcherIcon = () => {
     return h(NIcon, null, { default: () => h(ChevronForward) })
@@ -154,31 +257,10 @@ const nodeProps = ({ option }: { option: any }) => {
                         key: 'delete',
                         props: {
                             onClick: async () => {
-                                // if (store.config?.deleteNoConfirm) {
-                                //     await update({
-                                //         conn: props.conn,
-                                //         database: props.conn.info.db,
-                                //         sql: `DROP DATABASE ${option.label}`
-                                //     })
-                                //     expandedKeys.value = []
-                                //     expandedKeys.value = [await initConnection()]
-                                // } else {
-                                //     dialog.warning({
-                                //         title: t('delete'),
-                                //         content: `${t('deleteDatabase')} ${option.label} ?`,
-                                //         positiveText: t('delete'),
-                                //         onPositiveClick: async () => {
-                                //             await update({
-                                //                 conn: props.conn,
-                                //                 database: props.conn.info.db,
-                                //                 sql: `DROP DATABASE ${option.label}`
-                                //             })
-                                //             expandedKeys.value = []
-                                //             expandedKeys.value = [await initConnection()]
-                                //         }
-                                //     })
-                                // }
                                 showContextmenu.value = false
+                                await handleDropDatabase(option.database)
+                                expandedKeys.value = []
+                                expandedKeys.value = [await initConnection()]
                             }
                         }
                     }, {
@@ -198,7 +280,6 @@ const nodeProps = ({ option }: { option: any }) => {
                         }
                     }]
                     break
-                case 'tables':
                     optionsContextmenu.value = [{
                         label: t('reload'),
                         key: 'reload',
@@ -261,33 +342,9 @@ const nodeProps = ({ option }: { option: any }) => {
                         key: 'delete',
                         props: {
                             onClick: async () => {
-                                if (store.config?.deleteNoConfirm) {
-                                    // let res = await update({
-                                    //     conn: props.conn,
-                                    //     database: option.database,
-                                    //     sql: `DROP TABLE "public"."${option.table}"`
-                                    // })
-                                    // if (!res.is_error) {
-                                    //     await reloadParent(option.key, data.value)
-                                    // }
-                                } else {
-                                    dialog.warning({
-                                        title: t('delete'),
-                                        content: `${t('deleteTable')} ${option.label} ?`,
-                                        positiveText: t('delete'),
-                                        onPositiveClick: async () => {
-                                            // let res = await update({
-                                            //     conn: props.conn,
-                                            //     database: option.database,
-                                            //     sql: `DROP TABLE "public"."${option.table}"`
-                                            // })
-                                            // if (!res.is_error) {
-                                            //     await reloadParent(option.key, data.value)
-                                            // }
-                                        }
-                                    })
-                                }
                                 showContextmenu.value = false
+                                await handleDropCollection(option.database, option.collection)
+                                await reloadParent(option.key, data.value)
                             }
                         }
                     }]
@@ -502,13 +559,13 @@ const sqlCreateDatabase = computed(() => {
 <template>
     <div class="nocopy">
         <n-modal v-model:show="showPreviewSql" preset="card" style="width: 600px;" :title="t('info')" size="small">
-            <pre>{{sqlCreateDatabase}}</pre>
+            <pre>{{ sqlCreateDatabase }}</pre>
         </n-modal>
         <n-modal v-model:show="showCreateDatabase" preset="card" style="width: 600px;" :title="t('info')" size="small">
             <n-spin size="large" :show="loadingCreateDatabase">
                 <n-form :model="newDatabase" label-placement="left" label-width="auto"
                     require-mark-placement="right-hanging" size="small" :style="{
-                      maxWidth: '640px'
+                        maxWidth: '640px'
                     }">
                     <n-form-item label="Name" path="name">
                         <n-input v-model:value="newDatabase.name" placeholder="Database Name" />
@@ -517,8 +574,8 @@ const sqlCreateDatabase = computed(() => {
                         <n-select v-model:value="newDatabase.owner" placeholder="Owner" :options="roles" />
                     </n-form-item>
                     <!-- <n-form-item label="Template" path="template">
-                    <n-select v-model:value="newDatabase.template" placeholder="Template" :options="template" />
-                </n-form-item> -->
+                                                                                                                                                                                    <n-select v-model:value="newDatabase.template" placeholder="Template" :options="template" />
+                                                                                                                                                                                </n-form-item> -->
                     <n-form-item label="Encoding" path="encoding">
                         <n-select v-model:value="newDatabase.encoding" placeholder="Encoding" :options="encoding"
                             clearable />
@@ -562,6 +619,4 @@ const sqlCreateDatabase = computed(() => {
     </div>
 </template>
 
-<style scoped>
-
-</style>
+<style scoped></style>

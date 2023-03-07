@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { documents, deleteMany } from '@/api/mongodb'
+import { documents } from '@/api/mongodb'
 import { Connection } from '@/types/Connection'
 import { MongodbConnect } from '@/types/mongodb'
 import { h, onBeforeMount, shallowRef, ref, reactive } from 'vue'
 import EditorVue from '@/components/Editor.vue'
 import { NSpace, NRadioGroup, NRadio, NDataTable, NButton, NIcon } from 'naive-ui'
-import { Reload, Trash } from '@vicons/ionicons5'
+import { Reload } from '@vicons/ionicons5'
 
 
 const symbol = Symbol('mongodb')
@@ -143,30 +143,6 @@ const analyData = (key: string, res: any) => {
             }
         })
     })
-    columns.value.push({
-        title: '',
-        key: 'opera',
-        width: 34,
-        fixed: 'right',
-        render: (row: any, index: number) => h(
-            NButton,
-            {
-                size: 'small',
-                style: 'background: #282c34',
-                onClick: async () => await handleDelete(row)
-            },
-            {
-                default: () => h(
-                    NIcon,
-                    {},
-                    {
-                        default: () => h(Trash)
-                    }
-                )
-            }
-        )
-
-    })
     res.forEach((document: any) => {
         let keys = Object.keys(document)
         let tmp: { [x: string]: any } = {}
@@ -184,19 +160,6 @@ const analyData = (key: string, res: any) => {
         columns: columns.value,
         data: data.value
     })
-}
-
-const handleDelete = async (row: any) => {
-    const res = await deleteMany({
-        conn: props.conn,
-        database: props.data.database,
-        collection: props.data.collection,
-        documents: [{ "_id": row._id["$oid"] }]
-    })
-    console.log(res)
-    if (res) {
-        await handleLoadData()
-    }
 }
 
 const handleLoadData = async () => {
@@ -330,11 +293,5 @@ onBeforeMount(async () => {
     left: 4px;
     right: 4px;
     bottom: 4px;
-}
-
-.n-data-table :deep(td) {
-    margin: 0;
-    padding: 0;
-    background: none;
 }
 </style>

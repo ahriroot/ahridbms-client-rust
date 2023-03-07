@@ -42,7 +42,7 @@ const data = computed(() => {
     
 <template>
     <n-data-table size="small" :single-line="false" :columns="columns" :data="data" flex-height
-        style="position: absolute; top: 62px; bottom: 40px;" :remote="true" :scroll-x="900" />
+        style="position: absolute; top: 0; bottom: 0;" :remote="true" :scroll-x="900" />
 </template>
     
 <style scoped>

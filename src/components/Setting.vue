@@ -7,7 +7,6 @@ import { checkUpdate, installUpdate } from '@tauri-apps/api/updater'
 import { relaunch } from '@tauri-apps/api/process'
 import tauriConfig from '../../src-tauri/tauri.conf.json'
 
-
 const props = defineProps<{
     conn: any
     data: any

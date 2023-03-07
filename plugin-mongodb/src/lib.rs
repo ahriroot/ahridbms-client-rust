@@ -12,6 +12,9 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
         api::databases,
         api::collections,
         api::documents,
+        api::delete_many,
+        api::drop_database,
+        api::drop_collection,
         api::test
     ]);
     plugin.build()

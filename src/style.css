@@ -1,6 +1,42 @@
-html,
+/* html */
 body {
-    background-color: #333842;
+    background-color: #101014;
+    width: 100vw;
+    height: 100vh;
+}
+
+#window.dark {
+    --main-color: #282c34;
+    --title-bg-color: #21252b;
+    --side-bg-color: #333842;
+    --tree-bg-color: #21252b;
+    --tab-bg-color: #282c34;
+    --btn-color: #757982;
+    --btn-color-hover: #d7dae0;
+}
+
+#window {
+    background-color: var(--main-color);
+}
+
+#title {
+    background-color: var(--title-bg-color);
+}
+
+#body {
+    background-color: var(--side-bg-color);
+}
+
+#side {
+    background-color: var(--side-bg-color);
+}
+
+#tree {
+    background-color: var(--tree-bg-color);
+}
+
+#tab {
+    background-color: var(--tab-bg-color);
 }
 
 /* 禁止复制 */
@@ -28,4 +64,20 @@ body {
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+}
+
+.n-tabs {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.n-tabs .n-tab-pane {
+    position: absolute;
+    top: 36px;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
