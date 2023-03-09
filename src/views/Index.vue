@@ -8,6 +8,7 @@ import { emit, listen } from '@tauri-apps/api/event'
 
 import TreeWidget from '@/components/TreeWidget.vue'
 import TabWidget from '@/components/TabWidget.vue'
+import { uuid } from '@/utils/crypto'
 
 
 const store = useIndexStore()
@@ -80,6 +81,26 @@ const handleNewConnection = () => {
     }
     emit('tree-widget', JSON.stringify(payload))
 }
+
+const handleSetting = async () => {
+    const message = {
+        id: await uuid(),
+        conn: {
+            db_type: '',
+        },
+        tab_type: 'setting',
+        data: {
+            title: `Setting`,
+            table: ''
+        }
+    }
+    let payload = {
+        id: 1,
+        event: 'open',
+        data: message
+    }
+    emit('tab-widget', JSON.stringify(payload))
+}
 </script>
 
 <template>
@@ -89,6 +110,13 @@ const handleNewConnection = () => {
                 <template #icon>
                     <n-icon>
                         <Flash />
+                    </n-icon>
+                </template>
+            </n-button>
+            <n-button circle quaternary size="small" @click.stop="handleSetting">
+                <template #icon>
+                    <n-icon class="btn-icon-setting">
+                        <Settings />
                     </n-icon>
                 </template>
             </n-button>

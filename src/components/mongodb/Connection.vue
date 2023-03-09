@@ -141,6 +141,21 @@ const nodeProps = ({ option }: { option: any }) => {
                             }
                         }
                     }, {
+                        label: t('opera'),
+                        key: 'opera',
+                        props: {
+                            onClick: async () => {
+                                emits('handleOpenTab', {
+                                    id: await uuid(), conn: props.conn, tab_type: 'opera', data: {
+                                        title: `opera@${option.database}`,
+                                        database: option.database,
+                                        table: option.table
+                                    }
+                                })
+                                showContextmenu.value = false
+                            }
+                        }
+                    }, {
                         label: t('delete'),
                         key: 'delete',
                         props: {
@@ -317,7 +332,6 @@ const reloadTables = async (key: any, tree: any[]) => {
         if (tree[index].key === key) {
             tree[index].children = undefined
             if (!expandedKeys.value.includes(key)) {
-                console.log(key)
                 expandedKeys.value.push(key)
             }
             return

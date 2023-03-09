@@ -18,6 +18,7 @@ export default {
     test: '测试',
     delete: '删除',
     query: '查询',
+    opera: '操作',
     reload: '刷新',
     edit: '编辑',
     open: '打开',

@@ -446,7 +446,6 @@ const reloadTables = async (key: any, tree: any[]) => {
         if (tree[index].key === key) {
             tree[index].children = undefined
             if (!expandedKeys.value.includes(key)) {
-                console.log(key)
                 expandedKeys.value.push(key)
             }
             return

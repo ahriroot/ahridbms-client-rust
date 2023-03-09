@@ -3,6 +3,7 @@ import SettingVue from '@/components/Setting.vue'
 import MongodbConnect from '@/components/mongodb/Connection.vue'
 import MongodbCollection from '@/components/mongodb/Collection.vue'
 import MongodbQuery from '@/components/mongodb/Query.vue'
+import MongodbOpera from '@/components/mongodb/Opera.vue'
 
 import PostgresConnect from '@/components/postgres/Connection.vue'
 import PostgresTableVue from '@/components/postgres/Table.vue'
@@ -53,6 +54,7 @@ const TabComponents = {
     'postgres:create_table_s': PostgresCreateTableSVue,
     'mongodb:collection': MongodbCollection,
     'mongodb:query': MongodbQuery,
+    'mongodb:opera': MongodbOpera,
 }
 
 const InfoComponents = {

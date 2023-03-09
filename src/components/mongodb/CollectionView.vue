@@ -143,7 +143,6 @@ const handleGoBack = async (key: number) => {
 }
 
 onMounted(async () => {
-    console.log(props.data)
     editorRef.value?.setValue(JSON.stringify(props.data), null, 4)
     await handleLoadData()
 })

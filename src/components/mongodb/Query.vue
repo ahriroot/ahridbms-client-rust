@@ -136,7 +136,6 @@ const handleDB = async (match: RegExpMatchArray, command: string) => {
                     document: m1,
                     options: m2,
                 })
-                console.log(res)
                 type = 'find'
                 break
         }

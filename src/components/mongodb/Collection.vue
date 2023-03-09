@@ -4,7 +4,7 @@ import { Connection } from '@/types/Connection'
 import { MongodbConnect } from '@/types/mongodb'
 import { h, onMounted, shallowRef, ref, reactive } from 'vue'
 import EditorVue from '@/components/Editor.vue'
-import { NRadioGroup, NDataTable, NButton, NIcon, NRadioButton } from 'naive-ui'
+import { NRadioGroup, NDataTable, NButton, NIcon, NRadioButton, useLoadingBar } from 'naive-ui'
 import { Reload, Trash, Code, TabletLandscape } from '@vicons/ionicons5'
 
 
@@ -53,6 +53,7 @@ const minWidth = ref(36)
 const columns = ref<any[]>([])
 const data = ref<any[]>([])
 const loadingCount = ref(0)
+const loadingBar = useLoadingBar()
 const editorRef = shallowRef<any>(undefined)  // 显示 json 数据编辑器
 const showType = ref('table')  // 显示类型
 const showTypes = shallowRef([
@@ -202,7 +203,27 @@ const handleDelete = async (row: any) => {
     }
 }
 
+const loadingStart = () => {
+    loadingCount.value++
+    if (loadingCount.value == 1) {
+        loadingBar.start()
+    }
+}
+const loadingFinish = () => {
+    if (loadingCount.value > 0) {
+        loadingCount.value--
+    }
+    if (loadingCount.value == 0) {
+        loadingBar.finish()
+    }
+}
+const loadingStop = () => {
+    loadingCount.value = 0
+    loadingBar.finish()
+}
+
 const handleLoadData = async () => {
+    loadingStart()
     const res = await documents({
         conn: props.conn,
         database: props.data.database,
@@ -217,6 +238,7 @@ const handleLoadData = async () => {
     pagination.itemCount = res.count
     history.value = []
     analyData('ROOT', res.documents)
+    loadingStop()
 }
 const handleGoBack = async (key: number) => {
     let tmp = history.value.slice(0, key + 1)
@@ -256,7 +278,7 @@ onMounted(async () => {
             </div>
             <div class="right">
                 <span>
-                    <n-button strong secondary circle type="info" size="small" @click="handleLoadData">
+                    <n-button strong secondary circle type="info" size="small" @click="handleLoadData" :loading="loadingCount > 0">
                         <template #icon>
                             <n-icon>
                                 <reload />

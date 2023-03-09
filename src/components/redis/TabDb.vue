@@ -769,8 +769,6 @@ const handleDeleteSetValue = async (v: string) => {
 const newZsetMember = ref<string>('')
 const newZsetScore = ref<number>(0)
 const handleNewZsetMember = async () => {
-    // console.log(newZsetMember.value, newZsetScore.value)
-    // return
     if (detailKey.value && newZsetMember.value) {
         loadingStart()
         zadd({

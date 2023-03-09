@@ -18,6 +18,7 @@ export default {
     test: 'Test',
     delete: 'Delete',
     query: 'Query',
+    opera: 'Opera',
     reload: 'Reload',
     edit: 'Edit',
     open: 'Open',

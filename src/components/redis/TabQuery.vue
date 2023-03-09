@@ -92,7 +92,6 @@ const handle = async () => {
                         })
                         break
                     case ExecType.status:
-                        console.log((result.value as IExecValueStatus).Status)
                         break
                     case ExecType.integer:
                         let integer = result.value as IExecValueInteger

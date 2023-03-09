@@ -40,6 +40,13 @@ onBeforeMount(async () => {
 })
 
 onMounted(async () => {
+    if (import.meta.env.MODE === 'production') {
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'r') {
+                e.preventDefault()
+            }
+        })
+    }
     setTimeout(async () => {
         await invoke('close_splashscreen')
     }, 1000)
@@ -60,7 +67,9 @@ const { t, locale } = useI18n()
                 <n-dialog-provider>
                     <div id="window" class="dark">
                         <div id="title">
-                            <div class="left" data-tauri-drag-region></div>
+                            <div class="left nocopy" data-tauri-drag-region>
+                                <span>AhriDBMS</span>
+                            </div>
                             <div class="right">
                                 <div class="btn-window" @click="appWindow.minimize">
                                     <n-icon :size="22">
@@ -112,6 +121,11 @@ const { t, locale } = useI18n()
     left: 0;
     right: 100px;
     bottom: 0;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    padding-left: 10px;
+    font-weight: bold;
 }
 
 #title .right {
