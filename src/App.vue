@@ -2,10 +2,13 @@
 import { ref, onBeforeMount, onMounted } from 'vue'
 import { useIndexStore } from '@/store'
 import { invoke } from '@tauri-apps/api/tauri'
+import { appWindow } from '@tauri-apps/api/window'
 import {
     NConfigProvider, NGlobalStyle, NLoadingBarProvider, NMessageProvider, NDialogProvider,
+    NIcon,
     darkTheme, zhCN, enUS
 } from 'naive-ui'
+import { Remove, BrowsersSharp, Close } from '@vicons/ionicons5'
 import { useI18n } from 'vue-i18n'
 import { Config } from './types/store'
 
@@ -56,7 +59,26 @@ const { t, locale } = useI18n()
             <n-message-provider>
                 <n-dialog-provider>
                     <div id="window" class="dark">
-                        <div id="title" data-tauri-drag-region></div>
+                        <div id="title">
+                            <div class="left" data-tauri-drag-region></div>
+                            <div class="right">
+                                <div class="btn-window" @click="appWindow.minimize">
+                                    <n-icon :size="22">
+                                        <Remove />
+                                    </n-icon>
+                                </div>
+                                <div class="btn-window" @click="appWindow.toggleMaximize">
+                                    <n-icon>
+                                        <BrowsersSharp />
+                                    </n-icon>
+                                </div>
+                                <div class="btn-window" @click="appWindow.close">
+                                    <n-icon :size="22">
+                                        <Close />
+                                    </n-icon>
+                                </div>
+                            </div>
+                        </div>
                         <div id="body">
                             <Index />
                         </div>
@@ -82,6 +104,38 @@ const { t, locale } = useI18n()
     left: 0;
     right: 0;
     height: 30px;
+}
+
+#title .left {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 100px;
+    bottom: 0;
+}
+
+#title .right {
+    position: absolute;
+    top: 0;
+    width: 100px;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.btn-window {
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: 0.3s;
+}
+
+.btn-window:hover {
+    background: #333842;
 }
 
 #body {

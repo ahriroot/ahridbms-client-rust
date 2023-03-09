@@ -22,11 +22,9 @@ const request = async <T>(command: string, params: any): Promise<T> => {
 
 interface DatabaseArgs extends InvokeArgs {
     conn: Connection<MongodbConnect>
-    database?: string
 }
 
 const databases = async (params: DatabaseArgs): Promise<any> => {
-    params.database = ""
     let res = await request<any>('plugin:mongodb|databases', params)
     return res
 }
@@ -60,18 +58,6 @@ const documents = async (params: DocumentArgs): Promise<any> => {
     return res
 }
 
-interface DeleteManyArgs extends InvokeArgs {
-    conn: Connection<MongodbConnect>
-    database: string
-    collection: string
-    documents: object[]
-}
-
-const deleteMany = async (params: DeleteManyArgs): Promise<any> => {
-    let res = await request<any>('plugin:mongodb|delete_many', params)
-    return res
-}
-
 interface DropDatabaseManyArgs extends InvokeArgs {
     conn: Connection<MongodbConnect>
     database: string
@@ -93,6 +79,58 @@ const dropCollection = async (params: DropCollectionArgs): Promise<any> => {
     return res
 }
 
+interface CRDArgs extends InvokeArgs {
+    conn: Connection<MongodbConnect>
+    database: string
+    collection: string
+    document: object
+    options: object
+}
+
+interface UArgs extends InvokeArgs {
+    conn: Connection<MongodbConnect>
+    database: string
+    collection: string
+    filter: object
+    update: object
+    options: object
+}
+
+const insertOne = async (params: CRDArgs): Promise<any> => {
+    let res = await request<any>('plugin:mongodb|insert_one', params)
+    return res
+}
+
+const insertMany = async (params: CRDArgs): Promise<any> => {
+    let res = await request<any>('plugin:mongodb|insert_many', params)
+    return res
+}
+
+const updateOne = async (params: UArgs): Promise<any> => {
+    let res = await request<any>('plugin:mongodb|insert_one', params)
+    return res
+}
+
+const updateMany = async (params: UArgs): Promise<any> => {
+    let res = await request<any>('plugin:mongodb|insert_many', params)
+    return res
+}
+
+const deleteOne = async (params: CRDArgs): Promise<any> => {
+    let res = await request<any>('plugin:mongodb|delete_one', params)
+    return res
+}
+
+const deleteMany = async (params: CRDArgs): Promise<any> => {
+    let res = await request<any>('plugin:mongodb|delete_many', params)
+    return res
+}
+
+const find = async (params: CRDArgs): Promise<any> => {
+    let res = await request<any>('plugin:mongodb|find', params)
+    return res
+}
+
 interface TestArgs extends InvokeArgs {
     conn: Connection<MongodbConnect>
     database: string
@@ -103,5 +141,9 @@ const test = async (params: TestArgs): Promise<any> => {
     return res
 }
 
-export { databases, collections, documents, deleteMany, dropDatabase, dropCollection, test }
+export {
+    databases, collections, documents, dropDatabase, dropCollection,
+    insertOne, insertMany, updateOne, updateMany, deleteOne, deleteMany,
+    find, test
+}
 

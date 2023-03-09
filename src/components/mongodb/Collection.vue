@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { documents, deleteMany } from '@/api/mongodb'
+import { documents, deleteOne } from '@/api/mongodb'
 import { Connection } from '@/types/Connection'
 import { MongodbConnect } from '@/types/mongodb'
-import { h, onBeforeMount, shallowRef, ref, reactive } from 'vue'
+import { h, onMounted, shallowRef, ref, reactive } from 'vue'
 import EditorVue from '@/components/Editor.vue'
-import { NSpace, NRadioGroup, NRadio, NDataTable, NButton, NIcon } from 'naive-ui'
-import { Reload, Trash } from '@vicons/ionicons5'
+import { NRadioGroup, NDataTable, NButton, NIcon, NRadioButton } from 'naive-ui'
+import { Reload, Trash, Code, TabletLandscape } from '@vicons/ionicons5'
 
 
 const symbol = Symbol('mongodb')
@@ -55,18 +55,19 @@ const data = ref<any[]>([])
 const loadingCount = ref(0)
 const editorRef = shallowRef<any>(undefined)  // 显示 json 数据编辑器
 const showType = ref('table')  // 显示类型
-const showTypes = ref([
+const showTypes = shallowRef([
     {
         label: 'JSON',
-        value: 'json'
+        value: 'json',
+        icon: Code
     }, {
         label: 'TABLE',
-        value: 'table'
+        value: 'table',
+        icon: TabletLandscape
     }
 ])
 
 const analyData = (key: string, res: any) => {
-    history.value = []
     data.value = []
     columns.value = []
     minWidth.value = 36
@@ -143,30 +144,32 @@ const analyData = (key: string, res: any) => {
             }
         })
     })
-    columns.value.push({
-        title: '',
-        key: 'opera',
-        width: 34,
-        fixed: 'right',
-        render: (row: any, index: number) => h(
-            NButton,
-            {
-                size: 'small',
-                style: 'background: #282c34',
-                onClick: async () => await handleDelete(row)
-            },
-            {
-                default: () => h(
-                    NIcon,
-                    {},
-                    {
-                        default: () => h(Trash)
-                    }
-                )
-            }
-        )
+    if (key == "ROOT") {
+        columns.value.push({
+            title: '',
+            key: 'opera',
+            width: 34,
+            fixed: 'right',
+            render: (row: any, index: number) => h(
+                NButton,
+                {
+                    size: 'small',
+                    style: 'background: #282c34',
+                    onClick: async () => await handleDelete(row)
+                },
+                {
+                    default: () => h(
+                        NIcon,
+                        {},
+                        {
+                            default: () => h(Trash)
+                        }
+                    )
+                }
+            )
 
-    })
+        })
+    }
     res.forEach((document: any) => {
         let keys = Object.keys(document)
         let tmp: { [x: string]: any } = {}
@@ -187,13 +190,13 @@ const analyData = (key: string, res: any) => {
 }
 
 const handleDelete = async (row: any) => {
-    const res = await deleteMany({
+    const res = await deleteOne({
         conn: props.conn,
         database: props.data.database,
         collection: props.data.collection,
-        documents: [{ "_id": row._id["$oid"] }]
+        document: { "_id": row._id },
+        options: {}
     })
-    console.log(res)
     if (res) {
         await handleLoadData()
     }
@@ -210,8 +213,9 @@ const handleLoadData = async () => {
         size: pagination.pageSize,
         sorts: sorts.value
     })
-    editorRef.value?.setValue(JSON.stringify(res, null, 4))
+    editorRef.value?.setValue(JSON.stringify(res.documents, null, 4))
     pagination.itemCount = res.count
+    history.value = []
     analyData('ROOT', res.documents)
 }
 const handleGoBack = async (key: number) => {
@@ -234,7 +238,7 @@ const handleUpdateSorter = async (sorter: any) => {
     await handleLoadData()
 }
 
-onBeforeMount(async () => {
+onMounted(async () => {
     await handleLoadData()
 })
 </script>
@@ -260,23 +264,22 @@ onBeforeMount(async () => {
                         </template>
                     </n-button>
                 </span>
-                <n-radio-group v-model:value="showType" name="radiogroup">
-                    <n-space>
-                        <n-radio v-for="showType in showTypes" :key="showType.value" :value="showType.value">
-                            {{ showType.label }}
-                        </n-radio>
-                    </n-space>
+                <n-radio-group v-model:value="showType" name="radiogroup" size="small">
+                    <n-radio-button v-for="showType in showTypes" quaternary :key="showType.value" :value="showType.value">
+                        <n-icon>
+                            <component :is="showType.icon" />
+                        </n-icon>
+                    </n-radio-button>
                 </n-radio-group>
             </div>
         </div>
         <div class="result">
             <EditorVue v-show="showType == 'json'" ref="editorRef" @change="handleChange" :value="config.query"
                 :type="'json'" :read-only="true" />
-            <div class="table-view">
-                <n-data-table v-show="showType == 'table'" size="small" :single-line="false" :columns="columns" :data="data"
-                    flex-height style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;"
-                    :loading="loadingCount > 0" :pagination="pagination" :remote="true" :scroll-x="minWidth"
-                    @update:sorter="handleUpdateSorter" />
+            <div class="table-view" v-show="showType == 'table'">
+                <n-data-table size="small" :single-line="false" :columns="columns" :data="data" flex-height
+                    style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;" :loading="loadingCount > 0"
+                    :pagination="pagination" :remote="true" :scroll-x="minWidth" @update:sorter="handleUpdateSorter" />
             </div>
         </div>
     </div>
@@ -310,10 +313,11 @@ onBeforeMount(async () => {
 }
 
 .data .option .right {
-    width: 190px;
+    width: 126px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding-right: 6px;
 }
 
 .data .result {

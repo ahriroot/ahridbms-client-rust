@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { onMounted, shallowRef } from 'vue'
+import { onBeforeMount, onMounted, ref, shallowRef } from 'vue'
 import * as monaco from 'monaco-editor'
 import JsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import SqlWorker from 'monaco-editor/esm/vs/basic-languages/sql/sql.js?worker'
-import MongoWorker from 'monaco-editor/esm/vs/basic-languages/mongo/mongo.js?worker'
 import RedisWorker from 'monaco-editor/esm/vs/basic-languages/redis/redis.js?worker'
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker.js?worker'
 import { QuerySuggestionsOfRedis, QuerySuggestionsOfMongo } from '@/data/data'
@@ -27,10 +26,10 @@ if (props.type == undefined) {
 
 const monacoEditor = shallowRef<any>(null)
 const editorRef = shallowRef<HTMLElement | null>(null)
+const value = ref('')
+const language = ref('')
 
-onMounted(() => {
-    let value = ''
-    let language = ''
+onBeforeMount(() => {
     if (props.type == 'redis_query') {
         self.MonacoEnvironment = {
             getWorker: () => new RedisWorker()
@@ -44,17 +43,17 @@ onMounted(() => {
                 )
             } as any)
         })
-        value = props.value
-        language = 'redis'
+        value.value = props.value
+        language.value = 'redis'
     } else if (props.type == 'postgres_query') {
         self.MonacoEnvironment = {
             getWorker: () => new SqlWorker()
         }
-        value = props.value
-        language = 'sql'
+        value.value = props.value
+        language.value = 'sql'
     } else if (props.type == 'mongo_query') {
         self.MonacoEnvironment = {
-            getWorker: () => new EditorWorker()
+            getWorker: () => new SqlWorker()
         }
         monaco.languages.register({ id: "mongo" })
         monaco.languages.registerCompletionItemProvider("mongo", {
@@ -65,8 +64,8 @@ onMounted(() => {
                 )
             } as any)
         })
-        value = props.value
-        language = 'mongo'
+        value.value = props.value
+        language.value = 'mongo'
     } else if (props.type == 'json') {
         self.MonacoEnvironment = {
             getWorker: () => new JsonWorker()
@@ -77,17 +76,20 @@ onMounted(() => {
         } catch (e) {
             json = ''
         }
-        value = json
-        language = 'json'
+        value.value = json
+        language.value = 'json'
     }
+})
+
+onMounted(() => {
     if (editorRef.value) {
         monacoEditor.value = monaco.editor.create(editorRef.value, {
             mouseWheelZoom: true,
-            value: value,
-            readOnly: props.readOnly ? true : false,
+            value: value.value,
+            readOnly: props.readOnly,
             theme: 'vs-dark',
             selectOnLineNumbers: true,
-            language: language,
+            language: language.value,
             automaticLayout: true,
             fontSize: 18,
         })

@@ -1,28 +1,35 @@
 <script setup lang="ts">
-import TableViewVue from '@/components/postgres/TableView.vue'
+import CollectionView from '@/components/mongodb/CollectionView.vue'
 import { Connection } from '@/types/Connection'
-import { PostgresConnect } from '@/types/postgres'
+import { MongodbConnect } from '@/types/mongodb'
 import EditorVue from '@/components/Editor.vue'
 import { ref, onBeforeMount } from 'vue'
-import { executeSelectSql } from '@/api/postgres'
-import { NTabs, NTabPane, NButton, NIcon } from 'naive-ui'
+import { NSpace, NSelect, NButton, NIcon, NTabs, NTabPane, useMessage } from 'naive-ui'
 import { Checkmark } from '@vicons/ionicons5'
+import { databases, find, insertMany, insertOne, deleteOne, deleteMany, updateOne, updateMany } from '@/api/mongodb'
 import { uuid } from '@/utils/crypto'
 
 const props = defineProps<{
-    conn: Connection<PostgresConnect>
+    conn: Connection<MongodbConnect>
     data: any
 }>()
 const emits = defineEmits<{
     (e: 'handleCloseTab', val: null): void
 }>()
+const message = useMessage()
 
-onBeforeMount(() => {
-    let cfg = localStorage.getItem(`postgres:query:${props.conn.id}`)
+onBeforeMount(async () => {
+    let cfg = localStorage.getItem(`mongo:query:${props.conn.id}`)
     if (cfg) {
         config.value = JSON.parse(cfg)
     }
-    localStorage.setItem(`postgres:query:${props.conn.id}`, JSON.stringify(config.value))
+    const res = await databases({ conn: props.conn })
+    res.forEach((db: any) => {
+        options.value.push({
+            label: db,
+            value: db,
+        })
+    })
 })
 
 const config = ref({
@@ -31,9 +38,121 @@ const config = ref({
     query: ''
 })
 
-const handleChange = (val: string) => {
+const handleChange = async (val: string) => {
     config.value.query = val
-    localStorage.setItem(`postgres:query:${props.conn.id}`, JSON.stringify(config.value))
+    localStorage.setItem(`mongo:query:${props.conn.id}`, JSON.stringify(config.value))
+}
+
+const db = ref<string>(props.data.database)
+const options = ref<any[]>([])
+
+const handleUse = async (match: RegExpMatchArray, command: string) => {
+    db.value = match[1]
+}
+
+const handleDB = async (match: RegExpMatchArray, command: string) => {
+    try {
+        let col = match[1]
+        let func = match[2]
+        let m1 = JSON.parse(match[3])
+        let m2 = {}
+        if (match[4]) {
+            m2 = JSON.parse(match[4])
+        }
+        let m3 = {}
+        if (match[5]) {
+            m3 = JSON.parse(match[5])
+        }
+        let res: any;
+        let type = 'other'
+        switch (func) {
+            case 'insertOne':
+                res = await insertOne({
+                    conn: props.conn,
+                    database: db.value,
+                    collection: col,
+                    document: m1,
+                    options: m2,
+                })
+                type = 'insert'
+                break
+            case 'insertMany':
+                res = await insertMany({
+                    conn: props.conn,
+                    database: db.value,
+                    collection: col,
+                    document: m1,
+                    options: m2,
+                })
+                type = 'insert'
+                break
+            case 'updateOne':
+                res = await updateOne({
+                    conn: props.conn,
+                    database: db.value,
+                    collection: col,
+                    filter: m1,
+                    update: m2,
+                    options: m3,
+                })
+                type = 'update'
+                break
+            case 'updateMany':
+                res = await updateMany({
+                    conn: props.conn,
+                    database: db.value,
+                    collection: col,
+                    filter: m1,
+                    update: m2,
+                    options: m3,
+                })
+                type = 'update'
+                break
+            case 'deleteOne':
+                res = await deleteOne({
+                    conn: props.conn,
+                    database: db.value,
+                    collection: col,
+                    document: m1,
+                    options: m2,
+                })
+                type = 'delete'
+                break
+            case 'deleteMany':
+                res = await deleteMany({
+                    conn: props.conn,
+                    database: db.value,
+                    collection: col,
+                    document: m1,
+                    options: m2,
+                })
+                type = 'delete'
+                break
+            case 'find':
+                res = await find({
+                    conn: props.conn,
+                    database: db.value,
+                    collection: col,
+                    document: m1,
+                    options: m2,
+                })
+                console.log(res)
+                type = 'find'
+                break
+        }
+        results.value.push({
+            id: await uuid(),
+            type: type,
+            sql: command,
+            data: res
+        })
+        if (results.value.length == 1) {
+            tab.value = results.value[0].id
+        }
+    }
+    catch (e) {
+        // message.error((e as any).message)
+    }
 }
 
 const editorRef = ref<any>()
@@ -56,64 +175,69 @@ const handleSelect = async () => {
         },
         {
             type: 'db',
+            reg: /db\.(\w+).(\w+)\((.*)\)/,
+        },
+        {
+            type: 'db',
             reg: /db\.(\w+).(\w+)\((.*),\s*(.*)\)/,
         },
+        {
+            type: 'db',
+            reg: /db\.(\w+).(\w+)\((.*),\s*(.*),\s*(.*)\)/,
+        },
     ]
-    let exec: any[] = []
-    sql_str_arr.forEach((sql: string) => {
+    loading.value = true
+    results.value = []
+    sql_str_arr.forEach(async (command: string) => {
         for (let i = 0; i < regMap.length; i++) {
             let rm = regMap[i]
-            let match = sql.match(rm.reg)
+            let match = command.match(rm.reg)
             if (match) {
                 switch (rm.type) {
                     case 'use':
-                        exec.push({
-                            type: 'use',
-                            db: match[1],
-                        })
+                        await handleUse(match, command)
                         break
                     case 'db':
-                        exec.push({
-                            type: 'db',
-                            col: match[1],
-                            func: match[2],
-                            document: match[3],
-                            options: match[4],
-                        })
+                        await handleDB(match, command)
                         break
                 }
             }
         }
     })
-    console.log(exec)
+    loading.value = false
 }
 </script>
     
 <template>
     <div class="page">
         <div class="menu">
-            <n-button strong secondary size="small" @click="handleSelect" :loading="loading">
-                <template #icon>
-                    <n-icon>
-                        <Checkmark />
-                    </n-icon>
-                </template>
-            </n-button>
+            <n-space>
+                <n-button strong secondary size="small" @click="handleSelect" :loading="loading">
+                    <template #icon>
+                        <n-icon>
+                            <Checkmark />
+                        </n-icon>
+                    </template>
+                </n-button>
+                <div>
+                    <n-select style="min-width: 120px;" size="small" v-model:value="db" :options="options" />
+                </div>
+            </n-space>
         </div>
         <div class="input">
             <EditorVue ref="editorRef" @change="handleChange" :value="config.query" :type="'mongo_query'" />
         </div>
         <div class="output">
-            <!-- <n-tabs v-model:value="tab" type="card" tab-style="min-width: 80px;" size="small">
-                                                                                                <n-tab-pane display-directive="show" v-for="(i, index) in results" :key="i.id" :tab="`Result ${index}`"
-                                                                                                    :name="i.id">
-                                                                                                    <div class="sql">{{ i.sql }}</div>
-                                                                                                    <div class="res">
-                                                                                                        <TableViewVue v-if="i.type == 'select'" :data="i.data" />
-                                                                                                        <div v-else>{{ i }}</div>
-                                                                                                    </div>
-                                                                                                </n-tab-pane>
-                                                                                            </n-tabs> -->
+            <n-tabs v-model:value="tab" type="card" tab-style="min-width: 80px;" size="small">
+                <n-tab-pane display-directive="show" v-for="(i, index) in results" :key="i.id" :tab="`Result ${index}`"
+                    :name="i.id">
+                    <div class="sql">{{ i.sql }}</div>
+                    <div class="res">
+                        <CollectionView v-if="i.type == 'find'" :data="i.data" />
+                        <div v-else>{{ i.data }}</div>
+                    </div>
+                </n-tab-pane>
+            </n-tabs>
         </div>
     </div>
 </template>

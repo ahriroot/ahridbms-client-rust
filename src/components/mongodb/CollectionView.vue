@@ -1,47 +1,18 @@
 <script setup lang="ts">
-import { documents } from '@/api/mongodb'
-import { Connection } from '@/types/Connection'
-import { MongodbConnect } from '@/types/mongodb'
-import { h, onBeforeMount, shallowRef, ref, reactive } from 'vue'
+import { h, onMounted, shallowRef, ref } from 'vue'
 import EditorVue from '@/components/Editor.vue'
-import { NSpace, NRadioGroup, NRadio, NDataTable, NButton, NIcon } from 'naive-ui'
-import { Reload } from '@vicons/ionicons5'
+import { NSpace, NRadioGroup, NRadio, NDataTable, NButton } from 'naive-ui'
 
 
 const symbol = Symbol('mongodb')
 
 const props = defineProps<{
-    conn: Connection<MongodbConnect>
     data: any
 }>()
 const emits = defineEmits<{
     (e: 'handleCloseTab'): void
 }>()
 
-const pagination = reactive({
-    page: 1,
-    pageSize: 5,
-    showSizePicker: true,
-    itemCount: 0,
-    showQuickJumper: true,
-    pageSizes: [5, 10, 20, 50, 100, 500, 1000],
-    onChange: async (page: number) => {
-        pagination.page = page
-        await handleLoadData()
-    },
-    onUpdatePageSize: async (pageSize: number) => {
-        pagination.pageSize = pageSize
-        pagination.page = 1
-        await handleLoadData()
-    }
-})
-const sorts = ref<{
-    field: string
-    order: string
-}[]>([])
-
-const handleChange = (val: string) => {
-}
 const config = ref({
     expanded: [],
     resultList: [],
@@ -52,7 +23,6 @@ const history = ref<any[]>([])
 const minWidth = ref(36)
 const columns = ref<any[]>([])
 const data = ref<any[]>([])
-const loadingCount = ref(0)
 const editorRef = shallowRef<any>(undefined)  // 显示 json 数据编辑器
 const showType = ref('table')  // 显示类型
 const showTypes = ref([
@@ -66,7 +36,6 @@ const showTypes = ref([
 ])
 
 const analyData = (key: string, res: any) => {
-    history.value = []
     data.value = []
     columns.value = []
     minWidth.value = 36
@@ -163,19 +132,8 @@ const analyData = (key: string, res: any) => {
 }
 
 const handleLoadData = async () => {
-    const res = await documents({
-        conn: props.conn,
-        database: props.data.database,
-        collection: props.data.collection,
-        skip: 0,
-        limit: 0,
-        page: pagination.page,
-        size: pagination.pageSize,
-        sorts: sorts.value
-    })
-    editorRef.value?.setValue(JSON.stringify(res, null, 4))
-    pagination.itemCount = res.count
-    analyData('ROOT', res.documents)
+    history.value = []
+    analyData('ROOT', props.data)
 }
 const handleGoBack = async (key: number) => {
     let tmp = history.value.slice(0, key + 1)
@@ -183,21 +141,10 @@ const handleGoBack = async (key: number) => {
     columns.value = tmp[key].columns
     data.value = tmp[key].data
 }
-const handleUpdateSorter = async (sorter: any) => {
-    sorter.value = sorter
-    sorts.value = []
-    sorter.forEach((item: any) => {
-        if (item.order === "ascend" || item.order === "descend") {
-            sorts.value.push({
-                field: item.columnKey,
-                order: item.order === "ascend" ? "ASC" : "DESC"
-            })
-        }
-    })
-    await handleLoadData()
-}
 
-onBeforeMount(async () => {
+onMounted(async () => {
+    console.log(props.data)
+    editorRef.value?.setValue(JSON.stringify(props.data), null, 4)
     await handleLoadData()
 })
 </script>
@@ -214,15 +161,6 @@ onBeforeMount(async () => {
                 </span>
             </div>
             <div class="right">
-                <span>
-                    <n-button strong secondary circle type="info" size="small" @click="handleLoadData">
-                        <template #icon>
-                            <n-icon>
-                                <reload />
-                            </n-icon>
-                        </template>
-                    </n-button>
-                </span>
                 <n-radio-group v-model:value="showType" name="radiogroup">
                     <n-space>
                         <n-radio v-for="showType in showTypes" :key="showType.value" :value="showType.value">
@@ -233,13 +171,10 @@ onBeforeMount(async () => {
             </div>
         </div>
         <div class="result">
-            <EditorVue v-show="showType == 'json'" ref="editorRef" @change="handleChange" :value="config.query"
-                :type="'json'" :read-only="true" />
-            <div class="table-view">
-                <n-data-table v-show="showType == 'table'" size="small" :single-line="false" :columns="columns" :data="data"
-                    flex-height style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;"
-                    :loading="loadingCount > 0" :pagination="pagination" :remote="true" :scroll-x="minWidth"
-                    @update:sorter="handleUpdateSorter" />
+            <EditorVue v-show="showType == 'json'" ref="editorRef" :value="config.query" :type="'json'" :read-only="true" />
+            <div class="table-view" v-show="showType == 'table'">
+                <n-data-table size="small" :single-line="false" :columns="columns" :data="data"
+                    flex-height style="position: absolute; top: 0; left: 0; right: 0; bottom: 0;" :scroll-x="minWidth" />
             </div>
         </div>
     </div>
@@ -273,7 +208,7 @@ onBeforeMount(async () => {
 }
 
 .data .option .right {
-    width: 190px;
+    width: 160px;
     display: flex;
     justify-content: space-between;
     align-items: center;

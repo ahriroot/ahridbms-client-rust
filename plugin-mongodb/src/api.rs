@@ -1,15 +1,17 @@
 use futures_util::StreamExt;
 use mongodb::{
-    bson::{doc, oid::ObjectId, Bson, Document},
-    options::ClientOptions,
+    bson::{doc, Bson, Document},
+    options::{
+        ClientOptions, DeleteOptions, FindOptions, InsertManyOptions, InsertOneOptions,
+        UpdateOptions, WriteConcern,
+    },
     Client,
 };
 
 use crate::entity::*;
 
-#[tauri::command]
-pub async fn databases(conn: Connection, database: String) -> Response<Vec<String>> {
-    let conn_str = &format!(
+async fn get_conn_str(conn: Connection) -> String {
+    format!(
         "mongodb://{}{}:{}{}",
         if conn.info.user.is_empty() {
             "".to_string()
@@ -19,15 +21,16 @@ pub async fn databases(conn: Connection, database: String) -> Response<Vec<Strin
         conn.info.host,
         conn.info.port,
         if conn.info.db.is_empty() {
-            if database.is_empty() {
-                "".to_string()
-            } else {
-                format!("/{}", database)
-            }
+            "".to_string()
         } else {
             format!("/{}", conn.info.db)
         }
-    );
+    )
+}
+
+#[tauri::command]
+pub async fn databases(conn: Connection) -> Response<Vec<String>> {
+    let conn_str = get_conn_str(conn).await;
 
     let client_result = Client::with_uri_str(conn_str).await;
 
@@ -45,25 +48,7 @@ pub async fn databases(conn: Connection, database: String) -> Response<Vec<Strin
 
 #[tauri::command]
 pub async fn collections(conn: Connection, database: String) -> Response<Vec<String>> {
-    let conn_str = &format!(
-        "mongodb://{}{}:{}{}",
-        if conn.info.user.is_empty() {
-            "".to_string()
-        } else {
-            format!("{}:{}@", conn.info.user, conn.info.pass)
-        },
-        conn.info.host,
-        conn.info.port,
-        if conn.info.db.is_empty() {
-            if database.is_empty() {
-                "".to_string()
-            } else {
-                format!("/{}", database)
-            }
-        } else {
-            format!("/{}", conn.info.db)
-        }
-    );
+    let conn_str = get_conn_str(conn).await;
 
     let client_result = Client::with_uri_str(conn_str).await;
     match client_result {
@@ -89,25 +74,7 @@ pub async fn documents(
     size: i64,
     sorts: Vec<Sort>,
 ) -> Response<Document> {
-    let conn_str = &format!(
-        "mongodb://{}{}:{}{}",
-        if conn.info.user.is_empty() {
-            "".to_string()
-        } else {
-            format!("{}:{}@", conn.info.user, conn.info.pass)
-        },
-        conn.info.host,
-        conn.info.port,
-        if conn.info.db.is_empty() {
-            if database.is_empty() {
-                "".to_string()
-            } else {
-                format!("/{}", database)
-            }
-        } else {
-            format!("/{}", conn.info.db)
-        }
-    );
+    let conn_str = get_conn_str(conn).await;
 
     let client_result = Client::with_uri_str(conn_str).await;
     match client_result {
@@ -171,89 +138,8 @@ pub async fn documents(
 }
 
 #[tauri::command]
-pub async fn delete_many(
-    conn: Connection,
-    database: String,
-    collection: String,
-    documents: Vec<Document>,
-) -> Response<Document> {
-    let conn_str = &format!(
-        "mongodb://{}{}:{}{}",
-        if conn.info.user.is_empty() {
-            "".to_string()
-        } else {
-            format!("{}:{}@", conn.info.user, conn.info.pass)
-        },
-        conn.info.host,
-        conn.info.port,
-        if conn.info.db.is_empty() {
-            if database.is_empty() {
-                "".to_string()
-            } else {
-                format!("/{}", database)
-            }
-        } else {
-            format!("/{}", conn.info.db)
-        }
-    );
-
-    let client_result = Client::with_uri_str(conn_str).await;
-    match client_result {
-        Ok(client) => {
-            let collection = client
-                .database(&database)
-                .collection::<Document>(&collection);
-            let mut delete_count = 0;
-            for document in documents {
-                // string to objectid
-                let string_id = match document.get_str("_id") {
-                    Ok(string_id) => string_id,
-                    Err(e) => return Response::error(e.to_string()),
-                };
-                let oid = ObjectId::parse_str(string_id);
-                match oid {
-                    Ok(oid) => {
-                        let f = doc! { "_id": oid };
-                        let delete_result = collection.delete_one(f, None).await;
-                        match delete_result {
-                            Ok(delete_result) => {
-                                delete_count += delete_result.deleted_count;
-                            }
-                            Err(e) => return Response::error(e.to_string()),
-                        }
-                    }
-                    Err(e) => return Response::error(e.to_string()),
-                }
-            }
-            Response::ok(Res::Success(
-                doc! {"delete_count": Bson::Int64(delete_count as i64)},
-            ))
-        }
-        Err(e) => Response::error(e.to_string()),
-    }
-}
-
-#[tauri::command]
 pub async fn drop_database(conn: Connection, database: String) -> Response<Document> {
-    let conn_str = &format!(
-        "mongodb://{}{}:{}{}",
-        if conn.info.user.is_empty() {
-            "".to_string()
-        } else {
-            format!("{}:{}@", conn.info.user, conn.info.pass)
-        },
-        conn.info.host,
-        conn.info.port,
-        if conn.info.db.is_empty() {
-            if database.is_empty() {
-                "".to_string()
-            } else {
-                format!("/{}", database)
-            }
-        } else {
-            format!("/{}", conn.info.db)
-        }
-    );
+    let conn_str = get_conn_str(conn).await;
 
     let client_result = Client::with_uri_str(conn_str).await;
     match client_result {
@@ -274,25 +160,7 @@ pub async fn drop_collection(
     database: String,
     collection: String,
 ) -> Response<Document> {
-    let conn_str = &format!(
-        "mongodb://{}{}:{}{}",
-        if conn.info.user.is_empty() {
-            "".to_string()
-        } else {
-            format!("{}:{}@", conn.info.user, conn.info.pass)
-        },
-        conn.info.host,
-        conn.info.port,
-        if conn.info.db.is_empty() {
-            if database.is_empty() {
-                "".to_string()
-            } else {
-                format!("/{}", database)
-            }
-        } else {
-            format!("/{}", conn.info.db)
-        }
-    );
+    let conn_str = get_conn_str(conn).await;
 
     let client_result = Client::with_uri_str(conn_str).await;
     match client_result {
@@ -311,22 +179,267 @@ pub async fn drop_collection(
 }
 
 #[tauri::command]
-pub async fn test(conn: Connection, database: String) -> Document {
-    let conn_str = &format!(
-        "mongodb://{}{}:{}{}",
-        if conn.info.user.is_empty() {
-            "".to_string()
-        } else {
-            format!("{}:{}@", conn.info.user, conn.info.pass)
-        },
-        conn.info.host,
-        conn.info.port,
-        if conn.info.db.is_empty() {
-            "".to_string()
-        } else {
-            format!("/{}", conn.info.db)
+pub async fn insert_one(
+    conn: Connection,
+    database: String,
+    collection: String,
+    document: Document,
+    options: Document,
+) -> Response<Document> {
+    let conn_str = get_conn_str(conn).await;
+
+    let client_result = Client::with_uri_str(conn_str).await;
+    match client_result {
+        Ok(client) => {
+            let collection = client
+                .database(&database)
+                .collection::<Document>(&collection);
+
+            let write_concern = bson::from_bson::<WriteConcern>(Bson::Document(options)).unwrap();
+            let options = InsertOneOptions::builder()
+                .write_concern(write_concern)
+                .build();
+            let insert_result = collection.insert_one(document, options).await;
+            match insert_result {
+                Ok(insert_result) => {
+                    let mut res = Document::new();
+                    res.insert("inserted_id", insert_result.inserted_id);
+                    Response::ok(Res::Success(res))
+                }
+                Err(e) => Response::error(e.to_string()),
+            }
         }
-    );
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn insert_many(
+    conn: Connection,
+    database: String,
+    collection: String,
+    document: Vec<Document>,
+    options: Document,
+) -> Response<Document> {
+    let conn_str = get_conn_str(conn).await;
+
+    let client_result = Client::with_uri_str(conn_str).await;
+    match client_result {
+        Ok(client) => {
+            let collection = client
+                .database(&database)
+                .collection::<Document>(&collection);
+
+            let write_concern = bson::from_bson::<WriteConcern>(Bson::Document(options)).unwrap();
+            let options = InsertManyOptions::builder()
+                .write_concern(write_concern)
+                .build();
+            let insert_result = collection.insert_many(document, options).await;
+            match insert_result {
+                Ok(insert_result) => {
+                    let mut res = Document::new();
+                    // 遍历
+                    let mut inserted_ids = Vec::new();
+                    for (_, v) in insert_result.inserted_ids {
+                        inserted_ids.push(v);
+                    }
+                    res.insert("acknowledged", "");
+                    res.insert("inserted_ids", inserted_ids);
+                    Response::ok(Res::Success(res))
+                }
+                Err(e) => Response::error(e.to_string()),
+            }
+        }
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn update_one(
+    conn: Connection,
+    database: String,
+    collection: String,
+    filter: Document,
+    update: Document,
+    options: Document,
+) -> Response<Document> {
+    let conn_str = get_conn_str(conn).await;
+
+    let client_result = Client::with_uri_str(conn_str).await;
+    match client_result {
+        Ok(client) => {
+            let collection = client
+                .database(&database)
+                .collection::<Document>(&collection);
+
+            let write_concern = bson::from_bson::<WriteConcern>(Bson::Document(options)).unwrap();
+            let options = UpdateOptions::builder()
+                .write_concern(write_concern)
+                .build();
+            let update_result = collection.update_one(filter, update, options).await;
+            match update_result {
+                Ok(update_result) => {
+                    let mut res = Document::new();
+                    res.insert("matched_count", update_result.matched_count as i64);
+                    res.insert("modified_count", update_result.modified_count as i64);
+                    res.insert("upserted_id", update_result.upserted_id);
+                    Response::ok(Res::Success(res))
+                }
+                Err(e) => Response::error(e.to_string()),
+            }
+        }
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn update_many(
+    conn: Connection,
+    database: String,
+    collection: String,
+    filter: Document,
+    update: Document,
+    options: Document,
+) -> Response<Document> {
+    let conn_str = get_conn_str(conn).await;
+
+    let client_result = Client::with_uri_str(conn_str).await;
+    match client_result {
+        Ok(client) => {
+            let collection = client
+                .database(&database)
+                .collection::<Document>(&collection);
+
+            let write_concern = bson::from_bson::<WriteConcern>(Bson::Document(options)).unwrap();
+            let options = UpdateOptions::builder()
+                .write_concern(write_concern)
+                .build();
+            let update_result = collection.update_many(filter, update, options).await;
+            match update_result {
+                Ok(update_result) => {
+                    let mut res = Document::new();
+                    res.insert("matched_count", update_result.matched_count as i64);
+                    res.insert("modified_count", update_result.modified_count as i64);
+                    res.insert("upserted_id", update_result.upserted_id);
+                    Response::ok(Res::Success(res))
+                }
+                Err(e) => Response::error(e.to_string()),
+            }
+        }
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn delete_one(
+    conn: Connection,
+    database: String,
+    collection: String,
+    document: Document,
+    options: Document,
+) -> Response<Document> {
+    let conn_str = get_conn_str(conn).await;
+
+    let client_result = Client::with_uri_str(conn_str).await;
+    match client_result {
+        Ok(client) => {
+            let collection = client
+                .database(&database)
+                .collection::<Document>(&collection);
+
+            let write_concern = bson::from_bson::<WriteConcern>(Bson::Document(options)).unwrap();
+            let options = DeleteOptions::builder()
+                .write_concern(write_concern)
+                .build();
+            let delete_result = collection.delete_one(document, options).await;
+            match delete_result {
+                Ok(delete_result) => {
+                    let mut res = Document::new();
+                    res.insert("acknowledged", "");
+                    res.insert("deleted_count", delete_result.deleted_count as i64);
+                    Response::ok(Res::Success(res))
+                }
+                Err(e) => Response::error(e.to_string()),
+            }
+        }
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn delete_many(
+    conn: Connection,
+    database: String,
+    collection: String,
+    document: Document,
+    options: Document,
+) -> Response<Document> {
+    let conn_str = get_conn_str(conn).await;
+
+    let client_result = Client::with_uri_str(conn_str).await;
+    match client_result {
+        Ok(client) => {
+            let collection = client
+                .database(&database)
+                .collection::<Document>(&collection);
+
+            let write_concern = bson::from_bson::<WriteConcern>(Bson::Document(options)).unwrap();
+            let options = DeleteOptions::builder()
+                .write_concern(write_concern)
+                .build();
+            let delete_result = collection.delete_many(document, options).await;
+            match delete_result {
+                Ok(delete_result) => {
+                    let mut res = Document::new();
+                    res.insert("acknowledged", "");
+                    res.insert("deleted_count", delete_result.deleted_count as i64);
+                    Response::ok(Res::Success(res))
+                }
+                Err(e) => Response::error(e.to_string()),
+            }
+        }
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn find(
+    conn: Connection,
+    database: String,
+    collection: String,
+    document: Document,
+    options: Document,
+) -> Response<Vec<Document>> {
+    let conn_str = get_conn_str(conn).await;
+
+    let client_result = Client::with_uri_str(conn_str).await;
+    match client_result {
+        Ok(client) => {
+            let collection = client
+                .database(&database)
+                .collection::<Document>(&collection);
+
+            let find_options = bson::from_bson::<FindOptions>(Bson::Document(options)).unwrap();
+            let find_result = collection.find(document, find_options).await;
+            match find_result {
+                Ok(find_result) => {
+                    let mut res = Vec::new();
+                    let r = find_result.collect::<Vec<_>>().await;
+                    for i in r {
+                        res.push(i.unwrap());
+                    }
+                    Response::ok(Res::Success(res))
+                }
+                Err(e) => Response::error(e.to_string()),
+            }
+        }
+        Err(e) => Response::error(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub async fn test(conn: Connection, database: String) -> Document {
+    let conn_str = get_conn_str(conn).await;
 
     let client_options_result = ClientOptions::parse(conn_str).await;
 
